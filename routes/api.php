@@ -1,0 +1,74 @@
+<?php
+
+use App\Http\Controllers\Api\ActivityController;
+use App\Http\Controllers\Api\AiController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\CustomFieldController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DealController;
+use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\ImportController;
+use App\Http\Controllers\Api\PipelineController;
+use App\Http\Controllers\Api\PipelineStageController;
+use App\Http\Controllers\Api\SavedViewController;
+use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\TaskController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('v1')->group(function (): void {
+    Route::get('/', fn () => response()->json([
+        'name' => 'CRM Ultimate API',
+        'version' => 'v1',
+        'status' => 'ok',
+        'documentation' => '/docs/openapi.yaml',
+        'frontend' => '/',
+        'endpoints' => [
+            'login' => 'POST /api/v1/auth/login',
+            'me' => 'GET /api/v1/auth/me',
+            'companies' => 'GET|POST /api/v1/companies',
+            'contacts' => 'GET|POST /api/v1/contacts',
+            'deals' => 'GET|POST /api/v1/deals',
+            'activities' => 'GET|POST /api/v1/activities',
+            'pipelines' => 'GET|POST /api/v1/pipelines',
+        ],
+    ]));
+
+    Route::post('/auth/login', [AuthController::class, 'login']);
+
+    Route::middleware('jwt')->group(function (): void {
+        Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::get('/search', [SearchController::class, 'index']);
+
+        Route::prefix('ai')->group(function (): void {
+            Route::post('/summarize/deal/{id}', [AiController::class, 'summarizeDeal']);
+            Route::post('/summarize/contact/{id}', [AiController::class, 'summarizeContact']);
+            Route::post('/next-action/deal/{id}', [AiController::class, 'nextActionDeal']);
+            Route::post('/score/deal/{id}', [AiController::class, 'scoreDeal']);
+        });
+
+        Route::apiResource('companies', CompanyController::class);
+        Route::apiResource('contacts', ContactController::class);
+        Route::get('/deals/board', [DealController::class, 'board']);
+        Route::apiResource('deals', DealController::class);
+        Route::post('/deals/{deal}/move', [DealController::class, 'move']);
+        Route::get('/activities/due', [ActivityController::class, 'due']);
+        Route::apiResource('activities', ActivityController::class);
+        Route::apiResource('tasks', TaskController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+        Route::apiResource('saved-views', SavedViewController::class);
+
+        Route::middleware('role:admin,manager')->group(function (): void {
+            Route::apiResource('pipelines', PipelineController::class);
+            Route::apiResource('pipeline-stages', PipelineStageController::class);
+            Route::apiResource('custom-fields', CustomFieldController::class);
+            Route::apiResource('imports', ImportController::class)->only(['index', 'store', 'show']);
+            Route::apiResource('exports', ExportController::class)->only(['index', 'store', 'show']);
+            Route::get('/exports/{export}/download', [ExportController::class, 'download']);
+        });
+    });
+});
