@@ -4,6 +4,7 @@ RUN apk add --no-cache bash git icu-dev libpq-dev linux-headers unzip zip \
     && docker-php-ext-install intl pcntl pdo_pgsql sockets
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/crm.ini
 
 WORKDIR /var/www/html
 
