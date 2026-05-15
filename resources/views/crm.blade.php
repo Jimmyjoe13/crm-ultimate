@@ -1492,12 +1492,36 @@
                 } else if (type === 'next-action') {
                     resultDiv.innerHTML = renderNextActionPanel(data.data) + cached;
                 } else {
-                    resultDiv.innerHTML = `<div class="ai-result-wrap">${escapeHtml(String(data.data || ''))}</div>${cached}`;
+                    const summaryText = String(data.data || '');
+                    resultDiv.innerHTML = `<div class="ai-result-wrap">${escapeHtml(summaryText)}</div>${cached}<button class="btn secondary" type="button" id="saveAiNoteBtn" style="font-size:0.8rem;margin-top:0.5rem">📌 Ajouter comme note</button>`;
+                    document.getElementById('saveAiNoteBtn')?.addEventListener('click', () => saveAiNote(summaryText));
                 }
             } catch (err) {
                 resultDiv.innerHTML = `<div class="ai-result-wrap" style="color:var(--danger)">Erreur : ${escapeHtml(err.message)}</div>`;
             } finally {
                 document.querySelectorAll('.ai-btn').forEach(b => b.disabled = false);
+            }
+        }
+
+        async function saveAiNote(text) {
+            const btn = document.getElementById('saveAiNoteBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement...'; }
+            try {
+                await request('/activities', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        type: 'note',
+                        title: `Résumé IA — ${resources[state.current]?.title(state.selected) || ''}`,
+                        body: text,
+                        status: 'done',
+                        subject_type: subjectTypes[state.current],
+                        subject_id: state.selected.id,
+                    }),
+                });
+                if (btn) { btn.textContent = '✓ Note ajoutée'; btn.style.color = 'var(--ok)'; }
+            } catch (err) {
+                if (btn) { btn.disabled = false; btn.textContent = '📌 Ajouter comme note'; }
+                document.getElementById('aiResult')?.insertAdjacentHTML('beforeend', `<div style="color:var(--danger);font-size:0.82rem;margin-top:0.25rem">${escapeHtml(err.message)}</div>`);
             }
         }
 
