@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessCsvImport;
+use App\Models\Company;
 use App\Models\Contact;
 use App\Models\ImportJob;
 use App\Models\User;
@@ -95,6 +96,87 @@ class CsvImportTest extends TestCase
         $this->assertSame(5, $job->processed_rows);
         $this->assertSame('Alice1', Contact::first()->first_name);
         $this->assertSame('Dupont1', Contact::first()->last_name);
+    }
+
+    public function test_import_enriches_company_fields_from_contact_csv(): void
+    {
+        Storage::fake('local');
+
+        $user = User::query()->create([
+            'name' => 'Enrich Admin',
+            'email' => 'enrich@test.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        // CSV contact with virtual company fields
+        $lines = ['first_name,last_name,email,__company_name,__company_domain,__company_industry'];
+        $lines[] = 'Marie,Durand,marie@acme.fr,ACME Corp,acme.fr,SaaS';
+        $lines[] = 'Jean,Petit,jean@acme.fr,ACME Corp,acme.fr,SaaS'; // same company → should reuse
+
+        $path = 'imports/test_enrich.csv';
+        Storage::disk('local')->put($path, implode("\n", $lines));
+
+        $job = ImportJob::query()->create([
+            'user_id' => $user->id,
+            'entity_type' => 'contact',
+            'filename' => 'test_enrich.csv',
+            'status' => 'pending',
+        ]);
+
+        ProcessCsvImport::dispatchSync($job->id, $path);
+
+        $job->refresh();
+        $this->assertSame('completed', $job->status);
+        $this->assertSame(2, $job->processed_rows);
+
+        // Only one company should have been created (matched by domain)
+        $this->assertCount(1, Company::all());
+        $company = Company::first();
+        $this->assertSame('ACME Corp', $company->name);
+        $this->assertSame('acme.fr', $company->domain);
+        $this->assertSame('SaaS', $company->industry);
+
+        // Both contacts attached to that company via pivot
+        $this->assertCount(2, $company->contacts);
+        $this->assertSame(2, Contact::count());
+    }
+
+    public function test_import_reuses_existing_company_by_domain(): void
+    {
+        Storage::fake('local');
+
+        $user = User::query()->create([
+            'name' => 'Domain Admin',
+            'email' => 'domain@test.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        // Pre-existing company with same domain
+        $existing = Company::query()->create([
+            'name' => 'Existing Corp',
+            'domain' => 'existing.io',
+        ]);
+
+        $lines = ['first_name,email,__company_name,__company_domain'];
+        $lines[] = 'Sophie,sophie@existing.io,Nouveau Nom,existing.io';
+
+        $path = 'imports/test_domain.csv';
+        Storage::disk('local')->put($path, implode("\n", $lines));
+
+        $job = ImportJob::query()->create([
+            'user_id' => $user->id,
+            'entity_type' => 'contact',
+            'filename' => 'test_domain.csv',
+            'status' => 'pending',
+        ]);
+
+        ProcessCsvImport::dispatchSync($job->id, $path);
+
+        // Should reuse existing company (matched by domain), not create a duplicate
+        $this->assertCount(1, Company::all());
+        $this->assertSame($existing->id, Contact::first()->companies()->first()->id);
     }
 
     public function test_import_preview_endpoint_returns_headers_and_sample(): void

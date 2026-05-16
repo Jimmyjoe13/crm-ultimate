@@ -26,21 +26,37 @@ class CrmApiTest extends TestCase
             'first_name' => 'Jane',
             'last_name' => 'Doe',
             'email' => 'jane@acme.test',
-            'company_id' => $company['id'],
         ])->assertCreated()->json('data');
+
+        // Attach contact to company via pivot
+        $this->withToken($token)->postJson("/api/v1/contacts/{$contact['id']}/companies", [
+            'company_id' => $company['id'],
+            'role' => 'employee',
+            'is_primary' => true,
+        ])->assertOk();
 
         $pipeline = Pipeline::query()->create(['name' => 'Sales', 'is_default' => true]);
         $stage = $pipeline->stages()->create(['name' => 'Qualified', 'position' => 10, 'probability' => 30]);
 
-        $this->withToken($token)->postJson('/api/v1/deals', [
+        $deal = $this->withToken($token)->postJson('/api/v1/deals', [
             'name' => 'Acme Expansion',
             'amount' => 25000,
             'currency' => 'EUR',
-            'company_id' => $company['id'],
-            'contact_id' => $contact['id'],
             'pipeline_id' => $pipeline->id,
             'pipeline_stage_id' => $stage->id,
-        ])->assertCreated()->assertJsonPath('data.status', 'open');
+        ])->assertCreated()->assertJsonPath('data.status', 'open')->json('data');
+
+        // Associate company and contact to deal
+        $this->withToken($token)->postJson("/api/v1/deals/{$deal['id']}/companies", [
+            'company_id' => $company['id'],
+            'role' => 'customer',
+            'is_primary' => true,
+        ])->assertOk();
+
+        $this->withToken($token)->postJson("/api/v1/deals/{$deal['id']}/contacts", [
+            'contact_id' => $contact['id'],
+            'role' => 'primary',
+        ])->assertOk();
     }
 
     public function test_deal_board_and_detail_include_related_context(): void

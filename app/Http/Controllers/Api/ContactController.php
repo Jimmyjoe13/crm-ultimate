@@ -6,8 +6,11 @@ use App\Http\Controllers\Api\Concerns\CrudActions;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\AuditLog;
+use App\Models\Company;
 use App\Models\Contact;
+use App\Services\AssociationAuditor;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ContactController extends Controller
 {
@@ -27,7 +30,8 @@ class ContactController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
             'job_title' => ['nullable', 'string', 'max:255'],
-            'company_id' => ['nullable', 'exists:companies,id'],
+            'lifecycle_stage' => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+            'lead_status' => ['nullable', 'in:new,open,in_progress,connected,unqualified,bad_fit'],
             'owner_id' => ['nullable', 'exists:users,id'],
             'custom_values' => ['array'],
         ];
@@ -36,7 +40,7 @@ class ContactController extends Controller
     public function show(int $id): JsonResponse
     {
         $contact = Contact::query()
-            ->with(['company', 'owner'])
+            ->with(['companies', 'deals.stage', 'owner'])
             ->findOrFail($id);
 
         return response()->json([
@@ -53,5 +57,53 @@ class ContactController extends Controller
                 ->limit(25)
                 ->get(),
         ]);
+    }
+
+    // ── Association endpoints ────────────────────────────────────────────────
+
+    public function attachCompany(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'company_id' => ['required', 'exists:companies,id'],
+            'role' => ['in:employee,decision_maker,influencer,former'],
+            'is_primary' => ['boolean'],
+        ]);
+
+        $contact = Contact::query()->findOrFail($id);
+        $company = Company::query()->findOrFail($data['company_id']);
+
+        $pivot = [
+            'role' => $data['role'] ?? 'employee',
+            'is_primary' => $data['is_primary'] ?? false,
+        ];
+
+        $contact->companies()->syncWithoutDetaching([$company->id => $pivot]);
+
+        AssociationAuditor::recordAttach($contact, 'companies', $company->id, Company::class, $pivot);
+
+        return response()->json(['data' => $contact->companies()->withPivot('role', 'is_primary')->get()]);
+    }
+
+    public function detachCompany(Request $request, int $id, int $companyId): JsonResponse
+    {
+        $contact = Contact::query()->findOrFail($id);
+        $contact->companies()->detach($companyId);
+
+        AssociationAuditor::recordDetach($contact, 'companies', $companyId, Company::class);
+
+        return response()->json(null, 204);
+    }
+
+    public function updateCompanyAssoc(Request $request, int $id, int $companyId): JsonResponse
+    {
+        $data = $request->validate([
+            'role' => ['in:employee,decision_maker,influencer,former'],
+            'is_primary' => ['boolean'],
+        ]);
+
+        $contact = Contact::query()->findOrFail($id);
+        $contact->companies()->updateExistingPivot($companyId, $data);
+
+        return response()->json(['data' => $contact->companies()->withPivot('role', 'is_primary')->get()]);
     }
 }

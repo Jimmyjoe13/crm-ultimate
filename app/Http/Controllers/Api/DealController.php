@@ -6,9 +6,12 @@ use App\Http\Controllers\Api\Concerns\CrudActions;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\AuditLog;
+use App\Models\Company;
+use App\Models\Contact;
 use App\Models\Deal;
 use App\Models\Pipeline;
 use App\Models\PipelineStage;
+use App\Services\AssociationAuditor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -30,8 +33,6 @@ class DealController extends Controller
             'currency' => ['string', 'size:3'],
             'close_date' => ['nullable', 'date'],
             'status' => ['in:open,won,lost'],
-            'company_id' => ['nullable', 'exists:companies,id'],
-            'contact_id' => ['nullable', 'exists:contacts,id'],
             'pipeline_id' => [$required, 'exists:pipelines,id'],
             'pipeline_stage_id' => [$required, 'exists:pipeline_stages,id'],
             'owner_id' => ['nullable', 'exists:users,id'],
@@ -60,7 +61,7 @@ class DealController extends Controller
     public function show(int $id): JsonResponse
     {
         $deal = Deal::query()
-            ->with(['company', 'contact', 'pipeline', 'stage', 'owner'])
+            ->with(['companies', 'contacts', 'pipeline', 'stage', 'owner'])
             ->findOrFail($id);
 
         return response()->json([
@@ -87,7 +88,7 @@ class DealController extends Controller
             ->first() ?? Pipeline::query()->with('stages')->firstOrFail();
 
         $deals = Deal::query()
-            ->with(['company', 'contact', 'stage'])
+            ->with(['companies', 'contacts', 'stage'])
             ->where('pipeline_id', $pipeline->id)
             ->orderByDesc('created_at')
             ->get()
@@ -100,5 +101,94 @@ class DealController extends Controller
                 'deals' => $deals->get($stage->id, collect())->values(),
             ])->values(),
         ]);
+    }
+
+    // ── Association endpoints ────────────────────────────────────────────────
+
+    public function attachContact(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'contact_id' => ['required', 'exists:contacts,id'],
+            'role' => ['in:primary,technical,billing,other'],
+        ]);
+
+        $deal = Deal::query()->findOrFail($id);
+        $contact = Contact::query()->findOrFail($data['contact_id']);
+
+        $pivot = ['role' => $data['role'] ?? 'primary'];
+
+        $deal->contacts()->syncWithoutDetaching([$contact->id => $pivot]);
+
+        AssociationAuditor::recordAttach($deal, 'contacts', $contact->id, Contact::class, $pivot);
+
+        return response()->json(['data' => $deal->contacts()->withPivot('role')->get()]);
+    }
+
+    public function detachContact(Request $request, int $id, int $contactId): JsonResponse
+    {
+        $deal = Deal::query()->findOrFail($id);
+        $deal->contacts()->detach($contactId);
+
+        AssociationAuditor::recordDetach($deal, 'contacts', $contactId, Contact::class);
+
+        return response()->json(null, 204);
+    }
+
+    public function updateContactAssoc(Request $request, int $id, int $contactId): JsonResponse
+    {
+        $data = $request->validate([
+            'role' => ['required', 'in:primary,technical,billing,other'],
+        ]);
+
+        $deal = Deal::query()->findOrFail($id);
+        $deal->contacts()->updateExistingPivot($contactId, $data);
+
+        return response()->json(['data' => $deal->contacts()->withPivot('role')->get()]);
+    }
+
+    public function attachCompany(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'company_id' => ['required', 'exists:companies,id'],
+            'role' => ['in:customer,partner,reseller'],
+            'is_primary' => ['boolean'],
+        ]);
+
+        $deal = Deal::query()->findOrFail($id);
+        $company = Company::query()->findOrFail($data['company_id']);
+
+        $pivot = [
+            'role' => $data['role'] ?? 'customer',
+            'is_primary' => $data['is_primary'] ?? false,
+        ];
+
+        $deal->companies()->syncWithoutDetaching([$company->id => $pivot]);
+
+        AssociationAuditor::recordAttach($deal, 'companies', $company->id, Company::class, $pivot);
+
+        return response()->json(['data' => $deal->companies()->withPivot('role', 'is_primary')->get()]);
+    }
+
+    public function detachCompany(Request $request, int $id, int $companyId): JsonResponse
+    {
+        $deal = Deal::query()->findOrFail($id);
+        $deal->companies()->detach($companyId);
+
+        AssociationAuditor::recordDetach($deal, 'companies', $companyId, Company::class);
+
+        return response()->json(null, 204);
+    }
+
+    public function updateCompanyAssoc(Request $request, int $id, int $companyId): JsonResponse
+    {
+        $data = $request->validate([
+            'role' => ['in:customer,partner,reseller'],
+            'is_primary' => ['boolean'],
+        ]);
+
+        $deal = Deal::query()->findOrFail($id);
+        $deal->companies()->updateExistingPivot($companyId, $data);
+
+        return response()->json(['data' => $deal->companies()->withPivot('role', 'is_primary')->get()]);
     }
 }

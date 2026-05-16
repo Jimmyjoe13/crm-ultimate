@@ -53,10 +53,24 @@ Route::prefix('v1')->group(function (): void {
         });
 
         Route::apiResource('companies', CompanyController::class);
+        Route::post('/companies/{company}/contacts', [CompanyController::class, 'attachContact']);
+        Route::delete('/companies/{company}/contacts/{contact}', [CompanyController::class, 'detachContact']);
+        Route::patch('/companies/{company}/contacts/{contact}', [CompanyController::class, 'updateContactAssoc']);
+
         Route::apiResource('contacts', ContactController::class);
+        Route::post('/contacts/{contact}/companies', [ContactController::class, 'attachCompany']);
+        Route::delete('/contacts/{contact}/companies/{company}', [ContactController::class, 'detachCompany']);
+        Route::patch('/contacts/{contact}/companies/{company}', [ContactController::class, 'updateCompanyAssoc']);
+
         Route::get('/deals/board', [DealController::class, 'board']);
         Route::apiResource('deals', DealController::class);
         Route::post('/deals/{deal}/move', [DealController::class, 'move']);
+        Route::post('/deals/{deal}/contacts', [DealController::class, 'attachContact']);
+        Route::delete('/deals/{deal}/contacts/{contact}', [DealController::class, 'detachContact']);
+        Route::patch('/deals/{deal}/contacts/{contact}', [DealController::class, 'updateContactAssoc']);
+        Route::post('/deals/{deal}/companies', [DealController::class, 'attachCompany']);
+        Route::delete('/deals/{deal}/companies/{company}', [DealController::class, 'detachCompany']);
+        Route::patch('/deals/{deal}/companies/{company}', [DealController::class, 'updateCompanyAssoc']);
         Route::get('/activities/due', [ActivityController::class, 'due']);
         Route::apiResource('activities', ActivityController::class);
         Route::apiResource('tasks', TaskController::class)->only(['index', 'store', 'show', 'update', 'destroy']);

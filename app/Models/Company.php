@@ -3,16 +3,18 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasLifecycle;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Company extends Model
 {
     use Auditable;
     use HasFactory;
+    use HasLifecycle;
     use SoftDeletes;
 
     protected $fillable = [
@@ -23,6 +25,8 @@ class Company extends Model
         'website',
         'city',
         'country',
+        'lifecycle_stage',
+        'lead_status',
         'owner_id',
         'custom_values',
     ];
@@ -39,13 +43,17 @@ class Company extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function contacts(): HasMany
+    public function contacts(): BelongsToMany
     {
-        return $this->hasMany(Contact::class);
+        return $this->belongsToMany(Contact::class, 'contact_company')
+            ->withPivot('role', 'is_primary')
+            ->withTimestamps();
     }
 
-    public function deals(): HasMany
+    public function deals(): BelongsToMany
     {
-        return $this->hasMany(Deal::class);
+        return $this->belongsToMany(Deal::class, 'deal_company')
+            ->withPivot('role', 'is_primary')
+            ->withTimestamps();
     }
 }

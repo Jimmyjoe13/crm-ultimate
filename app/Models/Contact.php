@@ -3,15 +3,18 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasLifecycle;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Contact extends Model
 {
     use Auditable;
     use HasFactory;
+    use HasLifecycle;
     use SoftDeletes;
 
     protected $fillable = [
@@ -20,7 +23,8 @@ class Contact extends Model
         'email',
         'phone',
         'job_title',
-        'company_id',
+        'lifecycle_stage',
+        'lead_status',
         'owner_id',
         'custom_values',
     ];
@@ -32,9 +36,26 @@ class Contact extends Model
         ];
     }
 
-    public function company(): BelongsTo
+    public function companies(): BelongsToMany
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsToMany(Company::class, 'contact_company')
+            ->withPivot('role', 'is_primary')
+            ->withTimestamps();
+    }
+
+    public function primaryCompany(): BelongsToMany
+    {
+        return $this->belongsToMany(Company::class, 'contact_company')
+            ->withPivot('role', 'is_primary')
+            ->withTimestamps()
+            ->wherePivot('is_primary', true);
+    }
+
+    public function deals(): BelongsToMany
+    {
+        return $this->belongsToMany(Deal::class, 'deal_contact')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     public function owner(): BelongsTo

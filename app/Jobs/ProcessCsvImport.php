@@ -18,7 +18,7 @@ class ProcessCsvImport implements ShouldQueue
 
     /**
      * Maps common/French CSV header names to DB column names, per entity type.
-     * Keys are lowercase+trimmed. Applied after BOM strip and basic normalization.
+     * Keys are lowercase+trimmed.
      */
     private const COLUMN_MAPS = [
         'contact' => [
@@ -37,6 +37,8 @@ class ProcessCsvImport implements ShouldQueue
             'job title' => 'job_title', 'intitulé' => 'job_title', 'intitule' => 'job_title',
             'metier' => 'job_title', 'métier' => 'job_title',
             'proprietaire' => 'owner_id', 'propriétaire' => 'owner_id',
+            'cycle de vie' => 'lifecycle_stage', 'lifecycle' => 'lifecycle_stage',
+            'statut lead' => 'lead_status', 'lead status' => 'lead_status',
         ],
         'company' => [
             'nom' => 'name', 'company' => 'name', 'entreprise' => 'name',
@@ -50,6 +52,8 @@ class ProcessCsvImport implements ShouldQueue
             'tel' => 'phone', 'tél' => 'phone', 'téléphone' => 'phone', 'telephone' => 'phone',
             'ville' => 'city', 'pays' => 'country',
             'proprietaire' => 'owner_id', 'propriétaire' => 'owner_id',
+            'cycle de vie' => 'lifecycle_stage', 'lifecycle' => 'lifecycle_stage',
+            'statut lead' => 'lead_status',
         ],
         'deal' => [
             'nom' => 'name', 'opportunite' => 'name', 'opportunité' => 'name',
@@ -61,11 +65,22 @@ class ProcessCsvImport implements ShouldQueue
         ],
     ];
 
-    /** Duplicate check field(s) per entity type: null = no dedup for that entity */
     private const DUPE_KEYS = [
         'contact' => 'email',
         'company' => 'domain',
-        'deal' => null, // compound key handled separately
+        'deal' => null,
+    ];
+
+    // Virtual __company_* field prefixes extracted before fillable filter
+    private const COMPANY_VIRTUAL_FIELDS = [
+        '__company_name',
+        '__company_domain',
+        '__company_industry',
+        '__company_phone',
+        '__company_website',
+        '__company_city',
+        '__company_country',
+        '__company_lifecycle',
     ];
 
     public static function getColumnMaps(string $entityType): array
@@ -86,14 +101,12 @@ class ProcessCsvImport implements ShouldQueue
         $model = $this->modelFor($job->entity_type);
         $fillable = array_flip((new $model)->getFillable());
 
-        // Apply user-defined mapping if present, otherwise auto-detect
         if (! empty($job->mapping)) {
             $headers = $this->applyUserMapping($rawHeaders, $job->mapping);
         } else {
             $headers = $this->normalizeHeaders($rawHeaders, $job->entity_type);
         }
 
-        // Pre-load existing keys for fast duplicate detection
         $existing = $this->loadExistingKeys($job->entity_type);
 
         $errors = [];
@@ -116,10 +129,12 @@ class ProcessCsvImport implements ShouldQueue
 
             $combined = array_combine($headers, $row);
 
-            // Virtual field: resolve company name → company_id before fillable filter
-            $companyName = null;
-            if (isset($combined['__company_name']) && $combined['__company_name'] !== '') {
-                $companyName = $combined['__company_name'];
+            // Extract all virtual __company_* fields before fillable filter
+            $companyPayload = [];
+            foreach (self::COMPANY_VIRTUAL_FIELDS as $vf) {
+                if (isset($combined[$vf]) && $combined[$vf] !== '') {
+                    $companyPayload[$vf] = $combined[$vf];
+                }
             }
 
             $payload = array_filter(
@@ -127,7 +142,7 @@ class ProcessCsvImport implements ShouldQueue
                 fn ($v) => $v !== '' && $v !== null
             );
 
-            if (empty($payload) && $companyName === null) {
+            if (empty($payload) && empty($companyPayload)) {
                 $failed++;
                 if (count($errors) < 100) {
                     $errors[] = ['row' => $processed, 'message' => 'Aucun champ reconnu — vérifiez les en-têtes CSV.'];
@@ -140,10 +155,10 @@ class ProcessCsvImport implements ShouldQueue
                 $payload['owner_id'] = $job->user_id;
             }
 
-            // Resolve company name → ID (creates company if it doesn't exist)
-            if ($companyName !== null && $job->entity_type === 'contact') {
-                $company = Company::query()->firstOrCreate(['name' => $companyName]);
-                $payload['company_id'] = $company->id;
+            // Resolve __company_* → company record, then attach via pivot
+            $attachCompanyId = null;
+            if (! empty($companyPayload) && $job->entity_type === 'contact') {
+                $attachCompanyId = $this->resolveCompany($companyPayload);
             }
 
             // Duplicate detection
@@ -154,9 +169,12 @@ class ProcessCsvImport implements ShouldQueue
                 continue;
             }
 
-            $buffer[] = ['row' => $processed, 'payload' => $payload];
+            $buffer[] = [
+                'row' => $processed,
+                'payload' => $payload,
+                'attachCompanyId' => $attachCompanyId,
+            ];
 
-            // Track to also catch intra-batch duplicates
             if ($dupeKey !== null) {
                 $existing[$dupeKey] = true;
             }
@@ -183,14 +201,62 @@ class ProcessCsvImport implements ShouldQueue
         ]);
     }
 
+    private function resolveCompany(array $companyPayload): int
+    {
+        // Build the company core payload (strip __ prefix)
+        $coreFields = [
+            '__company_name' => 'name',
+            '__company_domain' => 'domain',
+            '__company_industry' => 'industry',
+            '__company_phone' => 'phone',
+            '__company_website' => 'website',
+            '__company_city' => 'city',
+            '__company_country' => 'country',
+            '__company_lifecycle' => 'lifecycle_stage',
+        ];
+
+        $mapped = [];
+        foreach ($coreFields as $virtual => $col) {
+            if (isset($companyPayload[$virtual]) && $companyPayload[$virtual] !== '') {
+                $mapped[$col] = $companyPayload[$virtual];
+            }
+        }
+
+        if (empty($mapped)) {
+            return 0;
+        }
+
+        // Prefer domain as unique match key, fall back to name
+        $matchKey = isset($mapped['domain'])
+            ? ['domain' => $mapped['domain']]
+            : ['name' => $mapped['name'] ?? 'Unknown'];
+
+        $company = Company::query()->firstOrCreate($matchKey, $mapped);
+
+        // Enrich with any newly discovered fields
+        $toUpdate = array_filter($mapped, fn ($v, $k) => ! isset($matchKey[$k]) && $v !== '', ARRAY_FILTER_USE_BOTH);
+        if (! empty($toUpdate)) {
+            $company->fill($toUpdate)->save();
+        }
+
+        return $company->id;
+    }
+
     private function flushBuffer(array $buffer, string $model, int &$failed, array &$errors): void
     {
         // Each create is independent — no wrapping transaction.
         // PostgreSQL aborts the whole transaction on any error, so wrapping
         // a batch in one transaction would silently kill all rows after the first failure.
-        foreach ($buffer as ['row' => $row, 'payload' => $payload]) {
+        foreach ($buffer as ['row' => $row, 'payload' => $payload, 'attachCompanyId' => $attachCompanyId]) {
             try {
-                $model::query()->create($payload);
+                $record = $model::query()->create($payload);
+
+                if ($attachCompanyId && $model === Contact::class) {
+                    $record->companies()->attach($attachCompanyId, [
+                        'role' => 'employee',
+                        'is_primary' => true,
+                    ]);
+                }
             } catch (\Throwable $e) {
                 $failed++;
                 if (count($errors) < 100) {
@@ -205,8 +271,7 @@ class ProcessCsvImport implements ShouldQueue
         return match ($entityType) {
             'contact' => Contact::query()->whereNotNull('email')->pluck('email')->flip()->toArray(),
             'company' => Company::query()->whereNotNull('domain')->pluck('domain')->flip()->toArray(),
-            'deal' => Deal::query()->selectRaw("name || '||' || COALESCE(company_id::text, '') AS k")
-                ->pluck('k')->flip()->toArray(),
+            'deal' => Deal::query()->pluck('name')->flip()->toArray(),
             default => [],
         };
     }
@@ -216,17 +281,11 @@ class ProcessCsvImport implements ShouldQueue
         return match ($entityType) {
             'contact' => isset($payload['email']) && $payload['email'] !== '' ? $payload['email'] : null,
             'company' => isset($payload['domain']) && $payload['domain'] !== '' ? $payload['domain'] : null,
-            'deal' => isset($payload['name'])
-                ? ($payload['name'].'||'.($payload['company_id'] ?? ''))
-                : null,
+            'deal' => $payload['name'] ?? null,
             default => null,
         };
     }
 
-    /**
-     * Apply a user-provided mapping: { "CSV header" => "field_key" | null }.
-     * Headers mapped to null are replaced with a placeholder that won't be in $fillable.
-     */
     private function applyUserMapping(array $rawHeaders, array $mapping): array
     {
         return array_map(function (string $header) use ($mapping): string {
@@ -236,7 +295,6 @@ class ProcessCsvImport implements ShouldQueue
                 return $mapping[$header] ?? '__ignored_'.md5($header);
             }
 
-            // Fallback to snake_case for unmapped headers
             $lower = mb_strtolower(trim($header));
 
             return preg_replace('/[\s\-\.]+/', '_', $lower);

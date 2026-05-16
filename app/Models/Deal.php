@@ -6,6 +6,7 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Deal extends Model
@@ -20,8 +21,6 @@ class Deal extends Model
         'currency',
         'close_date',
         'status',
-        'company_id',
-        'contact_id',
         'pipeline_id',
         'pipeline_stage_id',
         'owner_id',
@@ -37,14 +36,34 @@ class Deal extends Model
         ];
     }
 
-    public function company(): BelongsTo
+    public function companies(): BelongsToMany
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsToMany(Company::class, 'deal_company')
+            ->withPivot('role', 'is_primary')
+            ->withTimestamps();
     }
 
-    public function contact(): BelongsTo
+    public function primaryCompany(): BelongsToMany
     {
-        return $this->belongsTo(Contact::class);
+        return $this->belongsToMany(Company::class, 'deal_company')
+            ->withPivot('role', 'is_primary')
+            ->withTimestamps()
+            ->wherePivot('is_primary', true);
+    }
+
+    public function contacts(): BelongsToMany
+    {
+        return $this->belongsToMany(Contact::class, 'deal_contact')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function primaryContact(): BelongsToMany
+    {
+        return $this->belongsToMany(Contact::class, 'deal_contact')
+            ->withPivot('role')
+            ->withTimestamps()
+            ->wherePivot('role', 'primary');
     }
 
     public function pipeline(): BelongsTo

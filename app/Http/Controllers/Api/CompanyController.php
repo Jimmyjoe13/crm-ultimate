@@ -7,7 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\AuditLog;
 use App\Models\Company;
+use App\Models\Contact;
+use App\Services\AssociationAuditor;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CompanyController extends Controller
 {
@@ -29,6 +32,8 @@ class CompanyController extends Controller
             'website' => ['nullable', 'url', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],
             'country' => ['nullable', 'string', 'max:255'],
+            'lifecycle_stage' => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+            'lead_status' => ['nullable', 'in:new,open,in_progress,connected,unqualified,bad_fit'],
             'owner_id' => ['nullable', 'exists:users,id'],
             'custom_values' => ['array'],
         ];
@@ -54,5 +59,53 @@ class CompanyController extends Controller
                 ->limit(25)
                 ->get(),
         ]);
+    }
+
+    // ── Association endpoints ────────────────────────────────────────────────
+
+    public function attachContact(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'contact_id' => ['required', 'exists:contacts,id'],
+            'role' => ['in:employee,decision_maker,influencer,former'],
+            'is_primary' => ['boolean'],
+        ]);
+
+        $company = Company::query()->findOrFail($id);
+        $contact = Contact::query()->findOrFail($data['contact_id']);
+
+        $pivot = [
+            'role' => $data['role'] ?? 'employee',
+            'is_primary' => $data['is_primary'] ?? false,
+        ];
+
+        $company->contacts()->syncWithoutDetaching([$contact->id => $pivot]);
+
+        AssociationAuditor::recordAttach($company, 'contacts', $contact->id, Contact::class, $pivot);
+
+        return response()->json(['data' => $company->contacts()->withPivot('role', 'is_primary')->get()]);
+    }
+
+    public function detachContact(Request $request, int $id, int $contactId): JsonResponse
+    {
+        $company = Company::query()->findOrFail($id);
+        $company->contacts()->detach($contactId);
+
+        AssociationAuditor::recordDetach($company, 'contacts', $contactId, Contact::class);
+
+        return response()->json(null, 204);
+    }
+
+    public function updateContactAssoc(Request $request, int $id, int $contactId): JsonResponse
+    {
+        $data = $request->validate([
+            'role' => ['in:employee,decision_maker,influencer,former'],
+            'is_primary' => ['boolean'],
+        ]);
+
+        $company = Company::query()->findOrFail($id);
+        $company->contacts()->updateExistingPivot($contactId, $data);
+
+        return response()->json(['data' => $company->contacts()->withPivot('role', 'is_primary')->get()]);
     }
 }

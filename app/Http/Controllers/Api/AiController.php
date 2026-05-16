@@ -21,7 +21,7 @@ class AiController extends Controller
     {
         return $this->respond('summarize-deal', 'deal', $id, function () use ($id) {
             $deal = Deal::query()
-                ->with(['company', 'contact', 'pipeline', 'stage', 'owner'])
+                ->with(['companies', 'contacts', 'pipeline', 'stage', 'owner'])
                 ->findOrFail($id);
 
             $activities = Activity::query()
@@ -50,7 +50,7 @@ class AiController extends Controller
     {
         return $this->respond('summarize-contact', 'contact', $id, function () use ($id) {
             $contact = Contact::query()
-                ->with(['company', 'owner'])
+                ->with(['companies', 'owner'])
                 ->findOrFail($id);
 
             $activities = Activity::query()
@@ -72,7 +72,7 @@ class AiController extends Controller
     {
         return $this->respond('next-action-deal', 'deal', $id, function () use ($id) {
             $deal = Deal::query()
-                ->with(['company', 'contact', 'pipeline', 'stage', 'owner'])
+                ->with(['companies', 'contacts', 'pipeline', 'stage', 'owner'])
                 ->findOrFail($id);
 
             $activities = Activity::query()
@@ -183,8 +183,8 @@ class AiController extends Controller
             "Statut : {$deal->status}",
             'Étape : '.($deal->stage?->name ?? 'N/A').' (probabilité : '.($deal->stage?->probability ?? 0).'%)',
             'Pipeline : '.($deal->pipeline?->name ?? 'N/A'),
-            'Entreprise : '.($deal->company?->name ?? 'Non renseignée'),
-            'Contact : '.($deal->contact ? "{$deal->contact->first_name} {$deal->contact->last_name}" : 'Non renseigné'),
+            'Entreprise : '.($deal->companies->first()?->name ?? 'Non renseignée'),
+            'Contact : '.($deal->contacts->first() ? "{$deal->contacts->first()->first_name} {$deal->contacts->first()->last_name}" : 'Non renseigné'),
             'Responsable : '.($deal->owner?->name ?? 'Non assigné'),
             'Date de clôture : '.($deal->close_date?->format('d/m/Y') ?? 'Non définie'),
             "Dernière modif : il y a {$daysOld} jour(s)",
@@ -217,7 +217,7 @@ class AiController extends Controller
             'Email : '.($contact->email ?? 'Non renseigné'),
             'Téléphone : '.($contact->phone ?? 'Non renseigné'),
             'Poste : '.($contact->job_title ?? 'Non renseigné'),
-            'Entreprise : '.($contact->company?->name ?? 'Non renseignée'),
+            'Entreprise : '.($contact->companies->first()?->name ?? 'Non renseignée'),
             'Responsable : '.($contact->owner?->name ?? 'Non assigné'),
         ];
 
