@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\PipelineController;
 use App\Http\Controllers\Api\PipelineStageController;
 use App\Http\Controllers\Api\SavedViewController;
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\SegmentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -78,7 +79,21 @@ Route::prefix('v1')->group(function (): void {
         Route::apiResource('tasks', TaskController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
         Route::apiResource('saved-views', SavedViewController::class);
 
+        // Segments — lecture pour tous les authentifiés
+        Route::get('/segments/fields/{entityType}', [SegmentController::class, 'fields']);
+        Route::get('/segments/{id}/members', [SegmentController::class, 'members']);
+        Route::get('/segments', [SegmentController::class, 'index']);
+        Route::get('/segments/{id}', [SegmentController::class, 'show']);
+
         Route::middleware('role:admin,manager')->group(function (): void {
+            // Segments — écriture réservée admin/manager
+            Route::post('/segments', [SegmentController::class, 'store']);
+            Route::put('/segments/{id}', [SegmentController::class, 'update']);
+            Route::patch('/segments/{id}', [SegmentController::class, 'update']);
+            Route::delete('/segments/{id}', [SegmentController::class, 'destroy']);
+            Route::post('/segments/{id}/refresh', [SegmentController::class, 'refreshCount']);
+            Route::post('/segments/preview', [SegmentController::class, 'preview']);
+
             Route::apiResource('pipelines', PipelineController::class);
             Route::apiResource('pipeline-stages', PipelineStageController::class);
             Route::apiResource('custom-fields', CustomFieldController::class);

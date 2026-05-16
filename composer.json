@@ -6,6 +6,7 @@
   "require": {
     "php": "^8.3",
     "laravel/framework": "^13.0",
+    "mallardduck/blade-lucide-icons": "^1.26",
     "predis/predis": "^3.0"
   },
   "require-dev": {

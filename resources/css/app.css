@@ -1,0 +1,353 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────
+   CSS CUSTOM PROPERTIES (design tokens)
+   Light mode = :root, dark = html.dark
+   ────────────────────────────────────────── */
+:root {
+    --bg:          #fafaf7;
+    --surface:     #ffffff;
+    --surface2:    #f5f4f0;
+    --border:      #e7e5df;
+    --borderS:     #d4d1c8;
+    --text:        #1a1a17;
+    --text2:       #5e5c55;
+    --text3:       #92908a;
+    --accent:      #ef6a2a;
+    --accent-h:    #d85816;
+    --accent-soft: #fff3eb;
+    --ok:          #2f8a5f;
+    --ok-soft:     #e1f2e9;
+    --warn:        #d4a017;
+    --warn-soft:   #fbf3dc;
+    --err:         #c63d2f;
+    --err-soft:    #fce8e5;
+    --info:        #2a5fb4;
+    --info-soft:   #e1eaf7;
+    --shadow-card: 0 1px 2px rgba(20,20,15,0.04), 0 0 0 1px var(--border);
+    --shadow-pop:  0 12px 32px -8px rgba(20,20,15,0.18), 0 0 0 1px var(--border);
+}
+
+html.dark {
+    --bg:          #0e0e0c;
+    --surface:     #181815;
+    --surface2:    #232220;
+    --border:      #2e2c28;
+    --borderS:     #3d3a35;
+    --text:        #f4f1ea;
+    --text2:       #a8a59b;
+    --text3:       #6e6a60;
+    --accent-soft: rgba(239,106,42,0.14);
+    --ok-soft:     rgba(47,138,95,0.18);
+    --warn-soft:   rgba(212,160,23,0.18);
+    --err-soft:    rgba(198,61,47,0.18);
+    --info-soft:   rgba(42,95,180,0.20);
+    --shadow-card: 0 0 0 1px var(--border);
+    --shadow-pop:  0 16px 40px -10px rgba(0,0,0,0.6), 0 0 0 1px var(--border);
+}
+
+/* ──────────────────────────────────────────
+   BASE
+   ────────────────────────────────────────── */
+@layer base {
+    html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-size: 16px;
+        line-height: 1.45;
+    }
+    h1, h2, h3, .display {
+        font-family: 'Caveat', cursive;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+    h1 { font-size: 36px; line-height: 1.05; }
+    h2 { font-size: 28px; line-height: 1.1; }
+    h3 { font-size: 22px; line-height: 1.15; }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--borderS); }
+
+    svg.ic {
+        width: 16px; height: 16px;
+        stroke: currentColor; stroke-width: 1.6;
+        fill: none; stroke-linecap: round; stroke-linejoin: round;
+    }
+}
+
+/* ──────────────────────────────────────────
+   UTILITY CLASSES (CSS-var driven)
+   Tailwind can't handle dynamic CSS vars in dark mode the same way
+   ────────────────────────────────────────── */
+.bg-surface   { background: var(--surface) !important; }
+.bg-surface2  { background: var(--surface2) !important; }
+.bg-bg        { background: var(--bg) !important; }
+.text-primary   { color: var(--text) !important; }
+.text-secondary { color: var(--text2) !important; }
+.text-tertiary  { color: var(--text3) !important; }
+.border-default { border-color: var(--border) !important; }
+.border-strong  { border-color: var(--borderS) !important; }
+.shadow-card    { box-shadow: var(--shadow-card) !important; }
+.shadow-pop     { box-shadow: var(--shadow-pop) !important; }
+
+/* ──────────────────────────────────────────
+   COMPONENTS
+   ────────────────────────────────────────── */
+@layer components {
+
+    /* ── kbd ── */
+    .kbd {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10.5px;
+        padding: 1px 5px;
+        border: 1px solid var(--border);
+        border-bottom-width: 1.5px;
+        border-radius: 4px;
+        background: var(--surface2);
+        color: var(--text2);
+    }
+
+    /* ── mono-label ── */
+    .mono-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text3);
+    }
+
+    /* ── number styles ── */
+    .num      { font-family: 'Kalam', cursive; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+    .num-mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+    /* ── chip / badge ── */
+    .chip {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        background: var(--surface2);
+        color: var(--text2);
+        border: 1px solid var(--border);
+        white-space: nowrap;
+    }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); display: inline-block; }
+    .chip.accent { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+    .chip.accent .chip-dot { background: var(--accent); }
+    .chip.ok    { background: var(--ok-soft);   color: var(--ok);   border-color: transparent; }
+    .chip.ok .chip-dot { background: var(--ok); }
+    .chip.err   { background: var(--err-soft);  color: var(--err);  border-color: transparent; }
+    .chip.err .chip-dot { background: var(--err); }
+    .chip.warn  { background: var(--warn-soft); color: #8a6700;     border-color: transparent; }
+    html.dark .chip.warn { color: #f3c948; }
+    .chip.info  { background: var(--info-soft); color: var(--info); border-color: transparent; }
+    .chip.solid { background: var(--text); color: var(--bg); border-color: transparent; }
+
+    /* ── btn ── */
+    .btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 12px;
+        font-size: 13px; font-weight: 500;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+        transition: background .12s, border-color .12s;
+        cursor: pointer;
+    }
+    .btn:hover { background: var(--surface2); }
+    .btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn.primary:hover { background: var(--accent-h); border-color: var(--accent-h); }
+    .btn.ghost { background: transparent; border-color: transparent; color: var(--text2); }
+    .btn.ghost:hover { background: var(--surface2); color: var(--text); }
+    .btn.sm { padding: 4px 8px; font-size: 12px; }
+    .btn.icon { padding: 6px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── avatar ── */
+    .av {
+        width: 24px; height: 24px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 10.5px; font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .av.sm { width: 20px; height: 20px; font-size: 9.5px; }
+    .av.lg { width: 32px; height: 32px; font-size: 12px; }
+    .av.sq { border-radius: 6px; }
+    .av.c1 { background: #ffe7d8; color: #c44e10; border-color: transparent; }
+    .av.c2 { background: #d6efe0; color: #1d6b46; border-color: transparent; }
+    .av.c3 { background: #dde8fa; color: #1f4b94; border-color: transparent; }
+    .av.c4 { background: #f4e0f7; color: #7d2a93; border-color: transparent; }
+    .av.c5 { background: #fbf3dc; color: #8a6700; border-color: transparent; }
+    html.dark .av.c1 { background: #4a2410; color: #ffb084; }
+    html.dark .av.c2 { background: #1a3a28; color: #8de0b3; }
+    html.dark .av.c3 { background: #1a2a4a; color: #9ab8e8; }
+    html.dark .av.c4 { background: #3a1a44; color: #d99eea; }
+    html.dark .av.c5 { background: #3a2e10; color: #f3c948; }
+
+    /* ── card ── */
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+    }
+    .card-h {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .card-h .title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .card-h .meta  { font-size: 11.5px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+    /* ── progress bar ── */
+    .pbar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .pbar > div { height: 100%; background: var(--text); border-radius: 3px; }
+    .pbar.accent > div { background: var(--accent); }
+    .pbar.ok > div { background: var(--ok); }
+
+    /* ── checkbox ── */
+    .ckb {
+        width: 14px; height: 14px;
+        border: 1.5px solid var(--borderS);
+        border-radius: 4px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: var(--surface);
+        flex-shrink: 0;
+    }
+    .ckb.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+    /* ── table ── */
+    table.t { width: 100%; border-collapse: separate; border-spacing: 0; }
+    table.t th, table.t td { padding: 10px 14px; text-align: left; }
+    table.t thead th {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text3);
+        font-weight: 500;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+    }
+    table.t tbody tr { border-bottom: 1px solid var(--border); }
+    table.t tbody tr:hover { background: var(--surface2); cursor: pointer; }
+    table.t tbody td { font-size: 13px; vertical-align: middle; }
+    table.t tbody tr:last-child td { border-bottom: none; }
+
+    /* ── rail icon ── */
+    .rail-ic {
+        width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 9px;
+        color: var(--text2);
+        font-size: 16px;
+        transition: background .12s, color .12s;
+        cursor: pointer;
+        position: relative;
+    }
+    .rail-ic:hover { background: var(--surface2); color: var(--text); }
+    .rail-ic.on { background: var(--accent); color: white; }
+    .rail-ic.on:hover { background: var(--accent-h); color: white; }
+    .rail-ic .tt {
+        position: absolute; left: 100%; margin-left: 12px; top: 50%; transform: translateY(-50%);
+        background: var(--text); color: var(--bg);
+        font-size: 11.5px; padding: 4px 9px;
+        border-radius: 6px; white-space: nowrap;
+        opacity: 0; pointer-events: none; transition: opacity .12s;
+        font-family: 'JetBrains Mono', monospace;
+        z-index: 30;
+    }
+    .rail-ic:hover .tt { opacity: 1; }
+
+    /* ── timeline ── */
+    .tl-item { display: grid; grid-template-columns: 80px 24px 1fr; gap: 0; align-items: flex-start; padding: 12px 0; }
+    .tl-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); padding-top: 2px; }
+    .tl-axis { position: relative; }
+    .tl-axis::before {
+        content: ''; position: absolute; left: 11px; top: 8px; bottom: -12px;
+        width: 1px; background: var(--border);
+    }
+    .tl-item:last-child .tl-axis::before { display: none; }
+    .tl-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: var(--text); border: 2px solid var(--bg);
+        box-shadow: 0 0 0 1px var(--border);
+        margin-left: 7px; margin-top: 4px;
+    }
+    .tl-dot.accent { background: var(--accent); }
+    .tl-dot.ok     { background: var(--ok); }
+    .tl-dot.info   { background: var(--info); }
+    .tl-content { padding-left: 10px; }
+    .tl-content .ti { font-size: 13px; color: var(--text); }
+    .tl-content .ti b { font-weight: 600; }
+    .tl-content .ts { font-size: 11.5px; color: var(--text3); margin-top: 1px; font-family: 'JetBrains Mono', monospace; }
+
+    /* ── kanban ── */
+    .k-col { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+    .k-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        cursor: grab;
+        transition: border-color .12s;
+    }
+    .k-card:hover { border-color: var(--borderS); }
+    .k-card.hot { border-left: 3px solid var(--accent); padding-left: 9px; }
+
+    /* ── KPI hero ── */
+    .kpi-hero {
+        background: linear-gradient(135deg, #ef6a2a 0%, #d85816 100%);
+        color: white;
+    }
+
+    /* ── form field ── */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+    .field input, .field select, .field textarea {
+        padding: 7px 10px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+        font-family: inherit;
+        transition: border-color .12s, box-shadow .12s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    /* ── select chevron ── */
+    .select-arrow {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2392908a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 28px;
+    }
+
+    /* ── delta arrows ── */
+    .delta-up { color: var(--ok); }
+    .delta-dn { color: var(--err); }
+
+    /* ── drawer backdrop ── */
+    .drawer-backdrop { background: rgba(20,20,15,0.45); }
+    html.dark .drawer-backdrop { background: rgba(0,0,0,0.65); }
+}
