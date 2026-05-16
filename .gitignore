@@ -14,3 +14,9 @@
 !/storage/framework/views/.gitkeep
 /storage/logs/*
 !/storage/logs/.gitkeep
+
+# Dev artifacts
+/.playwright-mcp/
+/*.png
+/*.zip
+/docs/
