@@ -137,6 +137,13 @@ class ImportController extends Controller
         return response()->json(['data' => ImportJob::query()->findOrFail($id)]);
     }
 
+    // Company-name column aliases that should auto-map to __company_name when importing contacts
+    private const COMPANY_NAME_ALIASES = [
+        'societe', 'société', 'entreprise', 'company', 'company_name',
+        'nom_entreprise', 'nom_societe', 'organization', 'organisation',
+        'account', 'account_name',
+    ];
+
     private function buildAutoMapping(array $rawHeaders, string $entityType): array
     {
         $columnMaps = ProcessCsvImport::getColumnMaps($entityType);
@@ -150,7 +157,10 @@ class ImportController extends Controller
             $lower = mb_strtolower(trim($header));
             $snake = preg_replace('/[\s\-\.]+/', '_', $lower);
 
-            if (isset($columnMaps[$lower])) {
+            // For contact imports, auto-suggest company-name columns → __company_name
+            if ($entityType === 'contact' && in_array($snake, self::COMPANY_NAME_ALIASES, true)) {
+                $mapping[$header] = '__company_name';
+            } elseif (isset($columnMaps[$lower])) {
                 $mapping[$header] = $columnMaps[$lower];
             } elseif (isset($columnMaps[$snake])) {
                 $mapping[$header] = $columnMaps[$snake];

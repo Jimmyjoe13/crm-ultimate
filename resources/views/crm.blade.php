@@ -764,6 +764,8 @@
             globalResults: null,
             importPreview: null,
             customFieldsCache: {},
+            totalRows: 0,
+            currentPage: 1,
         };
 
         function escapeHtml(value) {
@@ -855,6 +857,7 @@
             state.message = '';
             state.error = '';
             state.importPreview = null;
+            state.currentPage = 1;
             await loadCurrent();
         }
 
@@ -888,12 +891,15 @@
 
         async function loadList() {
             const resource = resources[state.current];
-            const params = new URLSearchParams({ per_page: 50 });
+            const params = new URLSearchParams({ per_page: 100, page: state.currentPage });
             if (state.search) {
                 params.set('search', state.search);
+                state.currentPage = 1;
+                params.set('page', 1);
             }
             const data = await request(`${resource.endpoint}?${params.toString()}`);
             state.rows = data.data || [];
+            state.totalRows = data.total ?? data.data?.length ?? 0;
 
             const entityType = { companies: 'company', contacts: 'contact', deals: 'deal' }[state.current];
             if (entityType && !state.customFieldsCache[entityType]) {
@@ -1032,8 +1038,15 @@
                     <div class="panel">
                         <div class="panel-head">
                             <h2>Liste</h2>
-                            <div style="display:flex;gap:0.5rem;align-items:center">
-                                <span class="status">${state.rows.length} element(s)</span>
+                            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+                                <span class="status">
+                                    ${state.rows.length} / ${state.totalRows} element(s)
+                                    ${state.totalRows > 100 ? `— page ${state.currentPage} / ${Math.ceil(state.totalRows / 100)}` : ''}
+                                </span>
+                                ${state.totalRows > 100 ? `
+                                    <button class="btn secondary" type="button" id="prevPageBtn" ${state.currentPage <= 1 ? 'disabled' : ''} style="font-size:0.78rem;padding:0.25rem 0.5rem">←</button>
+                                    <button class="btn secondary" type="button" id="nextPageBtn" ${state.rows.length < 100 ? 'disabled' : ''} style="font-size:0.78rem;padding:0.25rem 0.5rem">→</button>
+                                ` : ''}
                                 ${canImport ? '<button class="btn secondary" type="button" id="importToggleBtn" style="font-size:0.8rem;padding:0.3rem 0.7rem">↑ Importer CSV</button>' : ''}
                             </div>
                         </div>
@@ -1268,6 +1281,12 @@
                 await loadList();
                 renderShell();
             }, 350));
+            document.getElementById('prevPageBtn')?.addEventListener('click', async () => {
+                if (state.currentPage > 1) { state.currentPage--; await loadList(); renderShell(); }
+            });
+            document.getElementById('nextPageBtn')?.addEventListener('click', async () => {
+                if (state.rows.length >= 100) { state.currentPage++; await loadList(); renderShell(); }
+            });
             document.getElementById('importToggleBtn')?.addEventListener('click', () => {
                 const panel = document.getElementById('importPanel');
                 if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
