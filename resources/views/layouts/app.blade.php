@@ -21,5 +21,6 @@
 </head>
 <body>
 {{ $slot }}
+<x-toast-container />
 </body>
 </html>

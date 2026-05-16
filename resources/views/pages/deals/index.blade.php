@@ -23,7 +23,7 @@
 
 {{-- Filter bar --}}
 <div class="px-7 pb-3 flex items-center gap-2 flex-wrap">
-    <span class="chip solid num-mono">All · {{ $allCount }}</span>
+    <x-chip color="gray" :dot="true">All · {{ $allCount }}</x-chip>
     <span class="ml-auto text-xs text-tertiary font-mono">Sort: close date ↑</span>
 </div>
 

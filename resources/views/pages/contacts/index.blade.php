@@ -9,15 +9,15 @@
     </div>
     <div class="flex items-center gap-2">
         @if(in_array(auth()->user()?->role, ['admin','manager']))
-        <a href="/imports/contact/create" class="btn sm ghost">
-            <svg class="ic" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <x-button variant="ghost" size="sm" href="/imports/contact/create"
+                  icon='<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>'>
             Importer CSV
-        </a>
+        </x-button>
         @endif
         <form method="GET" action="{{ '/contacts' }}" class="flex items-center gap-2">
             <input type="text" name="search" value="{{ $search }}" placeholder="Rechercher…"
                    class="field" style="padding: 6px 10px; border: 1px solid var(--border); border-radius:7px; font-size:13px; background: var(--surface); color: var(--text);">
-            <button type="submit" class="btn sm">Chercher</button>
+            <x-button type="submit" size="sm">Chercher</x-button>
         </form>
     </div>
 </div>

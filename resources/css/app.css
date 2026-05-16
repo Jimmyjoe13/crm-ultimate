@@ -170,7 +170,10 @@ html.dark {
     .btn.primary:hover { background: var(--accent-h); border-color: var(--accent-h); }
     .btn.ghost { background: transparent; border-color: transparent; color: var(--text2); }
     .btn.ghost:hover { background: var(--surface2); color: var(--text); }
+    .btn.danger { background: var(--err); color: white; border-color: var(--err); }
+    .btn.danger:hover { background: #a8332a; border-color: #a8332a; }
     .btn.sm { padding: 4px 8px; font-size: 12px; }
+    .btn.lg { padding: 8px 16px; font-size: 14px; }
     .btn.icon { padding: 6px; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
