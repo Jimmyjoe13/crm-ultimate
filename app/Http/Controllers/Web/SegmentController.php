@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Segment;
 use App\Services\SegmentQueryEngine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SegmentController extends Controller
 {
@@ -153,6 +155,53 @@ class SegmentController extends Controller
 
         return redirect('/segments/' . $segment->id)
             ->with('success', "Segment « {$segment->name} » mis à jour.");
+    }
+
+    public function export(Segment $segment): StreamedResponse
+    {
+        $slug = Str::slug($segment->name);
+        $date = now()->format('Y-m-d');
+        $filename = "segment-{$slug}-{$date}.csv";
+
+        $members = $this->engine->buildQuery($segment)->with(
+            $segment->entity_type === 'contact' ? ['companies'] : []
+        )->get();
+
+        return response()->streamDownload(function () use ($members, $segment) {
+            $handle = fopen('php://output', 'w');
+
+            // UTF-8 BOM for Excel
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            if ($segment->entity_type === 'contact') {
+                fputcsv($handle, ['id', 'first_name', 'last_name', 'email', 'company', 'created_at']);
+                foreach ($members as $m) {
+                    fputcsv($handle, [
+                        $m->id,
+                        $m->first_name,
+                        $m->last_name,
+                        $m->email,
+                        $m->companies->first()?->name ?? '',
+                        $m->created_at?->toDateString(),
+                    ]);
+                }
+            } elseif ($segment->entity_type === 'company') {
+                fputcsv($handle, ['id', 'name', 'domain', 'industry', 'city', 'created_at']);
+                foreach ($members as $m) {
+                    fputcsv($handle, [$m->id, $m->name, $m->domain, $m->industry, $m->city, $m->created_at?->toDateString()]);
+                }
+            } else {
+                fputcsv($handle, ['id', 'name', 'amount', 'status', 'stage', 'created_at']);
+                foreach ($members as $m) {
+                    fputcsv($handle, [$m->id, $m->name, $m->amount, $m->status, $m->stage?->name ?? '', $m->created_at?->toDateString()]);
+                }
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
     }
 
     public function destroy(Segment $segment)

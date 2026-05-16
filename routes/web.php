@@ -50,6 +50,7 @@ Route::middleware('web.auth')->group(function () {
     Route::get('/segments/{segment}/edit',   [SegmentController::class, 'edit']);
     Route::put('/segments/{segment}',        [SegmentController::class, 'update']);
     Route::delete('/segments/{segment}',     [SegmentController::class, 'destroy']);
+    Route::get('/segments/{segment}/export', [SegmentController::class, 'export'])->name('segments.export');
 
     Route::get('/imports/{entityType}/create', [ImportController::class, 'create']);
     Route::post('/imports/preview',            [ImportController::class, 'preview']);
