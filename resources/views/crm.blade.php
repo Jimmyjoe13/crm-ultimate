@@ -597,6 +597,18 @@
         /* ── Import CSV ── */
         .import-panel { background: var(--soft); border: 1px solid var(--line); border-radius: 0; padding: 0.85rem 1.1rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
         .import-panel input[type=file] { padding: 0.25rem 0; }
+        /* ── Import mapping ── */
+        .import-step-bar { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.65rem; }
+        .import-step-bar .step { padding: 0.2rem 0.55rem; border-radius: 99px; border: 1px solid var(--line); }
+        .import-step-bar .step.active { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 700; }
+        .mapping-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.4rem; }
+        .mapping-table th { text-align: left; padding: 0.3rem 0.5rem; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        .mapping-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+        .mapping-table select { font-size: 0.79rem; padding: 0.18rem 0.4rem; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); max-width: 200px; width: 100%; }
+        .mapping-table .sample-val { color: var(--muted); font-size: 0.74rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mapping-actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; align-items: center; flex-wrap: wrap; }
+        /* ── Custom field inputs in forms ── */
+        .custom-fields-divider { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0.85rem 0 0.35rem; border-top: 1px solid var(--line); padding-top: 0.65rem; }
     </style>
 </head>
 <body>
@@ -699,6 +711,7 @@
             stages: {
                 label: 'Etapes',
                 icon: 'ET',
+                adminOnly: true,
                 endpoint: '/pipeline-stages',
                 title: row => row.name,
                 subtitle: row => `Pipeline ${row.pipeline_id} - ${row.probability || 0}%`,
@@ -712,6 +725,24 @@
                     ['is_lost', 'Perdue', 'select', false, ['0', '1']],
                 ],
                 details: ['id', 'pipeline_id', 'name', 'position', 'probability', 'is_won', 'is_lost'],
+            },
+            'custom-fields': {
+                label: 'Champs perso',
+                icon: 'CF',
+                adminOnly: true,
+                endpoint: '/custom-fields',
+                title: row => `${row.entity_type}: ${row.label}`,
+                subtitle: row => `${row.field_type}${row.is_required ? ' (requis)' : ''}`,
+                columns: ['id', 'entity_type', 'key', 'label', 'field_type'],
+                fields: [
+                    ['entity_type', 'Entite', 'select', true, ['company', 'contact', 'deal']],
+                    ['key', 'Cle (snake_case)', 'text', true],
+                    ['label', 'Libelle', 'text', true],
+                    ['field_type', 'Type', 'select', true, ['text', 'number', 'date', 'boolean', 'select']],
+                    ['is_required', 'Requis', 'select', false, ['0', '1']],
+                    ['position', 'Position', 'number'],
+                ],
+                details: ['id', 'entity_type', 'key', 'label', 'field_type', 'is_required', 'position'],
             },
         };
 
@@ -731,6 +762,8 @@
             dueTasks: [],
             globalSearch: '',
             globalResults: null,
+            importPreview: null,
+            customFieldsCache: {},
         };
 
         function escapeHtml(value) {
@@ -821,6 +854,7 @@
             state.selectedDetail = null;
             state.message = '';
             state.error = '';
+            state.importPreview = null;
             await loadCurrent();
         }
 
@@ -860,6 +894,20 @@
             }
             const data = await request(`${resource.endpoint}?${params.toString()}`);
             state.rows = data.data || [];
+
+            const entityType = { companies: 'company', contacts: 'contact', deals: 'deal' }[state.current];
+            if (entityType && !state.customFieldsCache[entityType]) {
+                loadCustomFields(entityType);
+            }
+        }
+
+        async function loadCustomFields(entityType) {
+            try {
+                const data = await request(`/custom-fields?entity_type=${entityType}&per_page=100`);
+                state.customFieldsCache[entityType] = data.data || [];
+            } catch (_) {
+                state.customFieldsCache[entityType] = [];
+            }
         }
 
         async function loadBoard() {
@@ -874,7 +922,7 @@
                     <aside class="sidebar">
                         <div class="brand"><span class="brand-mark">C</span><span>CRM Ultimate</span></div>
                         <nav class="nav">
-                            ${Object.entries(resources).map(([key, item]) => `
+                            ${Object.entries(resources).filter(([, item]) => !item.adminOnly || ['admin', 'manager'].includes(state.user?.role)).map(([key, item]) => `
                                 <button type="button" class="${key === state.current ? 'active' : ''}" data-nav="${key}">
                                     <span class="nav-icon">${escapeHtml(item.icon || item.label.slice(0, 2).toUpperCase())}</span>
                                     ${escapeHtml(item.label)}
@@ -1093,11 +1141,30 @@
         }
 
         function renderForm(resource, formId, values = {}) {
+            const entityType = { companies: 'company', contacts: 'contact', deals: 'deal' }[state.current];
+            const customFields = entityType ? (state.customFieldsCache[entityType] || []) : [];
+            const customValues = values.custom_values || {};
+            const customFieldsHtml = customFields.length
+                ? `<div class="custom-fields-divider">Champs personnalisés</div>${customFields.map(cf => renderCustomField(cf, customValues[cf.key])).join('')}`
+                : '';
             return `
                 <form id="${formId}">
                     ${resource.fields.map(([name, label, type, required, options]) => renderField(name, label, type, required, options, values[name])).join('')}
+                    ${customFieldsHtml}
                     <button class="btn" type="submit">${formId === 'editForm' ? 'Enregistrer' : 'Creer'}</button>
                 </form>`;
+        }
+
+        function renderCustomField(cf, value = '') {
+            const inputName = `custom_values[${cf.key}]`;
+            if (cf.field_type === 'boolean') {
+                return `<div class="field"><label>${escapeHtml(cf.label)}</label><select name="${inputName}"><option value="">—</option><option value="1" ${value == 1 ? 'selected' : ''}>Oui</option><option value="0" ${value == 0 && value !== '' ? 'selected' : ''}>Non</option></select></div>`;
+            }
+            if (cf.field_type === 'select' && Array.isArray(cf.options)) {
+                return `<div class="field"><label>${escapeHtml(cf.label)}</label><select name="${inputName}" ${cf.is_required ? 'required' : ''}><option value=""></option>${cf.options.map(o => `<option value="${escapeHtml(o)}" ${value === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select></div>`;
+            }
+            const inputType = cf.field_type === 'number' ? 'number' : cf.field_type === 'date' ? 'date' : 'text';
+            return `<div class="field"><label>${escapeHtml(cf.label)}</label><input name="${inputName}" type="${inputType}" value="${escapeHtml(value)}" ${cf.is_required ? 'required' : ''}></div>`;
         }
 
         function renderField(name, label, type, required, options, value = '') {
@@ -1205,7 +1272,9 @@
                 const panel = document.getElementById('importPanel');
                 if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
             });
-            document.getElementById('importForm')?.addEventListener('submit', submitImport);
+            document.getElementById('importForm')?.addEventListener('submit', previewImport);
+            const entityType = { companies: 'company', contacts: 'contact', deals: 'deal' }[state.current];
+            if (entityType) bindImportMappingEvents(entityType);
             document.getElementById('createForm')?.addEventListener('submit', createRecord);
             document.getElementById('editForm')?.addEventListener('submit', updateRecord);
             document.getElementById('activityForm')?.addEventListener('submit', createActivity);
@@ -1276,8 +1345,14 @@
                 if (value === '') {
                     continue;
                 }
+                const customMatch = key.match(/^custom_values\[(.+)\]$/);
+                if (customMatch) {
+                    if (!payload.custom_values) payload.custom_values = {};
+                    payload.custom_values[customMatch[1]] = value;
+                    continue;
+                }
                 const element = form.elements[key];
-                payload[key] = element.type === 'number' ? Number(value) : value;
+                payload[key] = element && element.type === 'number' ? Number(value) : value;
             }
             return payload;
         }
@@ -1365,36 +1440,126 @@
 
         function renderImportPanel() {
             const entityType = { companies: 'company', contacts: 'contact', deals: 'deal' }[state.current] || 'company';
+            const p = state.importPreview;
             return `
                 <div id="importPanel" class="import-panel" style="display:none">
-                    <form id="importForm" style="display:flex;align-items:flex-end;gap:0.75rem;flex-wrap:wrap">
-                        <div class="field" style="margin:0;flex:1;min-width:200px">
-                            <label style="font-size:0.8rem">Fichier CSV</label>
-                            <input type="file" name="file" accept=".csv,.txt" required>
-                        </div>
-                        <input type="hidden" name="entity_type" value="${entityType}">
-                        <button class="btn" type="submit" style="white-space:nowrap">Lancer l'import</button>
-                        <span id="importMsg" class="muted" style="font-size:0.82rem"></span>
-                    </form>
+                    ${p ? renderMappingStep(p, entityType) : renderUploadStep(entityType)}
                 </div>`;
         }
 
-        async function submitImport(event) {
+        function renderUploadStep(entityType) {
+            return `
+                <div class="import-step-bar">
+                    <span class="step active">1 Upload</span>
+                    <span>→</span>
+                    <span class="step">2 Mapping</span>
+                    <span>→</span>
+                    <span class="step">3 Import</span>
+                </div>
+                <form id="importForm" style="display:flex;align-items:flex-end;gap:0.75rem;flex-wrap:wrap">
+                    <div class="field" style="margin:0;flex:1;min-width:200px">
+                        <label style="font-size:0.8rem">Fichier CSV</label>
+                        <input type="file" name="file" accept=".csv,.txt" required>
+                    </div>
+                    <input type="hidden" name="entity_type" value="${entityType}">
+                    <button class="btn" type="submit" style="white-space:nowrap">Analyser →</button>
+                    <span id="importMsg" class="muted" style="font-size:0.82rem"></span>
+                </form>`;
+        }
+
+        function renderMappingStep(p, entityType) {
+            const opts = p.available_fields.map(f => `<option value="${escapeHtml(f.key)}">${escapeHtml(f.label)} (${f.type === 'custom' ? 'perso' : 'core'})</option>`).join('');
+            const rows = p.headers.map((header, i) => {
+                const mapped = p.auto_mapping[header] || '';
+                const samples = (p.sample_rows || []).map(r => escapeHtml(r[i] || '')).join(', ');
+                return `<tr>
+                    <td><strong>${escapeHtml(header)}</strong></td>
+                    <td>
+                        <select data-map-header="${escapeHtml(header)}">
+                            <option value="">(ignorer)</option>
+                            ${opts.replace(`value="${escapeHtml(mapped)}"`, `value="${escapeHtml(mapped)}" selected`)}
+                        </select>
+                    </td>
+                    <td class="sample-val" title="${samples}">${samples}</td>
+                </tr>`;
+            }).join('');
+            return `
+                <div class="import-step-bar">
+                    <span class="step">1 Upload</span>
+                    <span>→</span>
+                    <span class="step active">2 Mapping</span>
+                    <span>→</span>
+                    <span class="step">3 Import</span>
+                </div>
+                <table class="mapping-table">
+                    <thead><tr><th>Colonne CSV</th><th>Mapper vers</th><th>Aperçu</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="mapping-actions">
+                    <button class="btn" type="button" id="importConfirmBtn">Importer →</button>
+                    <button class="btn secondary" type="button" id="importResetBtn">← Recommencer</button>
+                    <span id="importMsg" class="muted" style="font-size:0.82rem"></span>
+                </div>`;
+        }
+
+        async function previewImport(event) {
             event.preventDefault();
             const msg = document.getElementById('importMsg');
             const btn = event.target.querySelector('button[type=submit]');
             msg.style.color = 'var(--muted)';
-            msg.textContent = 'Import en cours...';
+            msg.textContent = 'Analyse...';
             btn.disabled = true;
             try {
-                const data = await request('/imports', { method: 'POST', body: new FormData(event.target) });
-                msg.style.color = 'var(--ok)';
-                msg.textContent = `Job #${data.data.id} créé — ${data.data.status}. Rafraîchissez dans quelques secondes.`;
-                event.target.reset();
+                const data = await request('/imports/preview', { method: 'POST', body: new FormData(event.target) });
+                state.importPreview = data;
+                const panel = document.getElementById('importPanel');
+                if (panel) {
+                    panel.innerHTML = renderMappingStep(data, event.target.querySelector('[name=entity_type]').value);
+                    bindImportMappingEvents(event.target.querySelector('[name=entity_type]').value);
+                }
             } catch (err) {
                 msg.style.color = 'var(--danger)';
                 msg.textContent = `Erreur : ${err.message}`;
-            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function bindImportMappingEvents(entityType) {
+            document.getElementById('importResetBtn')?.addEventListener('click', () => {
+                state.importPreview = null;
+                const panel = document.getElementById('importPanel');
+                if (panel) panel.innerHTML = renderUploadStep(entityType);
+                document.getElementById('importForm')?.addEventListener('submit', previewImport);
+            });
+            document.getElementById('importConfirmBtn')?.addEventListener('click', () => finishImport(entityType));
+        }
+
+        async function finishImport(entityType) {
+            const msg = document.getElementById('importMsg');
+            const btn = document.getElementById('importConfirmBtn');
+            msg.style.color = 'var(--muted)';
+            msg.textContent = 'Lancement...';
+            btn.disabled = true;
+            const mapping = {};
+            document.querySelectorAll('[data-map-header]').forEach(sel => {
+                mapping[sel.dataset.mapHeader] = sel.value || null;
+            });
+            try {
+                const data = await request('/imports', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        entity_type: entityType,
+                        preview_token: state.importPreview.preview_token,
+                        mapping,
+                    }),
+                });
+                msg.style.color = 'var(--ok)';
+                msg.textContent = `Job #${data.data.id} créé. Rafraîchissez dans quelques instants.`;
+                state.importPreview = null;
+                btn.disabled = false;
+            } catch (err) {
+                msg.style.color = 'var(--danger)';
+                msg.textContent = `Erreur : ${err.message}`;
                 btn.disabled = false;
             }
         }

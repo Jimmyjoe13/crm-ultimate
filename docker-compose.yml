@@ -19,7 +19,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    command: php artisan queue:work --sleep=1 --tries=3
+    command: php artisan queue:work --sleep=1 --tries=3 --timeout=600 --memory=512
     env_file:
       - path: .env
         required: false

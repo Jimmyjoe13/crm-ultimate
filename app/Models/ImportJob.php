@@ -18,6 +18,8 @@ class ImportJob extends Model
         'total_rows',
         'processed_rows',
         'failed_rows',
+        'duplicates_skipped',
+        'mapping',
         'errors',
     ];
 
@@ -25,6 +27,7 @@ class ImportJob extends Model
     {
         return [
             'errors' => 'array',
+            'mapping' => 'array',
         ];
     }
 

@@ -66,6 +66,7 @@ Route::prefix('v1')->group(function (): void {
             Route::apiResource('pipelines', PipelineController::class);
             Route::apiResource('pipeline-stages', PipelineStageController::class);
             Route::apiResource('custom-fields', CustomFieldController::class);
+            Route::post('/imports/preview', [ImportController::class, 'preview']);
             Route::apiResource('imports', ImportController::class)->only(['index', 'store', 'show']);
             Route::apiResource('exports', ExportController::class)->only(['index', 'store', 'show']);
             Route::get('/exports/{export}/download', [ExportController::class, 'download']);
