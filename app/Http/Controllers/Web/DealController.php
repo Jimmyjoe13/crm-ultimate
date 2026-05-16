@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Activity;
 use App\Models\Deal;
 use App\Models\PipelineStage;
 use Illuminate\Http\Request;
@@ -58,5 +59,53 @@ class DealController extends Controller
         ]);
 
         return redirect()->route('deals.index')->with('success', "Deal « {$deal->name} » créé.");
+    }
+
+    public function show(Deal $deal)
+    {
+        $deal->load('stage', 'companies', 'contacts', 'owner');
+
+        $stages = PipelineStage::orderBy('position')
+            ->where('is_won', false)
+            ->where('is_lost', false)
+            ->get();
+
+        $activities = Activity::where('subject_type', Deal::class)
+            ->where('subject_id', $deal->id)
+            ->with('owner')
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        // Background deals list (dimmed behind drawer)
+        $bgDeals = Deal::with('stage', 'companies', 'owner')
+            ->where('status', 'open')
+            ->orderBy('close_date')
+            ->limit(10)
+            ->get();
+
+        return view('pages.deals.show', compact('deal', 'stages', 'activities', 'bgDeals'));
+    }
+
+    public function markWon(Deal $deal)
+    {
+        $wonStage = PipelineStage::where('is_won', true)->first();
+        $deal->update([
+            'status'            => 'won',
+            'pipeline_stage_id' => $wonStage?->id ?? $deal->pipeline_stage_id,
+        ]);
+
+        return redirect()->route('deals.index')->with('success', "Deal « {$deal->name} » marqué gagné ✓");
+    }
+
+    public function markLost(Deal $deal)
+    {
+        $lostStage = PipelineStage::where('is_lost', true)->first();
+        $deal->update([
+            'status'            => 'lost',
+            'pipeline_stage_id' => $lostStage?->id ?? $deal->pipeline_stage_id,
+        ]);
+
+        return redirect()->route('deals.index')->with('success', "Deal « {$deal->name} » marqué perdu.");
     }
 }

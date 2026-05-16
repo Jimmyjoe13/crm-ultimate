@@ -1,0 +1,489 @@
+- generic [ref=e105]:
+  - complementary [ref=e106]:
+    - generic [ref=e107]:
+      - generic [ref=e108]: C
+      - generic [ref=e109]: CRM Ultimate
+    - navigation [ref=e110]:
+      - button "DB Dashboard" [ref=e111] [cursor=pointer]:
+        - generic [ref=e112]: DB
+        - text: Dashboard
+      - button "CO Entreprises" [ref=e113] [cursor=pointer]:
+        - generic [ref=e114]: CO
+        - text: Entreprises
+      - button "CT Contacts" [ref=e115] [cursor=pointer]:
+        - generic [ref=e116]: CT
+        - text: Contacts
+      - button "DL Deals" [ref=e117] [cursor=pointer]:
+        - generic [ref=e118]: DL
+        - text: Deals
+      - button "AC Activites" [ref=e119] [cursor=pointer]:
+        - generic [ref=e120]: AC
+        - text: Activites
+      - button "PL Pipelines" [ref=e121] [cursor=pointer]:
+        - generic [ref=e122]: PL
+        - text: Pipelines
+      - button "ET Etapes" [ref=e123] [cursor=pointer]:
+        - generic [ref=e124]: ET
+        - text: Etapes
+      - button "CF Champs perso" [ref=e125] [cursor=pointer]:
+        - generic [ref=e126]: CF
+        - text: Champs perso
+    - button "+ Nouveau deal" [ref=e127] [cursor=pointer]:
+      - generic [ref=e128]: +
+      - text: Nouveau deal
+  - main [ref=e129]:
+    - generic [ref=e130]:
+      - generic [ref=e131]:
+        - heading "Contacts" [level=1] [ref=e132]
+        - paragraph [ref=e133]: Espace commercial unifie
+      - generic [ref=e134]:
+        - searchbox "Recherche globale..." [ref=e136]
+        - searchbox "Filtrer..." [ref=e137]
+        - button "📋 Tâches" [ref=e139] [cursor=pointer]
+        - generic [ref=e140]:
+          - generic [ref=e141]: A
+          - text: admin@example.com
+        - button "+ Deal" [ref=e142] [cursor=pointer]
+        - button "Rafraichir" [ref=e143] [cursor=pointer]
+        - button "Deconnexion" [ref=e144] [cursor=pointer]
+    - generic [ref=e145]:
+      - generic [ref=e146]:
+        - generic [ref=e147]:
+          - heading "Liste" [level=2] [ref=e148]
+          - generic [ref=e149]:
+            - generic [ref=e150]: 50 / 50 element(s)
+            - button "↑ Importer CSV" [ref=e151] [cursor=pointer]
+            - generic [ref=e152]: Cliquer sur une ligne pour ouvrir la fiche
+        - table [ref=e154]:
+          - rowgroup [ref=e155]:
+            - row "id first_name last_name email lifecycle_stage job_title" [ref=e156] [cursor=pointer]:
+              - columnheader "id" [ref=e157]
+              - columnheader "first_name" [ref=e158]
+              - columnheader "last_name" [ref=e159]
+              - columnheader "email" [ref=e160]
+              - columnheader "lifecycle_stage" [ref=e161]
+              - columnheader "job_title" [ref=e162]
+          - rowgroup [ref=e163]:
+            - row "1 Sasha Koss cameron32@example.com Client Ship Captain" [ref=e164] [cursor=pointer]:
+              - cell "1" [ref=e165]
+              - cell "Sasha" [ref=e166]
+              - cell "Koss" [ref=e167]
+              - cell "cameron32@example.com" [ref=e168]
+              - cell "Client" [ref=e169]:
+                - generic [ref=e170]: Client
+              - cell "Ship Captain" [ref=e171]
+            - row "2 Lauren Senger velda.auer@example.net Opportunité Entertainment Attendant" [ref=e172] [cursor=pointer]:
+              - cell "2" [ref=e173]
+              - cell "Lauren" [ref=e174]
+              - cell "Senger" [ref=e175]
+              - cell "velda.auer@example.net" [ref=e176]
+              - cell "Opportunité" [ref=e177]:
+                - generic [ref=e178]: Opportunité
+              - cell "Entertainment Attendant" [ref=e179]
+            - row "3 Brionna Gleichner jaron55@example.net Lead Segmental Paver" [ref=e180] [cursor=pointer]:
+              - cell "3" [ref=e181]
+              - cell "Brionna" [ref=e182]
+              - cell "Gleichner" [ref=e183]
+              - cell "jaron55@example.net" [ref=e184]
+              - cell "Lead" [ref=e185]:
+                - generic [ref=e186]: Lead
+              - cell "Segmental Paver" [ref=e187]
+            - row "4 Petra Walker erodriguez@example.net Client Transformer Repairer" [ref=e188] [cursor=pointer]:
+              - cell "4" [ref=e189]
+              - cell "Petra" [ref=e190]
+              - cell "Walker" [ref=e191]
+              - cell "erodriguez@example.net" [ref=e192]
+              - cell "Client" [ref=e193]:
+                - generic [ref=e194]: Client
+              - cell "Transformer Repairer" [ref=e195]
+            - row "5 Sarina Parisian aparisian@example.net Client Telephone Operator" [ref=e196] [cursor=pointer]:
+              - cell "5" [ref=e197]
+              - cell "Sarina" [ref=e198]
+              - cell "Parisian" [ref=e199]
+              - cell "aparisian@example.net" [ref=e200]
+              - cell "Client" [ref=e201]:
+                - generic [ref=e202]: Client
+              - cell "Telephone Operator" [ref=e203]
+            - row "6 Taylor Senger fbeer@example.net Lead Solderer" [ref=e204] [cursor=pointer]:
+              - cell "6" [ref=e205]
+              - cell "Taylor" [ref=e206]
+              - cell "Senger" [ref=e207]
+              - cell "fbeer@example.net" [ref=e208]
+              - cell "Lead" [ref=e209]:
+                - generic [ref=e210]: Lead
+              - cell "Solderer" [ref=e211]
+            - row "7 Elza Braun pritchie@example.com Opportunité Construction Equipment Operator" [ref=e212] [cursor=pointer]:
+              - cell "7" [ref=e213]
+              - cell "Elza" [ref=e214]
+              - cell "Braun" [ref=e215]
+              - cell "pritchie@example.com" [ref=e216]
+              - cell "Opportunité" [ref=e217]:
+                - generic [ref=e218]: Opportunité
+              - cell "Construction Equipment Operator" [ref=e219]
+            - row "8 Ambrose Russel selina39@example.org MQL Web Developer" [ref=e220] [cursor=pointer]:
+              - cell "8" [ref=e221]
+              - cell "Ambrose" [ref=e222]
+              - cell "Russel" [ref=e223]
+              - cell "selina39@example.org" [ref=e224]
+              - cell "MQL" [ref=e225]:
+                - generic [ref=e226]: MQL
+              - cell "Web Developer" [ref=e227]
+            - row "9 Darian Schowalter wuckert.alvah@example.com Lead Manager of Weapons Specialists" [ref=e228] [cursor=pointer]:
+              - cell "9" [ref=e229]
+              - cell "Darian" [ref=e230]
+              - cell "Schowalter" [ref=e231]
+              - cell "wuckert.alvah@example.com" [ref=e232]
+              - cell "Lead" [ref=e233]:
+                - generic [ref=e234]: Lead
+              - cell "Manager of Weapons Specialists" [ref=e235]
+            - row "10 Kristina Wyman marcel99@example.net Client Hazardous Materials Removal Worker" [ref=e236] [cursor=pointer]:
+              - cell "10" [ref=e237]
+              - cell "Kristina" [ref=e238]
+              - cell "Wyman" [ref=e239]
+              - cell "marcel99@example.net" [ref=e240]
+              - cell "Client" [ref=e241]:
+                - generic [ref=e242]: Client
+              - cell "Hazardous Materials Removal Worker" [ref=e243]
+            - row "11 Nickolas Gislason gay92@example.org Opportunité Weapons Specialists" [ref=e244] [cursor=pointer]:
+              - cell "11" [ref=e245]
+              - cell "Nickolas" [ref=e246]
+              - cell "Gislason" [ref=e247]
+              - cell "gay92@example.org" [ref=e248]
+              - cell "Opportunité" [ref=e249]:
+                - generic [ref=e250]: Opportunité
+              - cell "Weapons Specialists" [ref=e251]
+            - row "12 Dave Fay edmund22@example.org SQL Credit Analyst" [ref=e252] [cursor=pointer]:
+              - cell "12" [ref=e253]
+              - cell "Dave" [ref=e254]
+              - cell "Fay" [ref=e255]
+              - cell "edmund22@example.org" [ref=e256]
+              - cell "SQL" [ref=e257]:
+                - generic [ref=e258]: SQL
+              - cell "Credit Analyst" [ref=e259]
+            - row "13 Claudia Berge cortney27@example.org MQL Electronic Engineering Technician" [ref=e260] [cursor=pointer]:
+              - cell "13" [ref=e261]
+              - cell "Claudia" [ref=e262]
+              - cell "Berge" [ref=e263]
+              - cell "cortney27@example.org" [ref=e264]
+              - cell "MQL" [ref=e265]:
+                - generic [ref=e266]: MQL
+              - cell "Electronic Engineering Technician" [ref=e267]
+            - row "14 Brady Reinger wilber.franecki@example.net Client Marine Cargo Inspector" [ref=e268] [cursor=pointer]:
+              - cell "14" [ref=e269]
+              - cell "Brady" [ref=e270]
+              - cell "Reinger" [ref=e271]
+              - cell "wilber.franecki@example.net" [ref=e272]
+              - cell "Client" [ref=e273]:
+                - generic [ref=e274]: Client
+              - cell "Marine Cargo Inspector" [ref=e275]
+            - row "15 Elena O'Reilly tyler.predovic@example.com SQL Illustrator" [ref=e276] [cursor=pointer]:
+              - cell "15" [ref=e277]
+              - cell "Elena" [ref=e278]
+              - cell "O'Reilly" [ref=e279]
+              - cell "tyler.predovic@example.com" [ref=e280]
+              - cell "SQL" [ref=e281]:
+                - generic [ref=e282]: SQL
+              - cell "Illustrator" [ref=e283]
+            - row "16 Christopher Renner kmiller@example.com MQL Brazing Machine Operator" [ref=e284] [cursor=pointer]:
+              - cell "16" [ref=e285]
+              - cell "Christopher" [ref=e286]
+              - cell "Renner" [ref=e287]
+              - cell "kmiller@example.com" [ref=e288]
+              - cell "MQL" [ref=e289]:
+                - generic [ref=e290]: MQL
+              - cell "Brazing Machine Operator" [ref=e291]
+            - row "17 Billy Schaden wuckert.syble@example.net Client Aircraft Mechanics OR Aircraft Service Technician" [ref=e292] [cursor=pointer]:
+              - cell "17" [ref=e293]
+              - cell "Billy" [ref=e294]
+              - cell "Schaden" [ref=e295]
+              - cell "wuckert.syble@example.net" [ref=e296]
+              - cell "Client" [ref=e297]:
+                - generic [ref=e298]: Client
+              - cell "Aircraft Mechanics OR Aircraft Service Technician" [ref=e299]
+            - row "18 Chet Graham gregorio17@example.org Opportunité Loan Interviewer" [ref=e300] [cursor=pointer]:
+              - cell "18" [ref=e301]
+              - cell "Chet" [ref=e302]
+              - cell "Graham" [ref=e303]
+              - cell "gregorio17@example.org" [ref=e304]
+              - cell "Opportunité" [ref=e305]:
+                - generic [ref=e306]: Opportunité
+              - cell "Loan Interviewer" [ref=e307]
+            - row "19 Rocio Hahn syble68@example.org Lead Transportation Worker" [ref=e308] [cursor=pointer]:
+              - cell "19" [ref=e309]
+              - cell "Rocio" [ref=e310]
+              - cell "Hahn" [ref=e311]
+              - cell "syble68@example.org" [ref=e312]
+              - cell "Lead" [ref=e313]:
+                - generic [ref=e314]: Lead
+              - cell "Transportation Worker" [ref=e315]
+            - row "20 Rosamond Bashirian juwan71@example.net SQL Director Of Business Development" [ref=e316] [cursor=pointer]:
+              - cell "20" [ref=e317]
+              - cell "Rosamond" [ref=e318]
+              - cell "Bashirian" [ref=e319]
+              - cell "juwan71@example.net" [ref=e320]
+              - cell "SQL" [ref=e321]:
+                - generic [ref=e322]: SQL
+              - cell "Director Of Business Development" [ref=e323]
+            - row "21 Jeramy Walter merle.funk@example.net Opportunité Animal Trainer" [ref=e324] [cursor=pointer]:
+              - cell "21" [ref=e325]
+              - cell "Jeramy" [ref=e326]
+              - cell "Walter" [ref=e327]
+              - cell "merle.funk@example.net" [ref=e328]
+              - cell "Opportunité" [ref=e329]:
+                - generic [ref=e330]: Opportunité
+              - cell "Animal Trainer" [ref=e331]
+            - row "22 Kellen Moen hboyle@example.net Client Automotive Master Mechanic" [ref=e332] [cursor=pointer]:
+              - cell "22" [ref=e333]
+              - cell "Kellen" [ref=e334]
+              - cell "Moen" [ref=e335]
+              - cell "hboyle@example.net" [ref=e336]
+              - cell "Client" [ref=e337]:
+                - generic [ref=e338]: Client
+              - cell "Automotive Master Mechanic" [ref=e339]
+            - row "23 Carissa Johns mroob@example.net MQL Natural Sciences Manager" [ref=e340] [cursor=pointer]:
+              - cell "23" [ref=e341]
+              - cell "Carissa" [ref=e342]
+              - cell "Johns" [ref=e343]
+              - cell "mroob@example.net" [ref=e344]
+              - cell "MQL" [ref=e345]:
+                - generic [ref=e346]: MQL
+              - cell "Natural Sciences Manager" [ref=e347]
+            - row "24 Agustina Hirthe thad.douglas@example.net Opportunité Mathematician" [ref=e348] [cursor=pointer]:
+              - cell "24" [ref=e349]
+              - cell "Agustina" [ref=e350]
+              - cell "Hirthe" [ref=e351]
+              - cell "thad.douglas@example.net" [ref=e352]
+              - cell "Opportunité" [ref=e353]:
+                - generic [ref=e354]: Opportunité
+              - cell "Mathematician" [ref=e355]
+            - row "25 Jonathon Leuschke hermann.cleve@example.com Opportunité Marriage and Family Therapist" [ref=e356] [cursor=pointer]:
+              - cell "25" [ref=e357]
+              - cell "Jonathon" [ref=e358]
+              - cell "Leuschke" [ref=e359]
+              - cell "hermann.cleve@example.com" [ref=e360]
+              - cell "Opportunité" [ref=e361]:
+                - generic [ref=e362]: Opportunité
+              - cell "Marriage and Family Therapist" [ref=e363]
+            - row "26 Jerrod Watsica elarson@example.net MQL Airfield Operations Specialist" [ref=e364] [cursor=pointer]:
+              - cell "26" [ref=e365]
+              - cell "Jerrod" [ref=e366]
+              - cell "Watsica" [ref=e367]
+              - cell "elarson@example.net" [ref=e368]
+              - cell "MQL" [ref=e369]:
+                - generic [ref=e370]: MQL
+              - cell "Airfield Operations Specialist" [ref=e371]
+            - row "27 Verlie Runte lhaley@example.net SQL Marketing VP" [ref=e372] [cursor=pointer]:
+              - cell "27" [ref=e373]
+              - cell "Verlie" [ref=e374]
+              - cell "Runte" [ref=e375]
+              - cell "lhaley@example.net" [ref=e376]
+              - cell "SQL" [ref=e377]:
+                - generic [ref=e378]: SQL
+              - cell "Marketing VP" [ref=e379]
+            - row "28 Oran Swaniawski nhyatt@example.com Opportunité Public Relations Specialist" [ref=e380] [cursor=pointer]:
+              - cell "28" [ref=e381]
+              - cell "Oran" [ref=e382]
+              - cell "Swaniawski" [ref=e383]
+              - cell "nhyatt@example.com" [ref=e384]
+              - cell "Opportunité" [ref=e385]:
+                - generic [ref=e386]: Opportunité
+              - cell "Public Relations Specialist" [ref=e387]
+            - row "29 Clinton Bartoletti tobin.hettinger@example.org MQL Ship Engineer" [ref=e388] [cursor=pointer]:
+              - cell "29" [ref=e389]
+              - cell "Clinton" [ref=e390]
+              - cell "Bartoletti" [ref=e391]
+              - cell "tobin.hettinger@example.org" [ref=e392]
+              - cell "MQL" [ref=e393]:
+                - generic [ref=e394]: MQL
+              - cell "Ship Engineer" [ref=e395]
+            - row "30 Keegan Cole clyde87@example.net Opportunité Exhibit Designer" [ref=e396] [cursor=pointer]:
+              - cell "30" [ref=e397]
+              - cell "Keegan" [ref=e398]
+              - cell "Cole" [ref=e399]
+              - cell "clyde87@example.net" [ref=e400]
+              - cell "Opportunité" [ref=e401]:
+                - generic [ref=e402]: Opportunité
+              - cell "Exhibit Designer" [ref=e403]
+            - row "31 Rosetta Purdy jade.raynor@example.com Lead Foreign Language Teacher" [ref=e404] [cursor=pointer]:
+              - cell "31" [ref=e405]
+              - cell "Rosetta" [ref=e406]
+              - cell "Purdy" [ref=e407]
+              - cell "jade.raynor@example.com" [ref=e408]
+              - cell "Lead" [ref=e409]:
+                - generic [ref=e410]: Lead
+              - cell "Foreign Language Teacher" [ref=e411]
+            - row "32 Rozella Streich vwill@example.com Client Heaters" [ref=e412] [cursor=pointer]:
+              - cell "32" [ref=e413]
+              - cell "Rozella" [ref=e414]
+              - cell "Streich" [ref=e415]
+              - cell "vwill@example.com" [ref=e416]
+              - cell "Client" [ref=e417]:
+                - generic [ref=e418]: Client
+              - cell "Heaters" [ref=e419]
+            - row "33 Godfrey O'Kon emil.ebert@example.com SQL Agricultural Engineer" [ref=e420] [cursor=pointer]:
+              - cell "33" [ref=e421]
+              - cell "Godfrey" [ref=e422]
+              - cell "O'Kon" [ref=e423]
+              - cell "emil.ebert@example.com" [ref=e424]
+              - cell "SQL" [ref=e425]:
+                - generic [ref=e426]: SQL
+              - cell "Agricultural Engineer" [ref=e427]
+            - row "34 Emmie Heidenreich cyrus69@example.org Opportunité Postmasters" [ref=e428] [cursor=pointer]:
+              - cell "34" [ref=e429]
+              - cell "Emmie" [ref=e430]
+              - cell "Heidenreich" [ref=e431]
+              - cell "cyrus69@example.org" [ref=e432]
+              - cell "Opportunité" [ref=e433]:
+                - generic [ref=e434]: Opportunité
+              - cell "Postmasters" [ref=e435]
+            - row "35 Leif Ondricka kris.lebsack@example.net Lead Pediatricians" [ref=e436] [cursor=pointer]:
+              - cell "35" [ref=e437]
+              - cell "Leif" [ref=e438]
+              - cell "Ondricka" [ref=e439]
+              - cell "kris.lebsack@example.net" [ref=e440]
+              - cell "Lead" [ref=e441]:
+                - generic [ref=e442]: Lead
+              - cell "Pediatricians" [ref=e443]
+            - row "36 Jany Bradtke uorn@example.org SQL Foreign Language Teacher" [ref=e444] [cursor=pointer]:
+              - cell "36" [ref=e445]
+              - cell "Jany" [ref=e446]
+              - cell "Bradtke" [ref=e447]
+              - cell "uorn@example.org" [ref=e448]
+              - cell "SQL" [ref=e449]:
+                - generic [ref=e450]: SQL
+              - cell "Foreign Language Teacher" [ref=e451]
+            - row "37 Gerard Stanton margret93@example.com Client Segmental Paver" [ref=e452] [cursor=pointer]:
+              - cell "37" [ref=e453]
+              - cell "Gerard" [ref=e454]
+              - cell "Stanton" [ref=e455]
+              - cell "margret93@example.com" [ref=e456]
+              - cell "Client" [ref=e457]:
+                - generic [ref=e458]: Client
+              - cell "Segmental Paver" [ref=e459]
+            - row "38 Yesenia Considine gretchen.daugherty@example.com MQL Retail Salesperson" [ref=e460] [cursor=pointer]:
+              - cell "38" [ref=e461]
+              - cell "Yesenia" [ref=e462]
+              - cell "Considine" [ref=e463]
+              - cell "gretchen.daugherty@example.com" [ref=e464]
+              - cell "MQL" [ref=e465]:
+                - generic [ref=e466]: MQL
+              - cell "Retail Salesperson" [ref=e467]
+            - row "39 Cristopher Thompson dcormier@example.com SQL Communication Equipment Worker" [ref=e468] [cursor=pointer]:
+              - cell "39" [ref=e469]
+              - cell "Cristopher" [ref=e470]
+              - cell "Thompson" [ref=e471]
+              - cell "dcormier@example.com" [ref=e472]
+              - cell "SQL" [ref=e473]:
+                - generic [ref=e474]: SQL
+              - cell "Communication Equipment Worker" [ref=e475]
+            - row "40 Shirley Shields janick.mclaughlin@example.net Lead Fire Fighter" [ref=e476] [cursor=pointer]:
+              - cell "40" [ref=e477]
+              - cell "Shirley" [ref=e478]
+              - cell "Shields" [ref=e479]
+              - cell "janick.mclaughlin@example.net" [ref=e480]
+              - cell "Lead" [ref=e481]:
+                - generic [ref=e482]: Lead
+              - cell "Fire Fighter" [ref=e483]
+            - row "41 Hildegard Stehr josh93@example.net Lead Economist" [ref=e484] [cursor=pointer]:
+              - cell "41" [ref=e485]
+              - cell "Hildegard" [ref=e486]
+              - cell "Stehr" [ref=e487]
+              - cell "josh93@example.net" [ref=e488]
+              - cell "Lead" [ref=e489]:
+                - generic [ref=e490]: Lead
+              - cell "Economist" [ref=e491]
+            - row "42 Arvid Jacobson fnitzsche@example.com Client Butcher" [ref=e492] [cursor=pointer]:
+              - cell "42" [ref=e493]
+              - cell "Arvid" [ref=e494]
+              - cell "Jacobson" [ref=e495]
+              - cell "fnitzsche@example.com" [ref=e496]
+              - cell "Client" [ref=e497]:
+                - generic [ref=e498]: Client
+              - cell "Butcher" [ref=e499]
+            - row "43 Clara Heathcote melba67@example.org Opportunité Chiropractor" [ref=e500] [cursor=pointer]:
+              - cell "43" [ref=e501]
+              - cell "Clara" [ref=e502]
+              - cell "Heathcote" [ref=e503]
+              - cell "melba67@example.org" [ref=e504]
+              - cell "Opportunité" [ref=e505]:
+                - generic [ref=e506]: Opportunité
+              - cell "Chiropractor" [ref=e507]
+            - row "44 Amy Paucek aylin96@example.com SQL Writer OR Author" [ref=e508] [cursor=pointer]:
+              - cell "44" [ref=e509]
+              - cell "Amy" [ref=e510]
+              - cell "Paucek" [ref=e511]
+              - cell "aylin96@example.com" [ref=e512]
+              - cell "SQL" [ref=e513]:
+                - generic [ref=e514]: SQL
+              - cell "Writer OR Author" [ref=e515]
+            - row "45 Garret Heathcote kfeeney@example.org Client Etcher" [ref=e516] [cursor=pointer]:
+              - cell "45" [ref=e517]
+              - cell "Garret" [ref=e518]
+              - cell "Heathcote" [ref=e519]
+              - cell "kfeeney@example.org" [ref=e520]
+              - cell "Client" [ref=e521]:
+                - generic [ref=e522]: Client
+              - cell "Etcher" [ref=e523]
+            - row "46 Lisette Roberts gvonrueden@example.org Client Anthropologist OR Archeologist" [ref=e524] [cursor=pointer]:
+              - cell "46" [ref=e525]
+              - cell "Lisette" [ref=e526]
+              - cell "Roberts" [ref=e527]
+              - cell "gvonrueden@example.org" [ref=e528]
+              - cell "Client" [ref=e529]:
+                - generic [ref=e530]: Client
+              - cell "Anthropologist OR Archeologist" [ref=e531]
+            - row "47 Augustus DuBuque elda.mertz@example.net Opportunité CFO" [ref=e532] [cursor=pointer]:
+              - cell "47" [ref=e533]
+              - cell "Augustus" [ref=e534]
+              - cell "DuBuque" [ref=e535]
+              - cell "elda.mertz@example.net" [ref=e536]
+              - cell "Opportunité" [ref=e537]:
+                - generic [ref=e538]: Opportunité
+              - cell "CFO" [ref=e539]
+            - row "48 Sasha Schmeler nitzsche.mariana@example.com Opportunité Arbitrator" [ref=e540] [cursor=pointer]:
+              - cell "48" [ref=e541]
+              - cell "Sasha" [ref=e542]
+              - cell "Schmeler" [ref=e543]
+              - cell "nitzsche.mariana@example.com" [ref=e544]
+              - cell "Opportunité" [ref=e545]:
+                - generic [ref=e546]: Opportunité
+              - cell "Arbitrator" [ref=e547]
+            - row "49 Elwin Cartwright rcrist@example.net Opportunité Commercial Pilot" [ref=e548] [cursor=pointer]:
+              - cell "49" [ref=e549]
+              - cell "Elwin" [ref=e550]
+              - cell "Cartwright" [ref=e551]
+              - cell "rcrist@example.net" [ref=e552]
+              - cell "Opportunité" [ref=e553]:
+                - generic [ref=e554]: Opportunité
+              - cell "Commercial Pilot" [ref=e555]
+            - row "50 Jazlyn Walter scarlett23@example.org Opportunité Rotary Drill Operator" [ref=e556] [cursor=pointer]:
+              - cell "50" [ref=e557]
+              - cell "Jazlyn" [ref=e558]
+              - cell "Walter" [ref=e559]
+              - cell "scarlett23@example.org" [ref=e560]
+              - cell "Opportunité" [ref=e561]:
+                - generic [ref=e562]: Opportunité
+              - cell "Rotary Drill Operator" [ref=e563]
+      - complementary [ref=e564]:
+        - generic [ref=e566]:
+          - heading "Creation" [level=2] [ref=e567]
+          - paragraph [ref=e568]: Nouvel enregistrement
+        - generic [ref=e569]:
+          - generic [ref=e570]:
+            - generic [ref=e571]:
+              - generic [ref=e572]: Prenom
+              - textbox [ref=e573]
+            - generic [ref=e574]:
+              - generic [ref=e575]: Nom
+              - textbox [ref=e576]
+            - generic [ref=e577]:
+              - generic [ref=e578]: Email
+              - textbox [ref=e579]
+            - generic [ref=e580]:
+              - generic [ref=e581]: Telephone
+              - textbox [ref=e582]
+            - generic [ref=e583]:
+              - generic [ref=e584]: Poste
+              - textbox [ref=e585]
+            - button "Creer" [ref=e586] [cursor=pointer]
+          - paragraph [ref=e587]

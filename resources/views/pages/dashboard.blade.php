@@ -138,11 +138,11 @@
                 <span class="title">Accès rapide</span>
             </div>
             <div class="p-4 flex flex-col gap-2">
-                <a href="{{ route('deals.index') }}" class="btn w-full justify-start">
+                <a href="{{ '/deals' }}" class="btn w-full justify-start">
                     <svg class="ic" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
                     Tous les deals
                 </a>
-                <a href="{{ route('contacts.index') }}" class="btn w-full justify-start">
+                <a href="{{ '/contacts' }}" class="btn w-full justify-start">
                     <svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     Contacts
                 </a>

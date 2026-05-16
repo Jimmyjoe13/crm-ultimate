@@ -1,0 +1,447 @@
+- generic [ref=e89]:
+  - complementary [ref=e90]:
+    - generic [ref=e91]:
+      - generic [ref=e92]: C
+      - generic [ref=e93]: CRM Ultimate
+    - navigation [ref=e94]:
+      - button "DB Dashboard" [ref=e95] [cursor=pointer]:
+        - generic [ref=e96]: DB
+        - text: Dashboard
+      - button "CO Entreprises" [ref=e97] [cursor=pointer]:
+        - generic [ref=e98]: CO
+        - text: Entreprises
+      - button "CT Contacts" [ref=e99] [cursor=pointer]:
+        - generic [ref=e100]: CT
+        - text: Contacts
+      - button "DL Deals" [ref=e101] [cursor=pointer]:
+        - generic [ref=e102]: DL
+        - text: Deals
+      - button "AC Activites" [ref=e103] [cursor=pointer]:
+        - generic [ref=e104]: AC
+        - text: Activites
+      - button "PL Pipelines" [ref=e105] [cursor=pointer]:
+        - generic [ref=e106]: PL
+        - text: Pipelines
+      - button "ET Etapes" [ref=e107] [cursor=pointer]:
+        - generic [ref=e108]: ET
+        - text: Etapes
+      - button "CF Champs perso" [ref=e109] [cursor=pointer]:
+        - generic [ref=e110]: CF
+        - text: Champs perso
+    - button "+ Nouveau deal" [ref=e111] [cursor=pointer]:
+      - generic [ref=e112]: +
+      - text: Nouveau deal
+  - main [ref=e113]:
+    - generic [ref=e114]:
+      - generic [ref=e115]:
+        - heading "Deals" [level=1] [ref=e116]
+        - paragraph [ref=e117]: Espace commercial unifie
+      - generic [ref=e118]:
+        - searchbox "Recherche globale..." [ref=e120]
+        - generic [ref=e121]:
+          - button "Kanban" [ref=e122] [cursor=pointer]
+          - button "Liste" [ref=e123] [cursor=pointer]
+        - button "📋 Tâches" [ref=e125] [cursor=pointer]
+        - generic [ref=e126]:
+          - generic [ref=e127]: A
+          - text: admin@example.com
+        - button "+ Deal" [ref=e128] [cursor=pointer]
+        - button "Rafraichir" [ref=e129] [cursor=pointer]
+        - button "Deconnexion" [ref=e130] [cursor=pointer]
+    - generic [ref=e131]:
+      - generic [ref=e132]:
+        - heading "Default Sales Pipeline" [level=2] [ref=e133]
+        - button "Voir la liste" [ref=e134] [cursor=pointer]
+      - generic [ref=e136]:
+        - generic [ref=e137]:
+          - generic [ref=e138]:
+            - heading "Prospecting" [level=3] [ref=e139]
+            - generic [ref=e140]: "7"
+          - button "Test Deal v1.3b 50 000 EUR cameron32@example.com Prospecting open" [ref=e141] [cursor=pointer]:
+            - strong [ref=e142]: Test Deal v1.3b
+            - generic [ref=e143]: 50 000 EUR
+            - generic [ref=e144]: cameron32@example.com
+            - generic [ref=e145]:
+              - combobox [ref=e146]:
+                - option "Prospecting" [selected]
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e147]: open
+          - button "enhance extensible content — Deal 11 739,14 EUR Rempel Ltd Prospecting open" [ref=e148] [cursor=pointer]:
+            - strong [ref=e149]: enhance extensible content — Deal
+            - generic [ref=e150]: 11 739,14 EUR
+            - generic [ref=e151]: Rempel Ltd
+            - generic [ref=e152]:
+              - combobox [ref=e153]:
+                - option "Prospecting" [selected]
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e154]: open
+          - button "integrate B2C platforms — Deal 54 542,64 EUR Davis LLC Prospecting open" [ref=e155] [cursor=pointer]:
+            - strong [ref=e156]: integrate B2C platforms — Deal
+            - generic [ref=e157]: 54 542,64 EUR
+            - generic [ref=e158]: Davis LLC
+            - generic [ref=e159]:
+              - combobox [ref=e160]:
+                - option "Prospecting" [selected]
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e161]: open
+          - button "repurpose user-centric synergies — Deal 85 207,75 EUR Nader, Stark and Gaylord Prospecting open" [ref=e162] [cursor=pointer]:
+            - strong [ref=e163]: repurpose user-centric synergies — Deal
+            - generic [ref=e164]: 85 207,75 EUR
+            - generic [ref=e165]: Nader, Stark and Gaylord
+            - generic [ref=e166]:
+              - combobox [ref=e167]:
+                - option "Prospecting" [selected]
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e168]: open
+          - button "integrate impactful action-items — Deal 1 239,61 EUR Mosciski-Bogisich Prospecting open" [ref=e169] [cursor=pointer]:
+            - strong [ref=e170]: integrate impactful action-items — Deal
+            - generic [ref=e171]: 1 239,61 EUR
+            - generic [ref=e172]: Mosciski-Bogisich
+            - generic [ref=e173]:
+              - combobox [ref=e174]:
+                - option "Prospecting" [selected]
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e175]: open
+          - button "disintermediate seamless networks — Deal 118 737,88 EUR Ondricka PLC Prospecting open" [ref=e176] [cursor=pointer]:
+            - strong [ref=e177]: disintermediate seamless networks — Deal
+            - generic [ref=e178]: 118 737,88 EUR
+            - generic [ref=e179]: Ondricka PLC
+            - generic [ref=e180]:
+              - combobox [ref=e181]:
+                - option "Prospecting" [selected]
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e182]: open
+          - button "cultivate bricks-and-clicks channels — Deal 2 830,12 EUR Feil, Heathcote and Luettgen Prospecting open" [ref=e183] [cursor=pointer]:
+            - strong [ref=e184]: cultivate bricks-and-clicks channels — Deal
+            - generic [ref=e185]: 2 830,12 EUR
+            - generic [ref=e186]: Feil, Heathcote and Luettgen
+            - generic [ref=e187]:
+              - combobox [ref=e188]:
+                - option "Prospecting" [selected]
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e189]: open
+        - generic [ref=e190]:
+          - generic [ref=e191]:
+            - heading "Qualified" [level=3] [ref=e192]
+            - generic [ref=e193]: "11"
+          - button "whiteboard wireless metrics — Deal 137 732,98 EUR Lockman, Blanda and Corkery Qualified open" [ref=e194] [cursor=pointer]:
+            - strong [ref=e195]: whiteboard wireless metrics — Deal
+            - generic [ref=e196]: 137 732,98 EUR
+            - generic [ref=e197]: Lockman, Blanda and Corkery
+            - generic [ref=e198]:
+              - combobox [ref=e199]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e200]: open
+          - button "recontextualize transparent eyeballs — Deal 74 408,76 EUR Quitzon LLC Qualified open" [ref=e201] [cursor=pointer]:
+            - strong [ref=e202]: recontextualize transparent eyeballs — Deal
+            - generic [ref=e203]: 74 408,76 EUR
+            - generic [ref=e204]: Quitzon LLC
+            - generic [ref=e205]:
+              - combobox [ref=e206]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e207]: open
+          - button "facilitate strategic e-business — Deal 147 075,75 EUR Mosciski-Bogisich Qualified open" [ref=e208] [cursor=pointer]:
+            - strong [ref=e209]: facilitate strategic e-business — Deal
+            - generic [ref=e210]: 147 075,75 EUR
+            - generic [ref=e211]: Mosciski-Bogisich
+            - generic [ref=e212]:
+              - combobox [ref=e213]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e214]: open
+          - button "reinvent front-end functionalities — Deal 73 255,7 EUR Braun, Waelchi and Farrell Qualified open" [ref=e215] [cursor=pointer]:
+            - strong [ref=e216]: reinvent front-end functionalities — Deal
+            - generic [ref=e217]: 73 255,7 EUR
+            - generic [ref=e218]: Braun, Waelchi and Farrell
+            - generic [ref=e219]:
+              - combobox [ref=e220]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e221]: open
+          - button "innovate revolutionary systems — Deal 67 958,81 EUR Harris-Brekke Qualified open" [ref=e222] [cursor=pointer]:
+            - strong [ref=e223]: innovate revolutionary systems — Deal
+            - generic [ref=e224]: 67 958,81 EUR
+            - generic [ref=e225]: Harris-Brekke
+            - generic [ref=e226]:
+              - combobox [ref=e227]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e228]: open
+          - button "deploy extensible vortals — Deal 138 339,3 EUR Upton-Schroeder Qualified open" [ref=e229] [cursor=pointer]:
+            - strong [ref=e230]: deploy extensible vortals — Deal
+            - generic [ref=e231]: 138 339,3 EUR
+            - generic [ref=e232]: Upton-Schroeder
+            - generic [ref=e233]:
+              - combobox [ref=e234]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e235]: open
+          - button "integrate extensible schemas — Deal 144 705,11 EUR Harris-Brekke Qualified open" [ref=e236] [cursor=pointer]:
+            - strong [ref=e237]: integrate extensible schemas — Deal
+            - generic [ref=e238]: 144 705,11 EUR
+            - generic [ref=e239]: Harris-Brekke
+            - generic [ref=e240]:
+              - combobox [ref=e241]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e242]: open
+          - button "transition rich interfaces — Deal 117 886,89 EUR Volkman-Beahan Qualified open" [ref=e243] [cursor=pointer]:
+            - strong [ref=e244]: transition rich interfaces — Deal
+            - generic [ref=e245]: 117 886,89 EUR
+            - generic [ref=e246]: Volkman-Beahan
+            - generic [ref=e247]:
+              - combobox [ref=e248]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e249]: open
+          - button "extend impactful portals — Deal 16 598,09 EUR Quitzon Group Qualified open" [ref=e250] [cursor=pointer]:
+            - strong [ref=e251]: extend impactful portals — Deal
+            - generic [ref=e252]: 16 598,09 EUR
+            - generic [ref=e253]: Quitzon Group
+            - generic [ref=e254]:
+              - combobox [ref=e255]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e256]: open
+          - button "evolve holistic web-readiness — Deal 12 691,65 EUR Yundt, Carter and Shields Qualified open" [ref=e257] [cursor=pointer]:
+            - strong [ref=e258]: evolve holistic web-readiness — Deal
+            - generic [ref=e259]: 12 691,65 EUR
+            - generic [ref=e260]: Yundt, Carter and Shields
+            - generic [ref=e261]:
+              - combobox [ref=e262]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e263]: open
+          - button "maximize intuitive infrastructures — Deal 80 981,71 EUR Ondricka PLC Qualified open" [ref=e264] [cursor=pointer]:
+            - strong [ref=e265]: maximize intuitive infrastructures — Deal
+            - generic [ref=e266]: 80 981,71 EUR
+            - generic [ref=e267]: Ondricka PLC
+            - generic [ref=e268]:
+              - combobox [ref=e269]:
+                - option "Prospecting"
+                - option "Qualified" [selected]
+                - option "Proposal"
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e270]: open
+        - generic [ref=e271]:
+          - generic [ref=e272]:
+            - heading "Proposal" [level=3] [ref=e273]
+            - generic [ref=e274]: "7"
+          - button "innovate seamless paradigms — Deal 89 215,09 EUR Harris-Brekke Proposal open" [ref=e275] [cursor=pointer]:
+            - strong [ref=e276]: innovate seamless paradigms — Deal
+            - generic [ref=e277]: 89 215,09 EUR
+            - generic [ref=e278]: Harris-Brekke
+            - generic [ref=e279]:
+              - combobox [ref=e280]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal" [selected]
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e281]: open
+          - button "scale plug-and-play functionalities — Deal 5 860,67 EUR Heller Group Proposal open" [ref=e282] [cursor=pointer]:
+            - strong [ref=e283]: scale plug-and-play functionalities — Deal
+            - generic [ref=e284]: 5 860,67 EUR
+            - generic [ref=e285]: Heller Group
+            - generic [ref=e286]:
+              - combobox [ref=e287]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal" [selected]
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e288]: open
+          - button "monetize next-generation networks — Deal 92 983,09 EUR Lockman, Blanda and Corkery Proposal open" [ref=e289] [cursor=pointer]:
+            - strong [ref=e290]: monetize next-generation networks — Deal
+            - generic [ref=e291]: 92 983,09 EUR
+            - generic [ref=e292]: Lockman, Blanda and Corkery
+            - generic [ref=e293]:
+              - combobox [ref=e294]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal" [selected]
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e295]: open
+          - button "leverage real-time vortals — Deal 92 633,1 EUR Hirthe-Gutkowski Proposal open" [ref=e296] [cursor=pointer]:
+            - strong [ref=e297]: leverage real-time vortals — Deal
+            - generic [ref=e298]: 92 633,1 EUR
+            - generic [ref=e299]: Hirthe-Gutkowski
+            - generic [ref=e300]:
+              - combobox [ref=e301]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal" [selected]
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e302]: open
+          - button "whiteboard transparent methodologies — Deal 115 845,11 EUR Davis LLC Proposal open" [ref=e303] [cursor=pointer]:
+            - strong [ref=e304]: whiteboard transparent methodologies — Deal
+            - generic [ref=e305]: 115 845,11 EUR
+            - generic [ref=e306]: Davis LLC
+            - generic [ref=e307]:
+              - combobox [ref=e308]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal" [selected]
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e309]: open
+          - button "embrace real-time partnerships — Deal 32 483,74 EUR Quitzon Group Proposal open" [ref=e310] [cursor=pointer]:
+            - strong [ref=e311]: embrace real-time partnerships — Deal
+            - generic [ref=e312]: 32 483,74 EUR
+            - generic [ref=e313]: Quitzon Group
+            - generic [ref=e314]:
+              - combobox [ref=e315]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal" [selected]
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e316]: open
+          - button "unleash dot-com models — Deal 139 019,82 EUR Yundt, Carter and Shields Proposal open" [ref=e317] [cursor=pointer]:
+            - strong [ref=e318]: unleash dot-com models — Deal
+            - generic [ref=e319]: 139 019,82 EUR
+            - generic [ref=e320]: Yundt, Carter and Shields
+            - generic [ref=e321]:
+              - combobox [ref=e322]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal" [selected]
+                - option "Won"
+                - option "Lost"
+              - generic [ref=e323]: open
+        - generic [ref=e324]:
+          - generic [ref=e325]:
+            - heading "Won" [level=3] [ref=e326]
+            - generic [ref=e327]: "3"
+          - button "unleash plug-and-play communities — Deal 101 406,99 EUR Hirthe-Gutkowski Won won" [ref=e328] [cursor=pointer]:
+            - strong [ref=e329]: unleash plug-and-play communities — Deal
+            - generic [ref=e330]: 101 406,99 EUR
+            - generic [ref=e331]: Hirthe-Gutkowski
+            - generic [ref=e332]:
+              - combobox [ref=e333]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won" [selected]
+                - option "Lost"
+              - generic [ref=e334]: won
+          - button "extend visionary e-commerce — Deal 79 649,68 EUR Sporer Ltd Won won" [ref=e335] [cursor=pointer]:
+            - strong [ref=e336]: extend visionary e-commerce — Deal
+            - generic [ref=e337]: 79 649,68 EUR
+            - generic [ref=e338]: Sporer Ltd
+            - generic [ref=e339]:
+              - combobox [ref=e340]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won" [selected]
+                - option "Lost"
+              - generic [ref=e341]: won
+          - button "engineer back-end applications — Deal 120 526,82 EUR Mosciski-Bogisich Won won" [ref=e342] [cursor=pointer]:
+            - strong [ref=e343]: engineer back-end applications — Deal
+            - generic [ref=e344]: 120 526,82 EUR
+            - generic [ref=e345]: Mosciski-Bogisich
+            - generic [ref=e346]:
+              - combobox [ref=e347]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won" [selected]
+                - option "Lost"
+              - generic [ref=e348]: won
+        - generic [ref=e349]:
+          - generic [ref=e350]:
+            - heading "Lost" [level=3] [ref=e351]
+            - generic [ref=e352]: "3"
+          - button "whiteboard collaborative networks — Deal 112 533,97 EUR Davis LLC Lost lost" [ref=e353] [cursor=pointer]:
+            - strong [ref=e354]: whiteboard collaborative networks — Deal
+            - generic [ref=e355]: 112 533,97 EUR
+            - generic [ref=e356]: Davis LLC
+            - generic [ref=e357]:
+              - combobox [ref=e358]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost" [selected]
+              - generic [ref=e359]: lost
+          - button "iterate clicks-and-mortar platforms — Deal 35 746,25 EUR Yundt, Carter and Shields Lost lost" [ref=e360] [cursor=pointer]:
+            - strong [ref=e361]: iterate clicks-and-mortar platforms — Deal
+            - generic [ref=e362]: 35 746,25 EUR
+            - generic [ref=e363]: Yundt, Carter and Shields
+            - generic [ref=e364]:
+              - combobox [ref=e365]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost" [selected]
+              - generic [ref=e366]: lost
+          - button "transform out-of-the-box functionalities — Deal 35 348,49 EUR Ondricka PLC Lost lost" [ref=e367] [cursor=pointer]:
+            - strong [ref=e368]: transform out-of-the-box functionalities — Deal
+            - generic [ref=e369]: 35 348,49 EUR
+            - generic [ref=e370]: Ondricka PLC
+            - generic [ref=e371]:
+              - combobox [ref=e372]:
+                - option "Prospecting"
+                - option "Qualified"
+                - option "Proposal"
+                - option "Won"
+                - option "Lost" [selected]
+              - generic [ref=e373]: lost

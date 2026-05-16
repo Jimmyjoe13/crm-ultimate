@@ -1,0 +1,71 @@
+- generic [ref=e41]:
+  - complementary [ref=e42]:
+    - generic [ref=e43]:
+      - generic [ref=e44]: C
+      - generic [ref=e45]: CRM Ultimate
+    - navigation [ref=e46]:
+      - button "DB Dashboard" [ref=e47] [cursor=pointer]:
+        - generic [ref=e48]: DB
+        - text: Dashboard
+      - button "CO Entreprises" [ref=e49] [cursor=pointer]:
+        - generic [ref=e50]: CO
+        - text: Entreprises
+      - button "CT Contacts" [ref=e51] [cursor=pointer]:
+        - generic [ref=e52]: CT
+        - text: Contacts
+      - button "DL Deals" [ref=e53] [cursor=pointer]:
+        - generic [ref=e54]: DL
+        - text: Deals
+      - button "AC Activites" [ref=e55] [cursor=pointer]:
+        - generic [ref=e56]: AC
+        - text: Activites
+      - button "PL Pipelines" [ref=e57] [cursor=pointer]:
+        - generic [ref=e58]: PL
+        - text: Pipelines
+    - button "+ Nouveau deal" [ref=e59] [cursor=pointer]:
+      - generic [ref=e60]: +
+      - text: Nouveau deal
+  - main [ref=e61]:
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - heading "Contacts" [level=1] [ref=e64]
+        - paragraph [ref=e65]: Espace commercial unifie
+      - generic [ref=e66]:
+        - searchbox "Recherche globale..." [ref=e68]
+        - searchbox "Filtrer..." [ref=e69]
+        - button "📋 Tâches" [ref=e71] [cursor=pointer]
+        - generic [ref=e73]: U
+        - button "+ Deal" [ref=e74] [cursor=pointer]
+        - button "Rafraichir" [ref=e75] [cursor=pointer]
+        - button "Deconnexion" [ref=e76] [cursor=pointer]
+    - generic [ref=e77]:
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - heading "Liste" [level=2] [ref=e80]
+          - generic [ref=e81]:
+            - generic [ref=e82]: 0 / 0 element(s)
+            - generic [ref=e83]: Cliquer sur une ligne pour ouvrir la fiche
+        - generic [ref=e85]: Aucune donnee pour le moment.
+      - complementary [ref=e86]:
+        - generic [ref=e88]:
+          - heading "Creation" [level=2] [ref=e89]
+          - paragraph [ref=e90]: Nouvel enregistrement
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - generic [ref=e93]:
+              - generic [ref=e94]: Prenom
+              - textbox [ref=e95]
+            - generic [ref=e96]:
+              - generic [ref=e97]: Nom
+              - textbox [ref=e98]
+            - generic [ref=e99]:
+              - generic [ref=e100]: Email
+              - textbox [ref=e101]
+            - generic [ref=e102]:
+              - generic [ref=e103]: Telephone
+              - textbox [ref=e104]
+            - generic [ref=e105]:
+              - generic [ref=e106]: Poste
+              - textbox [ref=e107]
+            - button "Creer" [ref=e108] [cursor=pointer]
+          - paragraph [ref=e109]: User not found.

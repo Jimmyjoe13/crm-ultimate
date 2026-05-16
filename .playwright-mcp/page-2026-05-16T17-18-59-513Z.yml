@@ -1,0 +1,290 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]: C
+    - link "Dashboard" [ref=e6] [cursor=pointer]:
+      - /url: http://localhost:8080
+      - img [ref=e7]
+      - generic: Dashboard
+    - link "Deals" [ref=e12] [cursor=pointer]:
+      - /url: /deals
+      - img [ref=e13]
+      - generic: Deals
+    - link "Pipeline" [ref=e15] [cursor=pointer]:
+      - /url: http://localhost:8080/pipeline
+      - img [ref=e16]
+      - generic: Pipeline
+    - link "Contacts" [ref=e20] [cursor=pointer]:
+      - /url: /contacts
+      - img [ref=e21]
+      - generic: Contacts
+    - link "Entreprises" [ref=e25] [cursor=pointer]:
+      - /url: /companies
+      - img [ref=e26]
+      - generic: Entreprises
+    - link "Activités" [ref=e28] [cursor=pointer]:
+      - /url: /activities
+      - img [ref=e29]
+      - generic: Activités
+    - link "Étapes" [ref=e32] [cursor=pointer]:
+      - /url: http://localhost:8080/settings/stages
+      - img [ref=e33]
+      - generic: Étapes
+    - link "Champs perso" [ref=e38] [cursor=pointer]:
+      - /url: http://localhost:8080/settings/fields
+      - img [ref=e39]
+      - generic: Champs perso
+    - button "AC admin@example.com" [ref=e42] [cursor=pointer]:
+      - text: AC
+      - generic: admin@example.com
+  - main [ref=e43]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]: workspace
+        - generic [ref=e48]: /
+      - generic [ref=e49]:
+        - link "Rechercher deal, contact, entreprise… ⌘ K" [ref=e50] [cursor=pointer]:
+          - /url: http://localhost:8080/search
+          - img [ref=e51]
+          - generic [ref=e54]: Rechercher deal, contact, entreprise…
+          - generic [ref=e55]: ⌘ K
+        - link "Tâches" [ref=e56] [cursor=pointer]:
+          - /url: "#"
+          - img [ref=e57]
+          - text: Tâches
+        - link "Nouveau deal" [ref=e59] [cursor=pointer]:
+          - /url: /deals?modal=new
+          - img [ref=e60]
+          - text: Nouveau deal
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - heading "Pipeline Default Sales Pipeline" [level=1] [ref=e65]
+          - paragraph [ref=e66]: Glisse les deals d'une étape à l'autre · 1 883 957 € total
+        - link "Table" [ref=e68] [cursor=pointer]:
+          - /url: /deals
+          - img [ref=e69]
+          - text: Table
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - generic [ref=e76]: Prospecting
+              - generic [ref=e77]: "6"
+            - generic [ref=e78]: 471 991 €
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - generic [ref=e82]: disintermediate virtual vortals — Deal
+              - generic [ref=e83]: 145 316 €
+              - generic [ref=e84]:
+                - generic [ref=e85]: AC
+                - generic [ref=e86]: Hahn, D'Amore and...
+                - generic [ref=e87]: 3 hours
+            - generic [ref=e88]:
+              - generic [ref=e90]: utilize cutting-edge partnerships — Deal
+              - generic [ref=e91]: 73 083 €
+              - generic [ref=e92]:
+                - generic [ref=e93]: AC
+                - generic [ref=e94]: Schiller-Ankunding
+                - generic [ref=e95]: 3 hours
+            - generic [ref=e96]:
+              - generic [ref=e98]: utilize clicks-and-mortar infrastructures — Deal
+              - generic [ref=e99]: 51 284 €
+              - generic [ref=e100]:
+                - generic [ref=e101]: AC
+                - generic [ref=e102]: Altenwerth-Crooks
+                - generic [ref=e103]: 3 hours
+            - generic [ref=e104]:
+              - generic [ref=e106]: cultivate next-generation technologies — Deal
+              - generic [ref=e107]: 67 716 €
+              - generic [ref=e108]:
+                - generic [ref=e109]: AC
+                - generic [ref=e110]: Waters, Witting an...
+                - generic [ref=e111]: 3 hours
+            - generic [ref=e112]:
+              - generic [ref=e114]: brand end-to-end relationships — Deal
+              - generic [ref=e115]: 45 938 €
+              - generic [ref=e116]:
+                - generic [ref=e117]: AC
+                - generic [ref=e118]: Block-Morissette
+                - generic [ref=e119]: 3 hours
+            - generic [ref=e120]:
+              - generic [ref=e122]: grow user-centric deliverables — Deal
+              - generic [ref=e123]: 88 655 €
+              - generic [ref=e124]:
+                - generic [ref=e125]: AC
+                - generic [ref=e126]: Waters, Witting an...
+                - generic [ref=e127]: 3 hours
+          - link "Ajouter deal" [ref=e128] [cursor=pointer]:
+            - /url: /deals
+            - img [ref=e129]
+            - text: Ajouter deal
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - generic [ref=e133]:
+              - generic [ref=e135]: Qualified
+              - generic [ref=e136]: "10"
+            - generic [ref=e137]: 862 839 €
+          - generic [ref=e138]:
+            - generic [ref=e139]:
+              - generic [ref=e141]: orchestrate distributed e-services — Deal
+              - generic [ref=e142]: 48 659 €
+              - generic [ref=e143]:
+                - generic [ref=e144]: AC
+                - generic [ref=e145]: Block-Morissette
+                - generic [ref=e146]: 3 hours
+            - generic [ref=e147]:
+              - generic [ref=e149]: matrix magnetic initiatives — Deal
+              - generic [ref=e150]: 110 931 €
+              - generic [ref=e151]:
+                - generic [ref=e152]: AC
+                - generic [ref=e153]: Lind, Gutkowski an...
+                - generic [ref=e154]: 3 hours
+            - generic [ref=e155]:
+              - generic [ref=e157]: deliver strategic deliverables — Deal
+              - generic [ref=e158]: 119 897 €
+              - generic [ref=e159]:
+                - generic [ref=e160]: AC
+                - generic [ref=e161]: Schiller-Ankunding
+                - generic [ref=e162]: 3 hours
+            - generic [ref=e163]:
+              - generic [ref=e165]: whiteboard 24/7 webservices — Deal
+              - generic [ref=e166]: 131 366 €
+              - generic [ref=e167]:
+                - generic [ref=e168]: AC
+                - generic [ref=e169]: Purdy, Koch and Er...
+                - generic [ref=e170]: 3 hours
+            - generic [ref=e171]:
+              - generic [ref=e173]: cultivate integrated paradigms — Deal
+              - generic [ref=e174]: 30 115 €
+              - generic [ref=e175]:
+                - generic [ref=e176]: AC
+                - generic [ref=e177]: Wehner and Sons
+                - generic [ref=e178]: 3 hours
+            - generic [ref=e179]:
+              - generic [ref=e181]: engage dynamic synergies — Deal
+              - generic [ref=e182]: 8 697 €
+              - generic [ref=e183]:
+                - generic [ref=e184]: AC
+                - generic [ref=e185]: Kuhic, Ziemann and...
+                - generic [ref=e186]: 3 hours
+            - generic [ref=e187]:
+              - generic [ref=e189]: monetize extensible initiatives — Deal
+              - generic [ref=e190]: 141 096 €
+              - generic [ref=e191]:
+                - generic [ref=e192]: AC
+                - generic [ref=e193]: Hessel-Yost
+                - generic [ref=e194]: 3 hours
+            - generic [ref=e195]:
+              - generic [ref=e197]: utilize turn-key methodologies — Deal
+              - generic [ref=e198]: 108 586 €
+              - generic [ref=e199]:
+                - generic [ref=e200]: AC
+                - generic [ref=e201]: Purdy, Koch and Er...
+                - generic [ref=e202]: 3 hours
+            - generic [ref=e203]:
+              - generic [ref=e205]: orchestrate transparent partnerships — Deal
+              - generic [ref=e206]: 13 861 €
+              - generic [ref=e207]:
+                - generic [ref=e208]: AC
+                - generic [ref=e209]: Purdy, Koch and Er...
+                - generic [ref=e210]: 3 hours
+            - generic [ref=e211]:
+              - generic [ref=e213]: envisioneer proactive applications — Deal
+              - generic [ref=e214]: 149 631 €
+              - generic [ref=e215]:
+                - generic [ref=e216]: AC
+                - generic [ref=e217]: Bins and Sons
+                - generic [ref=e218]: 3 hours
+          - link "Ajouter deal" [ref=e219] [cursor=pointer]:
+            - /url: /deals
+            - img [ref=e220]
+            - text: Ajouter deal
+        - generic [ref=e222]:
+          - generic [ref=e223]:
+            - generic [ref=e224]:
+              - generic [ref=e226]: Proposal
+              - generic [ref=e227]: "8"
+            - generic [ref=e228]: 549 128 €
+          - generic [ref=e229]:
+            - generic [ref=e230]:
+              - generic [ref=e232]: orchestrate front-end synergies — Deal
+              - generic [ref=e233]: 95 076 €
+              - generic [ref=e234]:
+                - generic [ref=e235]: AC
+                - generic [ref=e236]: Waters, Witting an...
+                - generic [ref=e237]: 3 hours
+            - generic [ref=e238]:
+              - generic [ref=e240]: facilitate wireless e-business — Deal
+              - generic [ref=e241]: 48 043 €
+              - generic [ref=e242]:
+                - generic [ref=e243]: AC
+                - generic [ref=e244]: Deckow-O'Conner
+                - generic [ref=e245]: 3 hours
+            - generic [ref=e246]:
+              - generic [ref=e248]: visualize dynamic technologies — Deal
+              - generic [ref=e249]: 80 942 €
+              - generic [ref=e250]:
+                - generic [ref=e251]: AC
+                - generic [ref=e252]: Kuhic, Ziemann and...
+                - generic [ref=e253]: 3 hours
+            - generic [ref=e254]:
+              - generic [ref=e256]: incentivize frictionless applications — Deal
+              - generic [ref=e257]: 30 842 €
+              - generic [ref=e258]:
+                - generic [ref=e259]: AC
+                - generic [ref=e260]: Lebsack-Feeney
+                - generic [ref=e261]: 3 hours
+            - generic [ref=e262]:
+              - generic [ref=e264]: architect enterprise mindshare — Deal
+              - generic [ref=e265]: 119 265 €
+              - generic [ref=e266]:
+                - generic [ref=e267]: AC
+                - generic [ref=e268]: Hahn, D'Amore and...
+                - generic [ref=e269]: 3 hours
+            - generic [ref=e270]:
+              - generic [ref=e272]: exploit back-end e-business — Deal
+              - generic [ref=e273]: 101 608 €
+              - generic [ref=e274]:
+                - generic [ref=e275]: AC
+                - generic [ref=e276]: Schiller-Ankunding
+                - generic [ref=e277]: 3 hours
+            - generic [ref=e278]:
+              - generic [ref=e280]: drive seamless synergies — Deal
+              - generic [ref=e281]: 26 297 €
+              - generic [ref=e282]:
+                - generic [ref=e283]: AC
+                - generic [ref=e284]: Deckow-O'Conner
+                - generic [ref=e285]: 3 hours
+            - generic [ref=e286]:
+              - generic [ref=e288]: revolutionize impactful solutions — Deal
+              - generic [ref=e289]: 47 055 €
+              - generic [ref=e290]:
+                - generic [ref=e291]: AC
+                - generic [ref=e292]: Krajcik, McCulloug...
+                - generic [ref=e293]: 3 hours
+          - link "Ajouter deal" [ref=e294] [cursor=pointer]:
+            - /url: /deals
+            - img [ref=e295]
+            - text: Ajouter deal
+        - generic [ref=e297]:
+          - generic [ref=e298]:
+            - generic [ref=e299]:
+              - generic [ref=e301]: Won
+              - generic [ref=e302]: "0"
+            - generic [ref=e303]: 0 €
+          - generic [ref=e305]: Vide
+          - link "Ajouter deal" [ref=e306] [cursor=pointer]:
+            - /url: /deals
+            - img [ref=e307]
+            - text: Ajouter deal
+        - generic [ref=e309]:
+          - generic [ref=e310]:
+            - generic [ref=e311]:
+              - generic [ref=e313]: Lost
+              - generic [ref=e314]: "0"
+            - generic [ref=e315]: 0 €
+          - generic [ref=e317]: Vide
+          - link "Ajouter deal" [ref=e318] [cursor=pointer]:
+            - /url: /deals
+            - img [ref=e319]
+            - text: Ajouter deal

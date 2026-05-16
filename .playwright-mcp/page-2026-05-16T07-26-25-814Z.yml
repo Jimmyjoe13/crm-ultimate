@@ -1,0 +1,92 @@
+- generic [ref=e19]:
+  - complementary [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]: C
+      - generic [ref=e23]: CRM Ultimate
+    - navigation [ref=e24]:
+      - button "DB Dashboard" [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: DB
+        - text: Dashboard
+      - button "CO Entreprises" [ref=e27] [cursor=pointer]:
+        - generic [ref=e28]: CO
+        - text: Entreprises
+      - button "CT Contacts" [ref=e29] [cursor=pointer]:
+        - generic [ref=e30]: CT
+        - text: Contacts
+      - button "DL Deals" [ref=e31] [cursor=pointer]:
+        - generic [ref=e32]: DL
+        - text: Deals
+      - button "AC Activites" [ref=e33] [cursor=pointer]:
+        - generic [ref=e34]: AC
+        - text: Activites
+      - button "PL Pipelines" [ref=e35] [cursor=pointer]:
+        - generic [ref=e36]: PL
+        - text: Pipelines
+      - button "ET Etapes" [ref=e37] [cursor=pointer]:
+        - generic [ref=e38]: ET
+        - text: Etapes
+      - button "CF Champs perso" [ref=e39] [cursor=pointer]:
+        - generic [ref=e40]: CF
+        - text: Champs perso
+    - button "+ Nouveau deal" [ref=e41] [cursor=pointer]:
+      - generic [ref=e42]: +
+      - text: Nouveau deal
+  - main [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - heading "Dashboard" [level=1] [ref=e46]
+        - paragraph [ref=e47]: Espace commercial unifie
+      - generic [ref=e48]:
+        - searchbox "Recherche globale..." [ref=e50]
+        - button "📋 Tâches" [ref=e52] [cursor=pointer]
+        - generic [ref=e53]:
+          - generic [ref=e54]: A
+          - text: admin@example.com
+        - button "+ Deal" [ref=e55] [cursor=pointer]
+        - button "Rafraichir" [ref=e56] [cursor=pointer]
+        - button "Deconnexion" [ref=e57] [cursor=pointer]
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - heading "Indicateurs" [level=2] [ref=e61]
+          - generic [ref=e62]: Temps reel
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]: Deals ouverts
+            - heading "24" [level=1] [ref=e66]
+          - generic [ref=e67]:
+            - generic [ref=e68]: Pipeline total
+            - heading "1 853 972,51 EUR" [level=1] [ref=e69]
+          - generic [ref=e70]:
+            - generic [ref=e71]: Gagnés ce mois
+            - heading "3" [level=1] [ref=e72]
+          - generic [ref=e73]:
+            - generic [ref=e74]: Perdus ce mois
+            - heading "3" [level=1] [ref=e75]
+          - generic [ref=e76]:
+            - generic [ref=e77]: Taux conversion 30j
+            - heading "50%" [level=1] [ref=e78]
+          - generic [ref=e79]:
+            - generic [ref=e80]: Tâches dues
+            - heading "0" [level=1] [ref=e81]
+          - generic [ref=e82]:
+            - generic [ref=e83]: Tâches en retard
+            - heading "0" [level=1] [ref=e84]
+      - generic [ref=e85]:
+        - heading "Pipeline par étape" [level=2] [ref=e87]
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - generic [ref=e90]: Prospecting
+            - strong [ref=e91]: 6 deal(s) — 274 297,14 EUR
+          - generic [ref=e92]:
+            - generic [ref=e93]: Qualified
+            - strong [ref=e94]: 11 deal(s) — 1 011 634,75 EUR
+          - generic [ref=e95]:
+            - generic [ref=e96]: Proposal
+            - strong [ref=e97]: 7 deal(s) — 568 040,62 EUR
+      - generic [ref=e98]:
+        - heading "Actions rapides" [level=2] [ref=e100]
+        - generic [ref=e101]:
+          - button "Nouvelle entreprise" [ref=e102] [cursor=pointer]
+          - button "Nouveau contact" [ref=e103] [cursor=pointer]
+          - button "Pipeline deals" [ref=e104] [cursor=pointer]

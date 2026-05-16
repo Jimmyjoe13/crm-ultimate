@@ -1,0 +1,16 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: C
+    - generic [ref=e6]: CRM Ultimate
+  - heading "Connexion" [level=2] [ref=e7]
+  - paragraph [ref=e8]: Bienvenue, entrez vos identifiants.
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: Adresse email
+      - textbox "Adresse email" [active] [ref=e12]:
+        - /placeholder: admin@example.com
+    - generic [ref=e13]:
+      - generic [ref=e14]: Mot de passe
+      - textbox "Mot de passe" [ref=e15]:
+        - /placeholder: ••••••••
+    - button "Se connecter" [ref=e16] [cursor=pointer]

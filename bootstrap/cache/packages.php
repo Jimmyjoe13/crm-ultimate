@@ -1,4 +1,18 @@
 <?php return array (
+  'blade-ui-kit/blade-icons' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'BladeUI\\Icons\\BladeIconsServiceProvider',
+    ),
+  ),
+  'mallardduck/blade-lucide-icons' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'MallardDuck\\LucideIcons\\BladeLucideIconsServiceProvider',
+    ),
+  ),
   'nesbot/carbon' => 
   array (
     'providers' => 

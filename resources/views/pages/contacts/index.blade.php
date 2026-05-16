@@ -7,7 +7,7 @@
             <span class="num-mono">{{ $contacts->total() }}</span> contacts
         </p>
     </div>
-    <form method="GET" action="{{ route('contacts.index') }}" class="flex items-center gap-2">
+    <form method="GET" action="{{ '/contacts' }}" class="flex items-center gap-2">
         <input type="text" name="search" value="{{ $search }}" placeholder="Rechercher…"
                class="field" style="padding: 6px 10px; border: 1px solid var(--border); border-radius:7px; font-size:13px; background: var(--surface); color: var(--text);">
         <button type="submit" class="btn sm">Chercher</button>
@@ -34,7 +34,7 @@
                     $initials = \App\Helpers\Avatar::initials($fullName ?: $contact->email);
                     $company  = $contact->companies->first();
                 @endphp
-                <tr onclick="window.location='{{ route('contacts.show', $contact) }}'" style="cursor:pointer;">
+                <tr onclick="window.location='{{ '/contacts/' . $contact->id }}'" style="cursor:pointer;">
                     <td>
                         <div class="flex items-center gap-2">
                             <span class="av {{ $color }}">{{ $initials }}</span>

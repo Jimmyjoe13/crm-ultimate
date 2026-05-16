@@ -1,6 +1,6 @@
-@props(['route', 'active' => false, 'tooltip' => ''])
+@props(['route' => null, 'href' => null, 'active' => false, 'tooltip' => ''])
 
-<a href="{{ route($route) }}" class="rail-ic {{ $active ? 'on' : '' }}">
+<a href="{{ $href ?? ($route ? route($route) : '#') }}" class="rail-ic {{ $active ? 'on' : '' }}">
     {{ $slot }}
     @if($tooltip)
     <span class="tt">{{ $tooltip }}</span>

@@ -1,0 +1,1728 @@
+<!doctype html>
+<html lang="fr" class="">
+<head>
+<meta charset="utf-8" />
+<title>CRM Ultimate — Hi-Fi Reference</title>
+<meta name="viewport" content="width=1440" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@500;600;700&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"Patrick Hand"', 'system-ui', 'sans-serif'],
+          display: ['Caveat', 'cursive'],
+          num: ['Kalam', 'cursive'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+        colors: {
+          accent: {
+            DEFAULT: '#ef6a2a',
+            hover:   '#d85816',
+            soft:    '#fff3eb',
+            'soft-dk': 'rgba(239,106,42,0.14)',
+          },
+          ink: {
+            // light
+            bg:        '#fafaf7',
+            surface:   '#ffffff',
+            surface2:  '#f5f4f0',
+            border:    '#e7e5df',
+            borderS:   '#d4d1c8',
+            text:      '#1a1a17',
+            text2:     '#5e5c55',
+            text3:     '#92908a',
+            // dark mirrors handled via CSS vars
+          },
+          ok:    { DEFAULT: '#2f8a5f', soft: '#e1f2e9' },
+          warn:  { DEFAULT: '#d4a017', soft: '#fbf3dc' },
+          err:   { DEFAULT: '#c63d2f', soft: '#fce8e5' },
+          info:  { DEFAULT: '#2a5fb4', soft: '#e1eaf7' },
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --bg:        #fafaf7;
+    --surface:   #ffffff;
+    --surface2:  #f5f4f0;
+    --border:    #e7e5df;
+    --borderS:   #d4d1c8;
+    --text:      #1a1a17;
+    --text2:     #5e5c55;
+    --text3:     #92908a;
+    --accent:    #ef6a2a;
+    --accent-h:  #d85816;
+    --accent-soft: #fff3eb;
+    --ok:        #2f8a5f;
+    --ok-soft:   #e1f2e9;
+    --warn:      #d4a017;
+    --warn-soft: #fbf3dc;
+    --err:       #c63d2f;
+    --err-soft:  #fce8e5;
+    --info:      #2a5fb4;
+    --info-soft: #e1eaf7;
+    --shadow-card: 0 1px 2px rgba(20,20,15,0.04), 0 0 0 1px var(--border);
+    --shadow-pop:  0 12px 32px -8px rgba(20,20,15,0.18), 0 0 0 1px var(--border);
+  }
+  html.dark {
+    --bg:        #0e0e0c;
+    --surface:   #18181500;
+    --surface2:  #232220;
+    --border:    #2e2c28;
+    --borderS:   #3d3a35;
+    --text:      #f4f1ea;
+    --text2:     #a8a59b;
+    --text3:     #6e6a60;
+    --accent-soft: rgba(239,106,42,0.14);
+    --ok-soft:   rgba(47,138,95,0.18);
+    --warn-soft: rgba(212,160,23,0.18);
+    --err-soft:  rgba(198,61,47,0.18);
+    --info-soft: rgba(42,95,180,0.20);
+    --shadow-card: 0 0 0 1px var(--border);
+    --shadow-pop:  0 16px 40px -10px rgba(0,0,0,0.6), 0 0 0 1px var(--border);
+  }
+  html.dark .surface-fix { background: #1a1a17; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Patrick Hand', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  /* Display / titres : Caveat */
+  h1, h2, h3, .display {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  h1 { font-size: 36px; line-height: 1.05; }
+  h2 { font-size: 28px; line-height: 1.1; }
+  h3 { font-size: 22px; line-height: 1.15; }
+
+  /* utility classes powered by CSS vars (so we don't fight Tailwind dark) */
+  .bg-surface   { background: var(--surface); }
+  .bg-surface2  { background: var(--surface2); }
+  .bg-bg        { background: var(--bg); }
+  .text-primary { color: var(--text); }
+  .text-secondary { color: var(--text2); }
+  .text-tertiary  { color: var(--text3); }
+  .border-default { border-color: var(--border); }
+  .border-strong  { border-color: var(--borderS); }
+  .shadow-card    { box-shadow: var(--shadow-card); }
+  .shadow-pop     { box-shadow: var(--shadow-pop); }
+
+  /* keyboard kbd */
+  .kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    padding: 1px 5px;
+    border: 1px solid var(--border);
+    border-bottom-width: 1.5px;
+    border-radius: 4px;
+    background: var(--surface2);
+    color: var(--text2);
+  }
+  /* mono label */
+  .mono-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+  }
+  /* Chiffres : Kalam pour gros nombres, mono pour data dense */
+  .num { font-family: 'Kalam', cursive; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+  .num-mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+  /* badge / chip */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); display: inline-block; }
+  .chip.accent { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .chip.accent .chip-dot { background: var(--accent); }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+  .chip.ok .chip-dot { background: var(--ok); }
+  .chip.err { background: var(--err-soft); color: var(--err); border-color: transparent; }
+  .chip.err .chip-dot { background: var(--err); }
+  .chip.warn { background: var(--warn-soft); color: #8a6700; border-color: transparent; }
+  html.dark .chip.warn { color: #f3c948; }
+  .chip.info { background: var(--info-soft); color: var(--info); border-color: transparent; }
+  .chip.solid { background: var(--text); color: var(--bg); border-color: transparent; }
+
+  /* btn */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    transition: background .12s, border-color .12s;
+  }
+  .btn:hover { background: var(--surface2); }
+  .btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-h); border-color: var(--accent-h); }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--text2); }
+  .btn.ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn.sm { padding: 4px 8px; font-size: 12px; }
+  .btn.icon { padding: 6px; }
+
+  /* avatar */
+  .av {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10.5px; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .av.sm { width: 20px; height: 20px; font-size: 9.5px; }
+  .av.lg { width: 32px; height: 32px; font-size: 12px; }
+  .av.c1 { background: #ffe7d8; color: #c44e10; }
+  .av.c2 { background: #d6efe0; color: #1d6b46; }
+  .av.c3 { background: #dde8fa; color: #1f4b94; }
+  .av.c4 { background: #f4e0f7; color: #7d2a93; }
+  .av.c5 { background: #fbf3dc; color: #8a6700; }
+  html.dark .av.c1 { background: #4a2410; color: #ffb084; }
+  html.dark .av.c2 { background: #1a3a28; color: #8de0b3; }
+  html.dark .av.c3 { background: #1a2a4a; color: #9ab8e8; }
+  html.dark .av.c4 { background: #3a1a44; color: #d99eea; }
+  html.dark .av.c5 { background: #3a2e10; color: #f3c948; }
+
+  /* card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .card-h {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-h .title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .card-h .meta  { font-size: 11.5px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+
+  /* progress bar */
+  .pbar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .pbar > div { height: 100%; background: var(--text); border-radius: 3px; }
+  .pbar.accent > div { background: var(--accent); }
+  .pbar.ok > div { background: var(--ok); }
+
+  /* checkbox */
+  .ckb {
+    width: 14px; height: 14px;
+    border: 1.5px solid var(--borderS);
+    border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .ckb.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+  /* table */
+  table.t { width: 100%; border-collapse: separate; border-spacing: 0; }
+  table.t th, table.t td { padding: 10px 14px; text-align: left; }
+  table.t thead th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  table.t tbody tr { border-bottom: 1px solid var(--border); }
+  table.t tbody tr:hover { background: var(--surface2); }
+  table.t tbody td { font-size: 13px; vertical-align: middle; }
+  table.t tbody tr:last-child { border-bottom: none; }
+
+  /* rail */
+  .rail-ic {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 9px;
+    color: var(--text2);
+    font-size: 16px;
+    transition: background .12s, color .12s;
+    cursor: pointer;
+    position: relative;
+  }
+  .rail-ic:hover { background: var(--surface2); color: var(--text); }
+  .rail-ic.on { background: var(--accent); color: white; }
+  .rail-ic.on:hover { background: var(--accent-h); color: white; }
+  .rail-ic .tt {
+    position: absolute; left: 100%; margin-left: 12px; top: 50%; transform: translateY(-50%);
+    background: var(--text); color: var(--bg);
+    font-size: 11.5px; padding: 4px 9px;
+    border-radius: 6px; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity .12s;
+    font-family: Inter, sans-serif;
+    z-index: 30;
+  }
+  .rail-ic:hover .tt { opacity: 1; }
+
+  /* delta arrows */
+  .delta-up { color: var(--ok); }
+  .delta-dn { color: var(--err); }
+
+  /* screen switcher */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* dot bg */
+  .dot-grid {
+    background-image: radial-gradient(var(--border) 1px, transparent 1px);
+    background-size: 16px 16px;
+    background-position: 0 0;
+  }
+
+  /* SVG icon defaults */
+  svg.ic { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* drawer */
+  .drawer-backdrop { background: rgba(20,20,15,0.45); }
+  html.dark .drawer-backdrop { background: rgba(0,0,0,0.65); }
+
+  /* preview-only scroll within frame */
+  .frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    margin: 0 auto;
+    overflow: hidden;
+    box-shadow: 0 1px 0 var(--border);
+    border-radius: 0;
+    position: relative;
+  }
+
+  /* devtools-ish meta strip on top of preview */
+  .meta-bar {
+    height: 40px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .meta-bar .seg {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--text2);
+  }
+  .meta-bar .seg.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  /* timeline (activities) */
+  .tl-item { display: grid; grid-template-columns: 80px 24px 1fr; gap: 0; align-items: flex-start; padding: 12px 0; }
+  .tl-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); padding-top: 2px; }
+  .tl-axis { position: relative; }
+  .tl-axis::before {
+    content: ''; position: absolute; left: 11px; top: 8px; bottom: -12px;
+    width: 1px; background: var(--border);
+  }
+  .tl-item:last-child .tl-axis::before { display: none; }
+  .tl-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--text); border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--border);
+    margin-left: 7px; margin-top: 4px;
+  }
+  .tl-dot.accent { background: var(--accent); }
+  .tl-dot.ok { background: var(--ok); }
+  .tl-dot.info { background: var(--info); }
+  .tl-content { padding-left: 10px; }
+  .tl-content .ti { font-size: 13px; color: var(--text); }
+  .tl-content .ti b { font-weight: 600; }
+  .tl-content .ts { font-size: 11.5px; color: var(--text3); margin-top: 1px; font-family: 'JetBrains Mono', monospace; }
+
+  /* kanban */
+  .k-col { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+  .k-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: grab;
+    transition: border-color .12s, transform .12s;
+  }
+  .k-card:hover { border-color: var(--borderS); }
+  .k-card.hot { border-left: 3px solid var(--accent); padding-left: 9px; }
+
+  /* hero kpi (orange) */
+  .kpi-hero {
+    background: linear-gradient(135deg, #ef6a2a 0%, #d85816 100%);
+    color: white;
+  }
+
+  /* tab nav for screen list */
+  .scnav {
+    position: fixed; right: 20px; bottom: 20px; z-index: 50;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-pop);
+    padding: 10px;
+    width: 240px;
+  }
+  .scnav h6 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); margin: 0 0 8px; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+  .scnav button {
+    width: 100%; text-align: left;
+    padding: 5px 8px;
+    font-size: 12.5px;
+    border-radius: 6px;
+    color: var(--text2);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .scnav button:hover { background: var(--surface2); color: var(--text); }
+  .scnav button.on { background: var(--text); color: var(--bg); }
+  .scnav button.on .num { color: rgba(255,255,255,0.5); }
+  .scnav .num { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); }
+
+  /* form */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .field input, .field select, .field textarea {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  /* select v with chevron */
+  .select-arrow {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2392908a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  /* scroll style */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--borderS); }
+</style>
+</head>
+<body>
+
+<!-- ============================== APP SHELL =============================== -->
+<div class="frame">
+
+  <!-- top dev strip (not part of product) -->
+  <div class="meta-bar">
+    <span class="font-mono text-[11px] tracking-wide uppercase text-tertiary">crm-ultimate</span>
+    <span class="text-tertiary">/</span>
+    <span id="crumbScreen" class="text-primary font-medium">Dashboard</span>
+    <span class="ml-auto flex items-center gap-2">
+      <span class="seg" id="themeBtn">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span id="themeLabel">Light</span>
+      </span>
+      <span class="text-tertiary text-[11px] font-mono">1440 × 900</span>
+    </span>
+  </div>
+
+  <!-- product app shell -->
+  <div class="flex" style="height: calc(100% - 40px);">
+
+    <!-- ===== ICON RAIL ===== -->
+    <aside class="flex flex-col items-center py-3 gap-1 border-r" style="width:56px; background: var(--surface); border-color: var(--border);">
+      <!-- brand -->
+      <div class="rail-ic" style="background: var(--accent); color: white; font-weight: 700; font-family: Inter, sans-serif; font-size: 14px;">C</div>
+      <div class="my-2 h-px w-6" style="background: var(--border);"></div>
+
+      <button class="rail-ic on" data-go="dashboard"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span class="tt">Dashboard</span></button>
+      <button class="rail-ic" data-go="deals"><svg class="ic" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg><span class="tt">Deals</span></button>
+      <button class="rail-ic" data-go="pipeline"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="12"/><rect x="17" y="3" width="4" height="8"/></svg><span class="tt">Pipeline</span></button>
+      <button class="rail-ic" data-go="contacts"><svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="tt">Contacts</span></button>
+      <button class="rail-ic" data-go="companies"><svg class="ic" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9v2M9 13v2M9 17v2M15 9v2M15 13v2M15 17v2"/></svg><span class="tt">Entreprises</span></button>
+      <button class="rail-ic" data-go="activities"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="tt">Activités</span></button>
+      <div class="my-2 h-px w-6" style="background: var(--border);"></div>
+      <button class="rail-ic" data-go="stages"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="2" fill="currentColor" stroke="none"/></svg><span class="tt">Etapes</span></button>
+      <button class="rail-ic" data-go="fields"><svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span class="tt">Champs perso</span></button>
+
+      <div class="mt-auto"></div>
+      <button class="rail-ic" style="background: var(--ok); color: white; font-weight: 600;">A<span class="tt">admin@example.com</span></button>
+    </aside>
+
+    <!-- ===== MAIN ===== -->
+    <main class="flex-1 overflow-auto" id="mainScroll" style="background: var(--bg);">
+
+      <!-- ===== HEADER (sticky) ===== -->
+      <header class="sticky top-0 z-20" style="background: var(--bg);">
+        <div class="flex items-center justify-between px-7 py-3 border-b" style="border-color: var(--border);">
+          <div class="flex items-center gap-3">
+            <span class="mono-label">workspace</span>
+            <span class="text-tertiary text-xs">/</span>
+            <span id="crumbSection" class="text-sm text-secondary">Dashboard</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- global search -->
+            <div class="flex items-center gap-2 px-3 py-1.5 border rounded-lg" style="border-color: var(--border); background: var(--surface); width: 320px;">
+              <svg class="ic" style="color: var(--text3);" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <span class="text-sm text-tertiary flex-1">Rechercher deal, contact, entreprise…</span>
+              <span class="kbd">⌘ K</span>
+            </div>
+
+            <button class="btn ghost">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0 6 0 3 3 0 0 0-6 0zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            </button>
+            <button class="btn">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Tâches
+              <span class="chip accent num" style="padding: 0 6px; font-size: 10px;">3</span>
+            </button>
+            <button class="btn primary">
+              <svg class="ic" viewBox="0 0 24 24" style="stroke-width: 2;"><path d="M12 5v14M5 12h14"/></svg>
+              Nouveau deal
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- ============================================================== -->
+      <!-- 1. DASHBOARD                                                    -->
+      <!-- ============================================================== -->
+      <section class="screen active" data-screen="dashboard" data-label="Dashboard" data-crumb="Dashboard">
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Bonjour Alex —</h1>
+            <p class="text-sm text-secondary mt-0.5">Voici l'état de ton pipeline ce <span class="num">vendredi 16 mai</span>.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn sm"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M10 18h4"/></svg>Filtrer</button>
+            <button class="btn sm"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3.5-7.12M21 4v6h-6"/></svg>30 jours</button>
+            <span class="chip ok"><span class="chip-dot"></span>Temps réel</span>
+          </div>
+        </div>
+
+        <!-- KPI BAND -->
+        <div class="px-7 pt-2">
+          <div class="grid grid-cols-4 gap-3">
+            <!-- HERO -->
+            <div class="kpi-hero rounded-xl p-5 col-span-1 relative overflow-hidden">
+              <div class="mono-label" style="color: rgba(255,255,255,0.75);">Pipeline total · 30j</div>
+              <div class="num text-4xl font-semibold tracking-tight mt-2">1 853 972 €</div>
+              <div class="flex items-center gap-2 mt-3 text-[12px]" style="color: rgba(255,255,255,0.9);">
+                <span class="font-mono">▲ +12,4%</span>
+                <span style="color: rgba(255,255,255,0.7);">vs mois dernier</span>
+              </div>
+              <!-- mini sparkline -->
+              <svg class="absolute bottom-3 right-4" width="120" height="40" viewBox="0 0 120 40" fill="none">
+                <polyline points="0,32 15,28 30,30 45,22 60,24 75,16 90,18 105,8 120,12" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
+                <polyline points="0,32 15,28 30,30 45,22 60,24 75,16 90,18 105,8 120,12 120,40 0,40" fill="rgba(255,255,255,0.12)"/>
+              </svg>
+            </div>
+            <!-- KPI 2: conversion -->
+            <div class="card p-5">
+              <div class="mono-label">Conversion · 30j</div>
+              <div class="num text-3xl font-semibold mt-2">50<span class="text-xl text-tertiary">%</span></div>
+              <div class="flex items-center gap-2 mt-3 text-[12px]">
+                <span class="num delta-up">▲ +6 pts</span>
+                <span class="text-tertiary">obj. 55%</span>
+              </div>
+              <div class="pbar accent mt-3"><div style="width: 91%;"></div></div>
+            </div>
+            <!-- KPI 3: won -->
+            <div class="card p-5">
+              <div class="mono-label">Gagnés · ce mois</div>
+              <div class="num text-3xl font-semibold mt-2" style="color: var(--ok);">3</div>
+              <div class="num text-[12px] mt-3" style="color: var(--text2);">142 800 €</div>
+              <div class="flex items-center gap-1.5 mt-1 text-[11.5px] text-tertiary font-mono">
+                <span class="inline-block w-2 h-2 rounded-full" style="background: var(--ok);"></span>
+                Tessera · Marka · Junip
+              </div>
+            </div>
+            <!-- KPI 4: lost -->
+            <div class="card p-5">
+              <div class="mono-label">Perdus · ce mois</div>
+              <div class="num text-3xl font-semibold mt-2" style="color: var(--err);">3</div>
+              <div class="num text-[12px] mt-3" style="color: var(--text2);">68 200 €</div>
+              <div class="flex items-center gap-1.5 mt-1 text-[11.5px] text-tertiary font-mono">
+                <span class="inline-block w-2 h-2 rounded-full" style="background: var(--err);"></span>
+                Pixel Lab · 2 autres
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN GRID -->
+        <div class="px-7 pt-5 pb-12 grid grid-cols-3 gap-3">
+          <!-- NEXT ACTIONS (2 cols) -->
+          <div class="card col-span-2">
+            <div class="card-h">
+              <div class="flex items-center gap-2">
+                <span class="title">Prochaines actions</span>
+                <span class="chip accent"><span class="chip-dot"></span>5 dues</span>
+                <span class="chip err"><span class="chip-dot"></span>1 en retard</span>
+              </div>
+              <span class="meta">aujourd'hui · ordre suggéré</span>
+            </div>
+            <div>
+              <!-- task row -->
+              <div class="grid grid-cols-[24px_36px_1fr_auto_auto] gap-3 items-center px-4 py-3 border-b" style="border-color: var(--border);">
+                <span class="ckb"></span>
+                <span class="av c1">JD</span>
+                <div class="min-w-0">
+                  <div class="text-[13.5px] font-medium truncate">Appeler J. Dupont — Acme SA</div>
+                  <div class="text-[11.5px] text-tertiary font-mono mt-0.5">negotiation · 84 500 € · score 92</div>
+                </div>
+                <span class="num text-[12px]" style="color: var(--text2);">14:30</span>
+                <span class="chip accent">Hot</span>
+              </div>
+              <div class="grid grid-cols-[24px_36px_1fr_auto_auto] gap-3 items-center px-4 py-3 border-b" style="border-color: var(--border);">
+                <span class="ckb"></span>
+                <span class="av c2">MR</span>
+                <div class="min-w-0">
+                  <div class="text-[13.5px] font-medium truncate">Envoyer proposal v2 — Lumio Studio</div>
+                  <div class="text-[11.5px] text-tertiary font-mono mt-0.5">proposal · 42 000 € · score 76</div>
+                </div>
+                <span class="num text-[12px]" style="color: var(--text2);">Aujourd'hui</span>
+                <span class="chip">Due</span>
+              </div>
+              <div class="grid grid-cols-[24px_36px_1fr_auto_auto] gap-3 items-center px-4 py-3 border-b" style="border-color: var(--border);">
+                <span class="ckb"></span>
+                <span class="av c5">PL</span>
+                <div class="min-w-0">
+                  <div class="text-[13.5px] font-medium truncate">Relancer Pixel Lab</div>
+                  <div class="text-[11.5px] text-tertiary font-mono mt-0.5">prospecting · 18 000 € · 3j sans réponse</div>
+                </div>
+                <span class="num text-[12px]" style="color: var(--err);">En retard ⚠</span>
+                <span class="chip">Cold</span>
+              </div>
+              <div class="grid grid-cols-[24px_36px_1fr_auto_auto] gap-3 items-center px-4 py-3 border-b" style="border-color: var(--border);">
+                <span class="ckb"></span>
+                <span class="av c3">SC</span>
+                <div class="min-w-0">
+                  <div class="text-[13.5px] font-medium truncate">Démo planifiée — Stelar Corp</div>
+                  <div class="text-[11.5px] text-tertiary font-mono mt-0.5">qualified · 220 000 € · platform deal</div>
+                </div>
+                <span class="num text-[12px]" style="color: var(--text2);">Demain 10:00</span>
+                <span class="chip ok">Prep</span>
+              </div>
+              <div class="grid grid-cols-[24px_36px_1fr_auto_auto] gap-3 items-center px-4 py-3 border-b" style="border-color: var(--border);">
+                <span class="ckb"></span>
+                <span class="av c4">NV</span>
+                <div class="min-w-0">
+                  <div class="text-[13.5px] font-medium truncate">Signer contrat — Novia</div>
+                  <div class="text-[11.5px] text-tertiary font-mono mt-0.5">proposal · 96 000 € · prêt signature</div>
+                </div>
+                <span class="num text-[12px]" style="color: var(--text2);">Vendredi</span>
+                <span class="chip">Sign</span>
+              </div>
+              <div class="grid grid-cols-[24px_36px_1fr_auto_auto] gap-3 items-center px-4 py-3 opacity-60">
+                <span class="ckb on"><svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 4l2.5 2.5L8 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="av c2">—</span>
+                <div class="min-w-0">
+                  <div class="text-[13.5px] line-through truncate">Brief commercial Q3</div>
+                  <div class="text-[11.5px] text-tertiary font-mono mt-0.5">complété hier 16:20</div>
+                </div>
+                <span></span><span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PIPELINE FUNNEL -->
+          <div class="flex flex-col gap-3">
+            <div class="card">
+              <div class="card-h">
+                <span class="title">Pipeline par étape</span>
+                <span class="meta">EUR</span>
+              </div>
+              <div class="p-4 flex flex-col gap-3">
+                <div>
+                  <div class="flex justify-between text-[12px] mb-1.5">
+                    <span><span class="num">6</span> Prospecting</span>
+                    <span class="num text-secondary">274 297 €</span>
+                  </div>
+                  <div class="pbar"><div style="width: 27%;"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between text-[12px] mb-1.5">
+                    <span><span class="num">11</span> Qualified</span>
+                    <span class="num text-secondary">1 011 634 €</span>
+                  </div>
+                  <div class="pbar"><div style="width: 100%;"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between text-[12px] mb-1.5">
+                    <span><span class="num">7</span> Proposal</span>
+                    <span class="num text-secondary">568 040 €</span>
+                  </div>
+                  <div class="pbar accent"><div style="width: 56%;"></div></div>
+                </div>
+                <div>
+                  <div class="flex justify-between text-[12px] mb-1.5">
+                    <span><span class="num">2</span> Negotiation</span>
+                    <span class="num text-secondary">136 500 €</span>
+                  </div>
+                  <div class="pbar"><div style="width: 14%;"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-h">
+                <span class="title">Activité</span>
+                <span class="meta">aujourd'hui</span>
+              </div>
+              <div class="px-4 py-2">
+                <div class="tl-item">
+                  <span class="tl-time">11:24</span>
+                  <div class="tl-axis"><div class="tl-dot info"></div></div>
+                  <div class="tl-content">
+                    <div class="ti">Email envoyé à <b>Lumio Studio</b></div>
+                    <div class="ts">proposal v2 · MR</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <span class="tl-time">10:08</span>
+                  <div class="tl-axis"><div class="tl-dot"></div></div>
+                  <div class="tl-content">
+                    <div class="ti">Note ajoutée sur <b>Acme SA</b></div>
+                    <div class="ts">"Décision finale d'ici jeudi"</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <span class="tl-time">09:42</span>
+                  <div class="tl-axis"><div class="tl-dot accent"></div></div>
+                  <div class="tl-content">
+                    <div class="ti">Deal créé · <b>Foxtrot Pilot</b></div>
+                    <div class="ts">12 500 € · qualified</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 2. DEALS (Table)                                                -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="deals" data-label="Deals" data-crumb="Deals">
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Deals</h1>
+            <p class="text-sm text-secondary mt-0.5"><span class="num">24</span> deals ouverts · <span class="num">1 853 972 €</span> en pipeline</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex gap-0 border rounded-lg overflow-hidden" style="border-color: var(--border);">
+              <button class="btn sm" style="border-radius: 0; border: none; background: var(--text); color: var(--bg);"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Table</button>
+              <button class="btn sm ghost" style="border-radius: 0; border: none;"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="18"/><rect x="11" y="3" width="6" height="12"/><rect x="19" y="3" width="2" height="8"/></svg>Kanban</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- filter bar -->
+        <div class="px-7 pb-3 flex items-center gap-2 flex-wrap">
+          <span class="chip solid num">All · 24</span>
+          <span class="chip">Mine · 18</span>
+          <span class="chip accent"><span class="chip-dot"></span>Hot · 4</span>
+          <span class="chip">Closing this week · 3</span>
+          <span class="chip err"><span class="chip-dot"></span>Overdue tasks · 1</span>
+          <span class="ml-auto text-xs text-tertiary font-mono">Sort: closing date ↓</span>
+          <button class="btn sm ghost"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Saved view</button>
+        </div>
+
+        <!-- table -->
+        <div class="px-7 pb-12">
+          <div class="card overflow-hidden">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th style="width: 32px;"><span class="ckb"></span></th>
+                  <th>Deal</th>
+                  <th>Company</th>
+                  <th>Amount</th>
+                  <th>Stage</th>
+                  <th>Close date</th>
+                  <th>Owner</th>
+                  <th>Score</th>
+                  <th style="width: 32px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="ckb"></span></td>
+                  <td>
+                    <div class="font-medium">Acme SA — Annual licence</div>
+                    <div class="text-[11.5px] text-tertiary font-mono mt-0.5">Created 03 May · 14 activities</div>
+                  </td>
+                  <td><span class="text-secondary">Acme SA</span></td>
+                  <td><span class="num font-semibold">84 500 €</span></td>
+                  <td><span class="chip"><span class="chip-dot" style="background: var(--info);"></span>Negotiation</span></td>
+                  <td><span class="num">22/05/2026</span></td>
+                  <td><span class="av c1">JD</span></td>
+                  <td><span class="chip accent num">92</span></td>
+                  <td><svg class="ic text-tertiary" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></svg></td>
+                </tr>
+                <tr>
+                  <td><span class="ckb"></span></td>
+                  <td>
+                    <div class="font-medium">Lumio Studio — Onboarding</div>
+                    <div class="text-[11.5px] text-tertiary font-mono mt-0.5">Created 22 Apr · 9 activities</div>
+                  </td>
+                  <td><span class="text-secondary">Lumio Studio</span></td>
+                  <td><span class="num font-semibold">42 000 €</span></td>
+                  <td><span class="chip"><span class="chip-dot" style="background: var(--accent);"></span>Proposal</span></td>
+                  <td><span class="num">28/05/2026</span></td>
+                  <td><span class="av c2">MR</span></td>
+                  <td><span class="chip num">76</span></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><span class="ckb"></span></td>
+                  <td>
+                    <div class="font-medium">Stelar Corp — Platform deal</div>
+                    <div class="text-[11.5px] text-tertiary font-mono mt-0.5">Created 14 Apr · 21 activities</div>
+                  </td>
+                  <td><span class="text-secondary">Stelar Corp</span></td>
+                  <td><span class="num font-semibold">220 000 €</span></td>
+                  <td><span class="chip"><span class="chip-dot" style="background: var(--text2);"></span>Qualified</span></td>
+                  <td><span class="num">03/06/2026</span></td>
+                  <td><span class="av c3">SC</span></td>
+                  <td><span class="chip num">68</span></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><span class="ckb"></span></td>
+                  <td>
+                    <div class="font-medium">Pixel Lab — Retainer Q3</div>
+                    <div class="text-[11.5px] text-tertiary font-mono mt-0.5">Created 10 Mar · 4 activities</div>
+                  </td>
+                  <td><span class="text-secondary">Pixel Lab</span></td>
+                  <td><span class="num font-semibold">18 000 €</span></td>
+                  <td><span class="chip"><span class="chip-dot" style="background: var(--text3);"></span>Prospecting</span></td>
+                  <td><span class="num" style="color: var(--err);">11/05/2026 ⚠</span></td>
+                  <td><span class="av c5">PL</span></td>
+                  <td><span class="chip num">41</span></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><span class="ckb"></span></td>
+                  <td>
+                    <div class="font-medium">Novia — Migration project</div>
+                    <div class="text-[11.5px] text-tertiary font-mono mt-0.5">Created 28 Apr · 18 activities</div>
+                  </td>
+                  <td><span class="text-secondary">Novia</span></td>
+                  <td><span class="num font-semibold">96 000 €</span></td>
+                  <td><span class="chip"><span class="chip-dot" style="background: var(--accent);"></span>Proposal</span></td>
+                  <td><span class="num">31/05/2026</span></td>
+                  <td><span class="av c4">NV</span></td>
+                  <td><span class="chip accent num">81</span></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><span class="ckb"></span></td>
+                  <td>
+                    <div class="font-medium">Halo Robotics — v2 proposal</div>
+                    <div class="text-[11.5px] text-tertiary font-mono mt-0.5">Created 02 May · 11 activities</div>
+                  </td>
+                  <td><span class="text-secondary">Halo Robotics</span></td>
+                  <td><span class="num font-semibold">128 000 €</span></td>
+                  <td><span class="chip"><span class="chip-dot" style="background: var(--accent);"></span>Proposal</span></td>
+                  <td><span class="num">05/06/2026</span></td>
+                  <td><span class="av c1">HR</span></td>
+                  <td><span class="chip num">73</span></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><span class="ckb"></span></td>
+                  <td>
+                    <div class="font-medium">Foxtrot — Pilot</div>
+                    <div class="text-[11.5px] text-tertiary font-mono mt-0.5">Created 15 May · 2 activities</div>
+                  </td>
+                  <td><span class="text-secondary">Foxtrot</span></td>
+                  <td><span class="num font-semibold">12 500 €</span></td>
+                  <td><span class="chip"><span class="chip-dot" style="background: var(--text2);"></span>Qualified</span></td>
+                  <td><span class="num">10/06/2026</span></td>
+                  <td><span class="av c3">FX</span></td>
+                  <td><span class="chip num">55</span></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><span class="ckb"></span></td>
+                  <td>
+                    <div class="font-medium">Mantis Group — Enterprise</div>
+                    <div class="text-[11.5px] text-tertiary font-mono mt-0.5">Created 19 Mar · 16 activities</div>
+                  </td>
+                  <td><span class="text-secondary">Mantis Group</span></td>
+                  <td><span class="num font-semibold">144 000 €</span></td>
+                  <td><span class="chip"><span class="chip-dot" style="background: var(--text2);"></span>Qualified</span></td>
+                  <td><span class="num">18/06/2026</span></td>
+                  <td><span class="av c2">MG</span></td>
+                  <td><span class="chip num">62</span></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="px-4 py-3 flex items-center justify-between border-t text-[12px] text-tertiary" style="border-color: var(--border);">
+              <span class="font-mono">8 sur 24</span>
+              <div class="flex gap-1">
+                <button class="btn sm ghost">‹ Précédent</button>
+                <button class="btn sm ghost">Suivant ›</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 3. PIPELINE (Kanban)                                            -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="pipeline" data-label="Pipeline" data-crumb="Pipeline / Commerce">
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Pipeline Commerce</h1>
+            <p class="text-sm text-secondary mt-0.5">Glisse les deals d'une étape à l'autre. <span class="num">1 853 972 €</span> total.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn sm"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M10 18h4"/></svg>Filtrer</button>
+            <select class="select-arrow btn sm" style="appearance: none;">
+              <option>Pipeline Commerce</option>
+            </select>
+            <button class="btn sm"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Étape</button>
+          </div>
+        </div>
+
+        <div class="px-7 pb-12 overflow-x-auto">
+          <div class="flex gap-3 pt-2" style="min-width: max-content;">
+
+            <div class="k-col">
+              <div class="flex items-center justify-between px-1 py-1">
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-2 h-2 rounded-full" style="background: var(--text3);"></span>
+                  <span class="font-semibold text-[13px]">Prospecting</span>
+                  <span class="chip num">6</span>
+                </div>
+                <span class="num text-[11.5px] text-tertiary">274k €</span>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Pixel Lab</div>
+                <div class="num text-[12px] text-secondary mt-0.5">18 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c5">PL</span><span class="text-[11px] text-tertiary font-mono">retainer</span></div>
+                  <span class="text-[11px] font-mono" style="color: var(--err);">3j ⚠</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Bluemark</div>
+                <div class="num text-[12px] text-secondary mt-0.5">46 200 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c2">BM</span><span class="text-[11px] text-tertiary font-mono">disco</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">7j</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Orca Tech</div>
+                <div class="num text-[12px] text-secondary mt-0.5">82 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c3">OT</span><span class="text-[11px] text-tertiary font-mono">inbound</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">2j</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Hodge &amp; Sons</div>
+                <div class="num text-[12px] text-secondary mt-0.5">31 500 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c1">HS</span><span class="text-[11px] text-tertiary font-mono">referral</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">5j</span>
+                </div>
+              </div>
+              <button class="btn ghost sm w-full justify-center text-tertiary">+ Ajouter deal</button>
+            </div>
+
+            <div class="k-col">
+              <div class="flex items-center justify-between px-1 py-1">
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-2 h-2 rounded-full" style="background: var(--info);"></span>
+                  <span class="font-semibold text-[13px]">Qualified</span>
+                  <span class="chip num">11</span>
+                </div>
+                <span class="num text-[11.5px] text-tertiary">1,01M €</span>
+              </div>
+              <div class="k-card" style="background: var(--accent-soft); border-color: var(--accent);">
+                <div class="flex justify-between items-start">
+                  <div class="text-[13.5px] font-medium">Stelar Corp</div>
+                  <span class="chip accent" style="padding: 0 6px; font-size: 9.5px;">★</span>
+                </div>
+                <div class="num text-[12px] mt-0.5" style="color: var(--accent);">220 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c3">SC</span><span class="text-[11px] text-tertiary font-mono">platform</span></div>
+                  <span class="text-[11px] font-mono" style="color: var(--accent);">demo demain</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Mantis Group</div>
+                <div class="num text-[12px] text-secondary mt-0.5">144 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c2">MG</span><span class="text-[11px] text-tertiary font-mono">enterprise</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">11j</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Quanta</div>
+                <div class="num text-[12px] text-secondary mt-0.5">96 800 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c4">QT</span><span class="text-[11px] text-tertiary font-mono">SaaS</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">6j</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Foxtrot</div>
+                <div class="num text-[12px] text-secondary mt-0.5">12 500 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c3">FX</span><span class="text-[11px] text-tertiary font-mono">pilot</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">4j</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Ekko</div>
+                <div class="num text-[12px] text-secondary mt-0.5">38 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c1">EK</span><span class="text-[11px] text-tertiary font-mono">standard</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">2j</span>
+                </div>
+              </div>
+              <button class="btn ghost sm w-full justify-center text-tertiary">+ Ajouter deal</button>
+            </div>
+
+            <div class="k-col">
+              <div class="flex items-center justify-between px-1 py-1">
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-2 h-2 rounded-full" style="background: var(--accent);"></span>
+                  <span class="font-semibold text-[13px]">Proposal</span>
+                  <span class="chip num">7</span>
+                </div>
+                <span class="num text-[11.5px] text-tertiary">568k €</span>
+              </div>
+              <div class="k-card hot">
+                <div class="flex justify-between items-start">
+                  <div class="text-[13.5px] font-medium">Lumio Studio</div>
+                  <span class="chip accent" style="padding: 0 6px; font-size: 9.5px;">Hot</span>
+                </div>
+                <div class="num text-[12px] text-secondary mt-0.5">42 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c2">MR</span><span class="text-[11px] text-tertiary font-mono">onboarding</span></div>
+                  <span class="text-[11px] font-mono" style="color: var(--accent);">due today</span>
+                </div>
+              </div>
+              <div class="k-card hot">
+                <div class="text-[13.5px] font-medium">Novia</div>
+                <div class="num text-[12px] text-secondary mt-0.5">96 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c4">NV</span><span class="text-[11px] text-tertiary font-mono">migration</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">vendredi</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Halo Robotics</div>
+                <div class="num text-[12px] text-secondary mt-0.5">128 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c1">HR</span><span class="text-[11px] text-tertiary font-mono">v2 proposal</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">9j</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Indra</div>
+                <div class="num text-[12px] text-secondary mt-0.5">74 200 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c5">IN</span><span class="text-[11px] text-tertiary font-mono">standard</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">3j</span>
+                </div>
+              </div>
+              <button class="btn ghost sm w-full justify-center text-tertiary">+ Ajouter deal</button>
+            </div>
+
+            <div class="k-col">
+              <div class="flex items-center justify-between px-1 py-1">
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-2 h-2 rounded-full" style="background: #7d2a93;"></span>
+                  <span class="font-semibold text-[13px]">Negotiation</span>
+                  <span class="chip num">2</span>
+                </div>
+                <span class="num text-[11.5px] text-tertiary">136k €</span>
+              </div>
+              <div class="k-card hot">
+                <div class="flex justify-between items-start">
+                  <div class="text-[13.5px] font-medium">Acme SA</div>
+                  <span class="chip accent num" style="padding: 0 6px; font-size: 9.5px;">92</span>
+                </div>
+                <div class="num text-[12px] text-secondary mt-0.5">84 500 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c1">JD</span><span class="text-[11px] text-tertiary font-mono">annual licence</span></div>
+                  <span class="text-[11px] font-mono" style="color: var(--accent);">call 14:30</span>
+                </div>
+              </div>
+              <div class="k-card">
+                <div class="text-[13.5px] font-medium">Greene &amp; Co</div>
+                <div class="num text-[12px] text-secondary mt-0.5">52 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c2">GC</span><span class="text-[11px] text-tertiary font-mono">2yr deal</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">7j</span>
+                </div>
+              </div>
+              <button class="btn ghost sm w-full justify-center text-tertiary">+ Ajouter deal</button>
+            </div>
+
+            <div class="k-col">
+              <div class="flex items-center justify-between px-1 py-1">
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-2 h-2 rounded-full" style="background: var(--ok);"></span>
+                  <span class="font-semibold text-[13px]" style="color: var(--ok);">Won</span>
+                  <span class="chip num">3</span>
+                </div>
+                <span class="num text-[11.5px] text-tertiary">142k €</span>
+              </div>
+              <div class="k-card" style="background: var(--ok-soft);">
+                <div class="text-[13.5px] font-medium">Tessera</div>
+                <div class="num text-[12px] mt-0.5" style="color: var(--ok);">62 800 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c2">TS</span><span class="text-[11px] text-tertiary font-mono">✓ signé</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">12 mai</span>
+                </div>
+              </div>
+              <div class="k-card" style="background: var(--ok-soft);">
+                <div class="text-[13.5px] font-medium">Marka</div>
+                <div class="num text-[12px] mt-0.5" style="color: var(--ok);">42 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c4">MK</span><span class="text-[11px] text-tertiary font-mono">✓ signé</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">08 mai</span>
+                </div>
+              </div>
+              <div class="k-card" style="background: var(--ok-soft);">
+                <div class="text-[13.5px] font-medium">Junip</div>
+                <div class="num text-[12px] mt-0.5" style="color: var(--ok);">38 000 €</div>
+                <div class="flex justify-between items-center mt-2.5">
+                  <div class="flex items-center gap-1.5"><span class="av sm c1">JN</span><span class="text-[11px] text-tertiary font-mono">✓ signé</span></div>
+                  <span class="text-[11px] font-mono text-tertiary">03 mai</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 4. CONTACTS                                                     -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="contacts" data-label="Contacts" data-crumb="Contacts">
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Contacts</h1>
+            <p class="text-sm text-secondary mt-0.5"><span class="num">187</span> contacts · <span class="num">42</span> avec deal actif</p>
+          </div>
+        </div>
+        <div class="px-7 pb-3 flex items-center gap-2">
+          <span class="chip solid">Tous · 187</span>
+          <span class="chip">Décideurs · 28</span>
+          <span class="chip">Sans activité 30j · 41</span>
+          <span class="chip accent"><span class="chip-dot"></span>Champions · 12</span>
+        </div>
+        <div class="px-7 pb-12">
+          <div class="card overflow-hidden">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th style="width: 32px;"><span class="ckb"></span></th>
+                  <th>Nom</th>
+                  <th>Rôle</th>
+                  <th>Entreprise</th>
+                  <th>Email</th>
+                  <th>Tél</th>
+                  <th>Deals</th>
+                  <th>Dernière activité</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av c1">JD</span><span class="font-medium">Julien Dupont</span></div></td><td><span class="text-secondary">CTO</span></td><td><span class="text-secondary">Acme SA</span></td><td class="font-mono text-[12px]">j.dupont@acme.fr</td><td class="font-mono text-[12px] text-tertiary">+33 6 12 34 56 78</td><td><span class="chip num">2</span></td><td class="text-tertiary font-mono text-[12px]">il y a 2h</td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av c2">MR</span><span class="font-medium">Maya Rousseau</span></div></td><td><span class="text-secondary">Head of Product</span></td><td><span class="text-secondary">Lumio Studio</span></td><td class="font-mono text-[12px]">maya@lumio.io</td><td class="font-mono text-[12px] text-tertiary">+33 7 88 12 34 22</td><td><span class="chip accent num">1</span></td><td class="text-tertiary font-mono text-[12px]">hier 11:24</td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av c3">SC</span><span class="font-medium">Sophie Chen</span></div></td><td><span class="text-secondary">VP Engineering</span></td><td><span class="text-secondary">Stelar Corp</span></td><td class="font-mono text-[12px]">sophie.chen@stelar.com</td><td class="font-mono text-[12px] text-tertiary">+1 415 555 0192</td><td><span class="chip num">3</span></td><td class="text-tertiary font-mono text-[12px]">2 jours</td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av c4">NV</span><span class="font-medium">Nicolas Vallée</span></div></td><td><span class="text-secondary">CEO</span></td><td><span class="text-secondary">Novia</span></td><td class="font-mono text-[12px]">nv@novia.tech</td><td class="font-mono text-[12px] text-tertiary">+33 1 47 22 18 04</td><td><span class="chip num">1</span></td><td class="text-tertiary font-mono text-[12px]">3 jours</td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av c5">PL</span><span class="font-medium">Pascal Levy</span></div></td><td><span class="text-secondary">Founder</span></td><td><span class="text-secondary">Pixel Lab</span></td><td class="font-mono text-[12px]">pascal@pixellab.co</td><td class="font-mono text-[12px] text-tertiary">+33 6 89 04 11 27</td><td><span class="chip num">1</span></td><td class="text-tertiary font-mono text-[12px]" style="color: var(--err);">8 jours ⚠</td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av c1">HR</span><span class="font-medium">Helena Rosenfeld</span></div></td><td><span class="text-secondary">COO</span></td><td><span class="text-secondary">Halo Robotics</span></td><td class="font-mono text-[12px]">h.rosenfeld@halo.de</td><td class="font-mono text-[12px] text-tertiary">+49 30 555 1827</td><td><span class="chip num">1</span></td><td class="text-tertiary font-mono text-[12px]">hier</td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av c2">MG</span><span class="font-medium">Marc Girard</span></div></td><td><span class="text-secondary">Procurement</span></td><td><span class="text-secondary">Mantis Group</span></td><td class="font-mono text-[12px]">m.girard@mantis.fr</td><td class="font-mono text-[12px] text-tertiary">+33 1 84 73 92 06</td><td><span class="chip num">1</span></td><td class="text-tertiary font-mono text-[12px]">4 jours</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 5. ENTREPRISES                                                  -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="companies" data-label="Entreprises" data-crumb="Entreprises">
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Entreprises</h1>
+            <p class="text-sm text-secondary mt-0.5"><span class="num">84</span> entreprises · <span class="num">31</span> avec deal actif</p>
+          </div>
+        </div>
+        <div class="px-7 pb-12">
+          <div class="card overflow-hidden">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th style="width: 32px;"><span class="ckb"></span></th>
+                  <th>Entreprise</th>
+                  <th>Secteur</th>
+                  <th>Taille</th>
+                  <th>Pays</th>
+                  <th>Deals</th>
+                  <th>Pipeline</th>
+                  <th>Owner</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av lg c1" style="border-radius: 6px;">A</span><div><div class="font-medium">Acme SA</div><div class="font-mono text-[11.5px] text-tertiary">acme.fr</div></div></div></td><td><span class="text-secondary">SaaS B2B</span></td><td class="font-mono text-[12px]">120 emp.</td><td class="font-mono text-[12px]">🇫🇷 FR</td><td><span class="chip num">2</span></td><td><span class="num font-semibold">84 500 €</span></td><td><span class="av sm c1">JD</span></td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av lg c2" style="border-radius: 6px;">L</span><div><div class="font-medium">Lumio Studio</div><div class="font-mono text-[11.5px] text-tertiary">lumio.io</div></div></div></td><td><span class="text-secondary">Design</span></td><td class="font-mono text-[12px]">24 emp.</td><td class="font-mono text-[12px]">🇫🇷 FR</td><td><span class="chip num">1</span></td><td><span class="num font-semibold">42 000 €</span></td><td><span class="av sm c2">MR</span></td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av lg c3" style="border-radius: 6px;">S</span><div><div class="font-medium">Stelar Corp</div><div class="font-mono text-[11.5px] text-tertiary">stelar.com</div></div></div></td><td><span class="text-secondary">Tech</span></td><td class="font-mono text-[12px]">850 emp.</td><td class="font-mono text-[12px]">🇺🇸 US</td><td><span class="chip num">3</span></td><td><span class="num font-semibold">220 000 €</span></td><td><span class="av sm c3">SC</span></td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av lg c4" style="border-radius: 6px;">N</span><div><div class="font-medium">Novia</div><div class="font-mono text-[11.5px] text-tertiary">novia.tech</div></div></div></td><td><span class="text-secondary">FinTech</span></td><td class="font-mono text-[12px]">68 emp.</td><td class="font-mono text-[12px]">🇫🇷 FR</td><td><span class="chip num">1</span></td><td><span class="num font-semibold">96 000 €</span></td><td><span class="av sm c4">NV</span></td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av lg c1" style="border-radius: 6px;">H</span><div><div class="font-medium">Halo Robotics</div><div class="font-mono text-[11.5px] text-tertiary">halo.de</div></div></div></td><td><span class="text-secondary">Robotique</span></td><td class="font-mono text-[12px]">340 emp.</td><td class="font-mono text-[12px]">🇩🇪 DE</td><td><span class="chip num">1</span></td><td><span class="num font-semibold">128 000 €</span></td><td><span class="av sm c1">HR</span></td></tr>
+                <tr><td><span class="ckb"></span></td><td><div class="flex items-center gap-2"><span class="av lg c5" style="border-radius: 6px;">P</span><div><div class="font-medium">Pixel Lab</div><div class="font-mono text-[11.5px] text-tertiary">pixellab.co</div></div></div></td><td><span class="text-secondary">Agency</span></td><td class="font-mono text-[12px]">12 emp.</td><td class="font-mono text-[12px]">🇫🇷 FR</td><td><span class="chip num">1</span></td><td><span class="num font-semibold">18 000 €</span></td><td><span class="av sm c5">PL</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 6. ACTIVITES                                                    -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="activities" data-label="Activités" data-crumb="Activités">
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Activités</h1>
+            <p class="text-sm text-secondary mt-0.5">Tout ce qui s'est passé sur ton pipeline.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn sm"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M10 18h4"/></svg>Type</button>
+            <button class="btn sm"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>30 jours</button>
+          </div>
+        </div>
+
+        <div class="px-7 pb-12 grid grid-cols-3 gap-3">
+          <!-- timeline -->
+          <div class="card col-span-2">
+            <div class="card-h">
+              <span class="title">Timeline</span>
+              <span class="meta">142 événements · 7 jours</span>
+            </div>
+            <div class="px-4 py-2">
+              <div class="text-[11px] font-mono uppercase text-tertiary tracking-wide pt-3 pb-1">Aujourd'hui · vendredi 16 mai</div>
+              <div class="tl-item">
+                <span class="tl-time">11:24</span><div class="tl-axis"><div class="tl-dot info"></div></div>
+                <div class="tl-content"><div class="ti">📧 Email envoyé à <b>Lumio Studio</b></div><div class="ts">Maya Rousseau · proposal v2 · 42 000 €</div></div>
+              </div>
+              <div class="tl-item">
+                <span class="tl-time">10:08</span><div class="tl-axis"><div class="tl-dot"></div></div>
+                <div class="tl-content"><div class="ti">📝 Note ajoutée sur <b>Acme SA</b></div><div class="ts">"Décision finale d'ici jeudi"</div></div>
+              </div>
+              <div class="tl-item">
+                <span class="tl-time">09:42</span><div class="tl-axis"><div class="tl-dot accent"></div></div>
+                <div class="tl-content"><div class="ti">➕ Deal créé · <b>Foxtrot Pilot</b></div><div class="ts">qualified · 12 500 €</div></div>
+              </div>
+              <div class="text-[11px] font-mono uppercase text-tertiary tracking-wide pt-4 pb-1">Hier · jeudi 15 mai</div>
+              <div class="tl-item">
+                <span class="tl-time">16:30</span><div class="tl-axis"><div class="tl-dot ok"></div></div>
+                <div class="tl-content"><div class="ti">✓ Deal gagné · <b>Tessera</b></div><div class="ts">62 800 € · contrat signé</div></div>
+              </div>
+              <div class="tl-item">
+                <span class="tl-time">14:12</span><div class="tl-axis"><div class="tl-dot info"></div></div>
+                <div class="tl-content"><div class="ti">📞 Appel · <b>Stelar Corp</b></div><div class="ts">Sophie Chen · 28 min · démo confirmée pour samedi</div></div>
+              </div>
+              <div class="tl-item">
+                <span class="tl-time">11:00</span><div class="tl-axis"><div class="tl-dot"></div></div>
+                <div class="tl-content"><div class="ti">🔄 Étape changée · <b>Novia</b></div><div class="ts">Qualified → Proposal</div></div>
+              </div>
+              <div class="text-[11px] font-mono uppercase text-tertiary tracking-wide pt-4 pb-1">Mercredi 14 mai</div>
+              <div class="tl-item">
+                <span class="tl-time">17:20</span><div class="tl-axis"><div class="tl-dot info"></div></div>
+                <div class="tl-content"><div class="ti">📧 Email reçu de <b>Halo Robotics</b></div><div class="ts">Helena Rosenfeld · "Retour sur la proposal v2"</div></div>
+              </div>
+              <div class="tl-item">
+                <span class="tl-time">10:45</span><div class="tl-axis"><div class="tl-dot accent"></div></div>
+                <div class="tl-content"><div class="ti">📅 Réunion programmée · <b>Mantis Group</b></div><div class="ts">demo enterprise · 20 mai 14h</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- summary -->
+          <div class="flex flex-col gap-3">
+            <div class="card p-5">
+              <div class="mono-label">Activité · 7j</div>
+              <div class="num text-3xl font-semibold mt-2">142</div>
+              <div class="text-[12px] text-tertiary mt-1">événements</div>
+              <div class="mt-4 grid grid-cols-2 gap-2 text-[12px]">
+                <div><span class="num font-semibold">68</span><span class="text-tertiary"> emails</span></div>
+                <div><span class="num font-semibold">22</span><span class="text-tertiary"> appels</span></div>
+                <div><span class="num font-semibold">31</span><span class="text-tertiary"> notes</span></div>
+                <div><span class="num font-semibold">21</span><span class="text-tertiary"> changements</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-h"><span class="title">Top deals actifs</span><span class="meta">par activité</span></div>
+              <div class="p-2">
+                <div class="flex items-center justify-between px-3 py-2 rounded-md hover:bg-[var(--surface2)]"><span class="text-[13px]">Acme SA</span><span class="num text-[12px] text-tertiary">14 act.</span></div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-md"><span class="text-[13px]">Stelar Corp</span><span class="num text-[12px] text-tertiary">21 act.</span></div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-md"><span class="text-[13px]">Novia</span><span class="num text-[12px] text-tertiary">18 act.</span></div>
+                <div class="flex items-center justify-between px-3 py-2 rounded-md"><span class="text-[13px]">Lumio Studio</span><span class="num text-[12px] text-tertiary">9 act.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 7. ETAPES (config)                                              -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="stages" data-label="Étapes" data-crumb="Paramètres / Étapes">
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Étapes du pipeline</h1>
+            <p class="text-sm text-secondary mt-0.5">Configure les étapes par lesquelles passent tes deals.</p>
+          </div>
+          <button class="btn primary sm"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2;"><path d="M12 5v14M5 12h14"/></svg>Ajouter étape</button>
+        </div>
+        <div class="px-7 pb-12 max-w-4xl">
+          <div class="card overflow-hidden">
+            <div class="px-4 py-3 grid grid-cols-[24px_36px_1fr_120px_120px_100px_60px] gap-3 items-center border-b mono-label" style="border-color: var(--border);">
+              <span></span><span></span><span>Étape</span><span>Probabilité</span><span>Couleur</span><span>Deals</span><span></span>
+            </div>
+            <div class="px-4 py-3 grid grid-cols-[24px_36px_1fr_120px_120px_100px_60px] gap-3 items-center border-b hover:bg-[var(--surface2)]" style="border-color: var(--border);">
+              <span class="text-tertiary cursor-grab"><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1" fill="currentColor" stroke="none"/></svg></span>
+              <span class="num text-tertiary text-[12px]">01</span>
+              <div><div class="font-medium">Prospecting</div><div class="text-[11.5px] text-tertiary font-mono">Premier contact, pas encore qualifié</div></div>
+              <span class="chip num">10%</span>
+              <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full" style="background: var(--text3);"></span><span class="font-mono text-[12px]">#92908a</span></div>
+              <span class="num text-[12px]">6</span>
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></svg></button>
+            </div>
+            <div class="px-4 py-3 grid grid-cols-[24px_36px_1fr_120px_120px_100px_60px] gap-3 items-center border-b" style="border-color: var(--border);">
+              <span class="text-tertiary cursor-grab"><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1" fill="currentColor" stroke="none"/></svg></span>
+              <span class="num text-tertiary text-[12px]">02</span>
+              <div><div class="font-medium">Qualified</div><div class="text-[11.5px] text-tertiary font-mono">Budget, autorité, besoin, timing confirmés</div></div>
+              <span class="chip num">35%</span>
+              <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full" style="background: var(--info);"></span><span class="font-mono text-[12px]">#2a5fb4</span></div>
+              <span class="num text-[12px]">11</span>
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></svg></button>
+            </div>
+            <div class="px-4 py-3 grid grid-cols-[24px_36px_1fr_120px_120px_100px_60px] gap-3 items-center border-b" style="border-color: var(--border);">
+              <span class="text-tertiary cursor-grab"><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1" fill="currentColor" stroke="none"/></svg></span>
+              <span class="num text-tertiary text-[12px]">03</span>
+              <div><div class="font-medium">Proposal</div><div class="text-[11.5px] text-tertiary font-mono">Proposition envoyée, en attente de retour</div></div>
+              <span class="chip num">60%</span>
+              <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full" style="background: var(--accent);"></span><span class="font-mono text-[12px]">#ef6a2a</span></div>
+              <span class="num text-[12px]">7</span>
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></svg></button>
+            </div>
+            <div class="px-4 py-3 grid grid-cols-[24px_36px_1fr_120px_120px_100px_60px] gap-3 items-center border-b" style="border-color: var(--border);">
+              <span class="text-tertiary cursor-grab"><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1" fill="currentColor" stroke="none"/></svg></span>
+              <span class="num text-tertiary text-[12px]">04</span>
+              <div><div class="font-medium">Negotiation</div><div class="text-[11.5px] text-tertiary font-mono">Négociation des termes finaux</div></div>
+              <span class="chip num">85%</span>
+              <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full" style="background: #7d2a93;"></span><span class="font-mono text-[12px]">#7d2a93</span></div>
+              <span class="num text-[12px]">2</span>
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></svg></button>
+            </div>
+            <div class="px-4 py-3 grid grid-cols-[24px_36px_1fr_120px_120px_100px_60px] gap-3 items-center" style="opacity: 0.75;">
+              <span></span>
+              <span class="num text-tertiary text-[12px]">★</span>
+              <div><div class="font-medium" style="color: var(--ok);">Won</div><div class="text-[11.5px] text-tertiary font-mono">Étape finale (verrouillée)</div></div>
+              <span class="chip num ok">100%</span>
+              <div class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full" style="background: var(--ok);"></span><span class="font-mono text-[12px]">#2f8a5f</span></div>
+              <span class="num text-[12px]">3</span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 8. CHAMPS PERSO                                                 -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="fields" data-label="Champs perso" data-crumb="Paramètres / Champs personnalisés">
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Champs personnalisés</h1>
+            <p class="text-sm text-secondary mt-0.5">Ajoute des champs custom à tes deals, contacts, entreprises.</p>
+          </div>
+          <button class="btn primary sm"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2;"><path d="M12 5v14M5 12h14"/></svg>Nouveau champ</button>
+        </div>
+        <div class="px-7 pb-3 flex items-center gap-2">
+          <span class="chip solid">Deals · 8</span>
+          <span class="chip">Contacts · 5</span>
+          <span class="chip">Entreprises · 3</span>
+        </div>
+        <div class="px-7 pb-12">
+          <div class="card overflow-hidden">
+            <table class="t">
+              <thead>
+                <tr><th>Label</th><th>Clé API</th><th>Type</th><th>Obligatoire</th><th>Valeurs</th><th>Utilisé</th><th></th></tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="font-medium">Source du lead</span></td><td class="font-mono text-[12px] text-tertiary">lead_source</td><td><span class="chip">Select</span></td><td><span class="chip">non</span></td><td class="font-mono text-[12px] text-tertiary">Inbound · Outbound · Referral · …</td><td class="num text-[12px]">24/24</td><td></td></tr>
+                <tr><td><span class="font-medium">Score</span></td><td class="font-mono text-[12px] text-tertiary">score</td><td><span class="chip">Number</span></td><td><span class="chip">non</span></td><td class="font-mono text-[12px] text-tertiary">0–100</td><td class="num text-[12px]">24/24</td><td></td></tr>
+                <tr><td><span class="font-medium">Type de deal</span></td><td class="font-mono text-[12px] text-tertiary">deal_type</td><td><span class="chip">Select</span></td><td><span class="chip accent">oui</span></td><td class="font-mono text-[12px] text-tertiary">New · Upsell · Renewal</td><td class="num text-[12px]">24/24</td><td></td></tr>
+                <tr><td><span class="font-medium">Date démo</span></td><td class="font-mono text-[12px] text-tertiary">demo_date</td><td><span class="chip">Date</span></td><td><span class="chip">non</span></td><td class="text-tertiary">—</td><td class="num text-[12px]">14/24</td><td></td></tr>
+                <tr><td><span class="font-medium">Concurrents</span></td><td class="font-mono text-[12px] text-tertiary">competitors</td><td><span class="chip">Multi-select</span></td><td><span class="chip">non</span></td><td class="font-mono text-[12px] text-tertiary">HubSpot · Salesforce · Pipedrive · …</td><td class="num text-[12px]">9/24</td><td></td></tr>
+                <tr><td><span class="font-medium">Notes pré-démo</span></td><td class="font-mono text-[12px] text-tertiary">pre_demo_notes</td><td><span class="chip">Text long</span></td><td><span class="chip">non</span></td><td class="text-tertiary">—</td><td class="num text-[12px]">11/24</td><td></td></tr>
+                <tr><td><span class="font-medium">Conformité légale</span></td><td class="font-mono text-[12px] text-tertiary">legal_ok</td><td><span class="chip">Boolean</span></td><td><span class="chip">non</span></td><td class="text-tertiary">—</td><td class="num text-[12px]">8/24</td><td></td></tr>
+                <tr><td><span class="font-medium">URL contrat</span></td><td class="font-mono text-[12px] text-tertiary">contract_url</td><td><span class="chip">URL</span></td><td><span class="chip">non</span></td><td class="text-tertiary">—</td><td class="num text-[12px]">6/24</td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 9. DEAL DETAIL (drawer overlay)                                 -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="deal-detail" data-label="Détail deal" data-crumb="Deals / Acme SA">
+        <!-- Background context: deals list dimmed -->
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between opacity-30 pointer-events-none">
+          <div><h1 class="text-2xl font-semibold tracking-tight">Deals</h1></div>
+        </div>
+        <div class="px-7 pb-12 opacity-30 pointer-events-none">
+          <div class="card overflow-hidden h-[600px]"></div>
+        </div>
+
+        <!-- backdrop -->
+        <div class="absolute inset-0 drawer-backdrop"></div>
+
+        <!-- Drawer -->
+        <aside class="absolute top-0 right-0 bottom-0 shadow-pop bg-surface" style="width: 720px; background: var(--surface); border-left: 1px solid var(--border);">
+          <!-- header -->
+          <div class="px-6 py-4 border-b flex items-center justify-between" style="border-color: var(--border);">
+            <div class="flex items-center gap-3">
+              <span class="av lg c1" style="border-radius: 6px;">A</span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-lg font-semibold">Acme SA — Annual licence</h2>
+                  <span class="chip"><span class="chip-dot" style="background: var(--info);"></span>Negotiation</span>
+                  <span class="chip accent num">★ 92</span>
+                </div>
+                <div class="text-[12px] text-tertiary font-mono mt-1">DEAL-2026-0142 · créé 03 mai · 14 activités · close 22/05</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 11h-6M20 8v6"/></svg></button>
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg></button>
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></svg></button>
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2;"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+
+          <!-- stage progress -->
+          <div class="px-6 py-4 border-b" style="border-color: var(--border);">
+            <div class="flex items-center gap-0">
+              <div class="flex-1 flex flex-col items-center"><div class="w-full h-1.5 bg-[var(--text)] rounded-l-full"></div><span class="mono-label mt-1.5" style="color: var(--text);">Prospecting</span></div>
+              <div class="flex-1 flex flex-col items-center"><div class="w-full h-1.5 bg-[var(--text)]"></div><span class="mono-label mt-1.5" style="color: var(--text);">Qualified</span></div>
+              <div class="flex-1 flex flex-col items-center"><div class="w-full h-1.5 bg-[var(--text)]"></div><span class="mono-label mt-1.5" style="color: var(--text);">Proposal</span></div>
+              <div class="flex-1 flex flex-col items-center"><div class="w-full h-1.5 bg-[var(--accent)] outline outline-2 outline-[var(--accent-soft)]"></div><span class="mono-label mt-1.5 font-semibold" style="color: var(--accent);">Negotiation ●</span></div>
+              <div class="flex-1 flex flex-col items-center"><div class="w-full h-1.5 bg-[var(--surface2)] rounded-r-full"></div><span class="mono-label mt-1.5">Won</span></div>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+              <div class="flex gap-2">
+                <button class="btn sm"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Étape précédente</button>
+                <button class="btn primary sm">Marquer gagné ✓</button>
+                <button class="btn sm">Marquer perdu</button>
+              </div>
+              <span class="num text-[12px] text-tertiary">⌘ ↵ pour avancer</span>
+            </div>
+          </div>
+
+          <!-- two-col body -->
+          <div class="grid grid-cols-[1fr_280px] h-[calc(100%-220px)] overflow-hidden">
+            <!-- left: activity tabs -->
+            <div class="overflow-auto">
+              <!-- tabs -->
+              <div class="flex border-b px-6 gap-0" style="border-color: var(--border);">
+                <button class="px-3 py-3 text-[13px] font-medium border-b-2" style="border-color: var(--accent); color: var(--text);">Activité <span class="chip ml-1" style="padding: 0 6px; font-size: 10px;">14</span></button>
+                <button class="px-3 py-3 text-[13px] text-secondary">Notes <span class="text-tertiary">· 3</span></button>
+                <button class="px-3 py-3 text-[13px] text-secondary">Emails <span class="text-tertiary">· 6</span></button>
+                <button class="px-3 py-3 text-[13px] text-secondary">Tâches <span class="text-tertiary">· 4</span></button>
+                <button class="px-3 py-3 text-[13px] text-secondary">Fichiers <span class="text-tertiary">· 2</span></button>
+              </div>
+              <!-- composer -->
+              <div class="px-6 py-4 border-b" style="border-color: var(--border);">
+                <div class="card p-3">
+                  <div class="text-[13px] text-tertiary">Ajouter une note, un email, un appel…</div>
+                  <div class="flex gap-2 mt-2">
+                    <button class="btn sm">📝 Note</button>
+                    <button class="btn sm">📧 Email</button>
+                    <button class="btn sm">📞 Appel</button>
+                    <button class="btn sm">✓ Tâche</button>
+                    <button class="btn primary sm ml-auto">Enregistrer</button>
+                  </div>
+                </div>
+              </div>
+              <!-- timeline -->
+              <div class="px-6 py-3">
+                <div class="tl-item">
+                  <span class="tl-time">Aujourd'hui</span>
+                  <div class="tl-axis"><div class="tl-dot accent"></div></div>
+                  <div class="tl-content">
+                    <div class="ti">📞 Appel programmé · <b>14:30</b> avec Julien Dupont</div>
+                    <div class="ts">Pour valider les termes finaux du contrat annuel</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <span class="tl-time">Hier 16:20</span>
+                  <div class="tl-axis"><div class="tl-dot info"></div></div>
+                  <div class="tl-content">
+                    <div class="ti">📧 Email envoyé à <b>Julien Dupont</b></div>
+                    <div class="ts">"Confirmation des termes du contrat — Acme x CRM Ultimate"</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <span class="tl-time">Hier 10:08</span>
+                  <div class="tl-axis"><div class="tl-dot"></div></div>
+                  <div class="tl-content">
+                    <div class="ti">📝 Note ajoutée</div>
+                    <div class="ts">"Décision finale d'ici jeudi. Ils sont chauds, le procurement a validé."</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <span class="tl-time">12 mai</span>
+                  <div class="tl-axis"><div class="tl-dot"></div></div>
+                  <div class="tl-content">
+                    <div class="ti">🔄 Étape changée · Proposal → <b>Negotiation</b></div>
+                    <div class="ts">Par Alex</div>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <span class="tl-time">10 mai</span>
+                  <div class="tl-axis"><div class="tl-dot info"></div></div>
+                  <div class="tl-content">
+                    <div class="ti">📞 Appel · 42 min</div>
+                    <div class="ts">Julien Dupont · démo + Q&amp;A · feedback positif</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- right: properties -->
+            <aside class="border-l overflow-auto" style="border-color: var(--border); background: var(--surface2);">
+              <div class="p-5">
+                <div class="mono-label mb-3">Propriétés</div>
+                <div class="flex flex-col gap-2.5 text-[13px]">
+                  <div class="flex justify-between"><span class="text-tertiary">Montant</span><span class="num font-semibold">84 500 €</span></div>
+                  <div class="flex justify-between"><span class="text-tertiary">Étape</span><span><span class="chip"><span class="chip-dot" style="background: var(--info);"></span>Negotiation</span></span></div>
+                  <div class="flex justify-between"><span class="text-tertiary">Probabilité</span><span class="num">85%</span></div>
+                  <div class="flex justify-between"><span class="text-tertiary">Close date</span><span class="num">22/05/2026</span></div>
+                  <div class="flex justify-between"><span class="text-tertiary">Owner</span><span class="flex items-center gap-1.5"><span class="av sm c1">A</span>Alex</span></div>
+                  <div class="flex justify-between"><span class="text-tertiary">Source</span><span class="chip">Inbound</span></div>
+                  <div class="flex justify-between"><span class="text-tertiary">Type</span><span class="chip">New</span></div>
+                </div>
+                <div class="mono-label mt-6 mb-3">Contact principal</div>
+                <div class="flex items-center gap-2">
+                  <span class="av c1">JD</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-[13px] truncate">Julien Dupont</div>
+                    <div class="font-mono text-[11.5px] text-tertiary truncate">CTO · j.dupont@acme.fr</div>
+                  </div>
+                </div>
+                <div class="mono-label mt-6 mb-3">Entreprise</div>
+                <div class="flex items-center gap-2">
+                  <span class="av lg c1" style="border-radius: 6px;">A</span>
+                  <div class="flex-1">
+                    <div class="font-medium text-[13px]">Acme SA</div>
+                    <div class="font-mono text-[11.5px] text-tertiary">acme.fr · 120 emp.</div>
+                  </div>
+                </div>
+                <div class="mono-label mt-6 mb-3">Champs perso</div>
+                <div class="flex flex-col gap-2.5 text-[13px]">
+                  <div class="flex justify-between"><span class="text-tertiary">Concurrents</span><span class="font-mono text-[11.5px]">HubSpot</span></div>
+                  <div class="flex justify-between"><span class="text-tertiary">Date démo</span><span class="num">10/05/2026</span></div>
+                  <div class="flex justify-between"><span class="text-tertiary">Conformité</span><span class="chip ok"><span class="chip-dot"></span>OK</span></div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </aside>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 10. NEW DEAL FORM (modal)                                        -->
+      <!-- ============================================================== -->
+      <section class="screen" data-screen="new-deal" data-label="Nouveau deal" data-crumb="Nouveau deal">
+        <!-- BG: dashboard dimmed -->
+        <div class="px-7 pt-6 pb-3 flex items-end justify-between opacity-25 pointer-events-none">
+          <div><h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1></div>
+        </div>
+        <div class="px-7 grid grid-cols-4 gap-3 opacity-25 pointer-events-none">
+          <div class="kpi-hero rounded-xl h-[120px]"></div>
+          <div class="card h-[120px]"></div>
+          <div class="card h-[120px]"></div>
+          <div class="card h-[120px]"></div>
+        </div>
+
+        <!-- backdrop -->
+        <div class="absolute inset-0 drawer-backdrop flex items-center justify-center">
+          <div class="card shadow-pop" style="width: 580px; background: var(--surface);">
+            <div class="px-6 py-4 border-b flex items-center justify-between" style="border-color: var(--border);">
+              <div>
+                <div class="text-lg font-semibold">Nouveau deal</div>
+                <div class="text-[12px] text-tertiary font-mono mt-0.5">Ajoute un deal à ton pipeline · ⌘ N</div>
+              </div>
+              <button class="btn icon ghost"><svg class="ic" viewBox="0 0 24 24" style="stroke-width:2;"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="px-6 py-5 grid grid-cols-2 gap-4">
+              <div class="field col-span-2">
+                <label>Nom du deal</label>
+                <input type="text" value="Acme SA — Annual licence" />
+              </div>
+              <div class="field">
+                <label>Montant</label>
+                <input type="text" value="84 500" class="num" />
+              </div>
+              <div class="field">
+                <label>Devise</label>
+                <select class="select-arrow"><option>EUR €</option><option>USD $</option></select>
+              </div>
+              <div class="field">
+                <label>Entreprise</label>
+                <div class="flex items-center gap-2 px-2 py-1.5 border rounded-md" style="border-color: var(--border); background: var(--surface);">
+                  <span class="av sm c1" style="border-radius: 4px;">A</span>
+                  <span class="text-[13px]">Acme SA</span>
+                  <span class="text-tertiary text-[11px] font-mono ml-auto">✕</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>Contact principal</label>
+                <div class="flex items-center gap-2 px-2 py-1.5 border rounded-md" style="border-color: var(--border); background: var(--surface);">
+                  <span class="av sm c1">JD</span>
+                  <span class="text-[13px]">Julien Dupont</span>
+                  <span class="text-tertiary text-[11px] font-mono ml-auto">✕</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>Étape</label>
+                <select class="select-arrow"><option>Qualified</option><option>Prospecting</option><option>Proposal</option><option>Negotiation</option></select>
+              </div>
+              <div class="field">
+                <label>Close date</label>
+                <input type="text" value="22/05/2026" class="num" />
+              </div>
+              <div class="field col-span-2">
+                <label>Source du lead</label>
+                <div class="flex gap-2">
+                  <span class="chip solid">Inbound</span>
+                  <span class="chip">Outbound</span>
+                  <span class="chip">Referral</span>
+                  <span class="chip">Event</span>
+                  <span class="chip">Cold</span>
+                </div>
+              </div>
+              <div class="field col-span-2">
+                <label>Note initiale</label>
+                <textarea rows="2" placeholder="Contexte du deal…"></textarea>
+              </div>
+            </div>
+            <div class="px-6 py-4 border-t flex items-center justify-between" style="border-color: var(--border); background: var(--surface2);">
+              <span class="text-[12px] text-tertiary font-mono">⌘ ↵ pour créer</span>
+              <div class="flex gap-2">
+                <button class="btn">Annuler</button>
+                <button class="btn primary">Créer le deal</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Floating screen switcher -->
+<div class="scnav">
+  <h6>Écrans · {n}</h6>
+  <div class="flex flex-col gap-0.5">
+    <button class="on" data-go="dashboard"><span>Dashboard</span><span class="num">01</span></button>
+    <button data-go="deals"><span>Deals</span><span class="num">02</span></button>
+    <button data-go="pipeline"><span>Pipeline</span><span class="num">03</span></button>
+    <button data-go="contacts"><span>Contacts</span><span class="num">04</span></button>
+    <button data-go="companies"><span>Entreprises</span><span class="num">05</span></button>
+    <button data-go="activities"><span>Activités</span><span class="num">06</span></button>
+    <button data-go="stages"><span>Étapes (config)</span><span class="num">07</span></button>
+    <button data-go="fields"><span>Champs perso</span><span class="num">08</span></button>
+    <button data-go="deal-detail"><span>→ Drawer deal</span><span class="num">09</span></button>
+    <button data-go="new-deal"><span>→ Modal new deal</span><span class="num">10</span></button>
+  </div>
+</div>
+
+<script>
+  // screen switcher
+  function go(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === name));
+    document.querySelectorAll('.rail-ic[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === name));
+    document.querySelectorAll('.scnav button[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === name));
+    const s = document.querySelector('.screen[data-screen="' + name + '"]');
+    if (s) {
+      document.getElementById('crumbScreen').textContent = s.dataset.label;
+      document.getElementById('crumbSection').textContent = s.dataset.crumb;
+    }
+    const sc = document.getElementById('mainScroll');
+    if (sc) sc.scrollTop = 0;
+  }
+  document.querySelectorAll('[data-go]').forEach(el => {
+    el.addEventListener('click', () => go(el.dataset.go));
+  });
+
+  // theme toggle
+  const themeBtn = document.getElementById('themeBtn');
+  const themeLabel = document.getElementById('themeLabel');
+  function setTheme(dark) {
+    document.documentElement.classList.toggle('dark', dark);
+    themeLabel.textContent = dark ? 'Dark' : 'Light';
+    themeBtn.classList.toggle('on', dark);
+  }
+  themeBtn.addEventListener('click', () => setTheme(!document.documentElement.classList.contains('dark')));
+
+  // Edit-mode protocol (so the host's Tweaks toolbar toggle works as a no-op here)
+  window.addEventListener('message', () => {});
+</script>
+</body>
+</html>

@@ -15,19 +15,19 @@
         <x-rail-icon route="dashboard" :active="$active === 'dashboard'" tooltip="Dashboard">
             <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
         </x-rail-icon>
-        <x-rail-icon route="deals.index" :active="$active === 'deals'" tooltip="Deals">
+        <x-rail-icon href="/deals" :active="$active === 'deals'" tooltip="Deals">
             <svg class="ic" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
         </x-rail-icon>
         <x-rail-icon route="pipeline.index" :active="$active === 'pipeline'" tooltip="Pipeline">
             <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="12"/><rect x="17" y="3" width="4" height="8"/></svg>
         </x-rail-icon>
-        <x-rail-icon route="contacts.index" :active="$active === 'contacts'" tooltip="Contacts">
+        <x-rail-icon href="/contacts" :active="$active === 'contacts'" tooltip="Contacts">
             <svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </x-rail-icon>
-        <x-rail-icon route="companies.index" :active="$active === 'companies'" tooltip="Entreprises">
+        <x-rail-icon href="/companies" :active="$active === 'companies'" tooltip="Entreprises">
             <svg class="ic" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9v2M9 13v2M9 17v2M15 9v2M15 13v2M15 17v2"/></svg>
         </x-rail-icon>
-        <x-rail-icon route="activities.index" :active="$active === 'activities'" tooltip="Activités">
+        <x-rail-icon href="/activities" :active="$active === 'activities'" tooltip="Activités">
             <svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         </x-rail-icon>
 
@@ -111,7 +111,7 @@
                         <svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                         Tâches
                     </a>
-                    <a href="{{ route('deals.index') }}?modal=new" class="btn primary" id="btnNouveauDeal">
+                    <a href="/deals?modal=new" class="btn primary" id="btnNouveauDeal">
                         <svg class="ic" style="stroke-width: 2;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                         Nouveau deal
                     </a>
@@ -137,7 +137,7 @@ function toggleTheme() {
 document.addEventListener('keydown', function(e) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        window.location.href = '{{ route('search') }}';
+        window.location.href = '/search';
     }
 });
 </script>

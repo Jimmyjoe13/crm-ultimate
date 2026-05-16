@@ -1,0 +1,127 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]: C
+    - link "Dashboard" [ref=e6] [cursor=pointer]:
+      - /url: http://localhost:8080
+      - img [ref=e7]
+      - generic: Dashboard
+    - link "Deals" [ref=e12] [cursor=pointer]:
+      - /url: /deals
+      - img [ref=e13]
+      - generic: Deals
+    - link "Pipeline" [ref=e15] [cursor=pointer]:
+      - /url: http://localhost:8080/pipeline
+      - img [ref=e16]
+      - generic: Pipeline
+    - link "Contacts" [ref=e20] [cursor=pointer]:
+      - /url: /contacts
+      - img [ref=e21]
+      - generic: Contacts
+    - link "Entreprises" [ref=e25] [cursor=pointer]:
+      - /url: /companies
+      - img [ref=e26]
+      - generic: Entreprises
+    - link "Activités" [ref=e28] [cursor=pointer]:
+      - /url: /activities
+      - img [ref=e29]
+      - generic: Activités
+    - link "Étapes" [ref=e32] [cursor=pointer]:
+      - /url: http://localhost:8080/settings/stages
+      - img [ref=e33]
+      - generic: Étapes
+    - link "Champs perso" [ref=e38] [cursor=pointer]:
+      - /url: http://localhost:8080/settings/fields
+      - img [ref=e39]
+      - generic: Champs perso
+    - button "AC admin@example.com" [ref=e42] [cursor=pointer]:
+      - text: AC
+      - generic: admin@example.com
+  - main [ref=e43]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]: workspace
+        - generic [ref=e48]: /
+      - generic [ref=e49]:
+        - link "Rechercher deal, contact, entreprise… ⌘ K" [ref=e50] [cursor=pointer]:
+          - /url: http://localhost:8080/search
+          - img [ref=e51]
+          - generic [ref=e54]: Rechercher deal, contact, entreprise…
+          - generic [ref=e55]: ⌘ K
+        - link "Tâches" [ref=e56] [cursor=pointer]:
+          - /url: "#"
+          - img [ref=e57]
+          - text: Tâches
+        - link "Nouveau deal" [ref=e59] [cursor=pointer]:
+          - /url: /deals?modal=new
+          - img [ref=e60]
+          - text: Nouveau deal
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - heading "Bonjour Admin CRM —" [level=1] [ref=e65]
+          - paragraph [ref=e66]: Voici l'état de ton pipeline ce samedi 16 mai.
+        - generic [ref=e67]:
+          - button "Filtrer" [ref=e68] [cursor=pointer]:
+            - img [ref=e69]
+            - text: Filtrer
+          - generic [ref=e71]: Temps réel
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - generic [ref=e76]: Pipeline total · 30j
+          - generic [ref=e77]: 1 883 957 €
+          - generic [ref=e78]:
+            - generic [ref=e79]: ▲ +12,4%
+            - generic [ref=e80]: vs mois dernier
+          - img [ref=e81]
+        - generic [ref=e84]:
+          - generic [ref=e85]: Conversion · 30j
+          - generic [ref=e86]: 50%
+          - generic [ref=e87]:
+            - generic [ref=e88]: ▲ +6 pts
+            - generic [ref=e89]: obj. 55%
+        - generic [ref=e92]:
+          - generic [ref=e93]: Gagnés · ce mois
+          - generic [ref=e94]: "3"
+          - generic [ref=e95]: 249 760 €
+          - generic [ref=e96]: exploit best-of-breed partnerships — Deal · embrace best-of-breed eyeballs — Deal · drive customized initiatives — Deal
+        - generic [ref=e98]:
+          - generic [ref=e99]: Perdus · ce mois
+          - generic [ref=e100]: "3"
+          - generic [ref=e101]: 191 310 €
+          - generic [ref=e102]: morph robust e-markets — Deal · synergize killer infomediaries — Deal · generate web-enabled architectures — Deal
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - generic [ref=e108]: Activités récentes
+            - generic [ref=e109]: aujourd'hui
+          - generic [ref=e111]: Aucune activité récente.
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - generic [ref=e114]:
+              - generic [ref=e115]: Pipeline par étape
+              - generic [ref=e116]: EUR
+            - generic [ref=e117]:
+              - generic [ref=e119]:
+                - generic [ref=e120]: 6 Prospecting
+                - generic [ref=e121]: 471 991 €
+              - generic [ref=e125]:
+                - generic [ref=e126]: 10 Qualified
+                - generic [ref=e127]: 862 839 €
+              - generic [ref=e131]:
+                - generic [ref=e132]: 8 Proposal
+                - generic [ref=e133]: 549 128 €
+          - generic [ref=e136]:
+            - generic [ref=e138]: Accès rapide
+            - generic [ref=e139]:
+              - link "Tous les deals" [ref=e140] [cursor=pointer]:
+                - /url: /deals
+                - img [ref=e141]
+                - text: Tous les deals
+              - link "Contacts" [ref=e143] [cursor=pointer]:
+                - /url: /contacts
+                - img [ref=e144]
+                - text: Contacts
+              - link "Kanban pipeline" [ref=e147] [cursor=pointer]:
+                - /url: http://localhost:8080/pipeline
+                - img [ref=e148]
+                - text: Kanban pipeline

@@ -8,7 +8,7 @@
 @endphp
 
 <div class="px-7 pt-6 pb-3 flex items-center gap-4">
-    <a href="{{ route('contacts.index') }}" class="btn ghost icon">
+    <a href="{{ '/contacts' }}" class="btn ghost icon">
         <svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </a>
     <div class="av lg {{ $color }}">{{ $initials }}</div>
@@ -50,7 +50,7 @@
                 @if($company)
                 <div class="field">
                     <label>Entreprise</label>
-                    <a href="{{ route('companies.show', $company) }}" class="text-[13px] text-accent hover:underline">{{ $company->name }}</a>
+                    <a href="{{ '/companies/' . $company->id }}" class="text-[13px] text-accent hover:underline">{{ $company->name }}</a>
                 </div>
                 @endif
             </div>

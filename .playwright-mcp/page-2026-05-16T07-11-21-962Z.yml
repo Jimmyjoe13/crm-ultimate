@@ -1,0 +1,16 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: C
+      - generic [ref=e7]: CRM Ultimate
+    - generic [ref=e8]:
+      - heading "Connexion" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Acces a l'espace CRM B2B
+    - generic [ref=e11]:
+      - generic [ref=e12]: Email
+      - textbox [ref=e13]: admin@example.com
+    - generic [ref=e14]:
+      - generic [ref=e15]: Mot de passe
+      - textbox [ref=e16]: password
+    - button "Se connecter" [active] [ref=e17] [cursor=pointer]
+    - paragraph [ref=e18]: Invalid credentials.

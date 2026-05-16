@@ -6,7 +6,7 @@
 @endphp
 
 <div class="px-7 pt-6 pb-3 flex items-center gap-4">
-    <a href="{{ route('companies.index') }}" class="btn ghost icon">
+    <a href="{{ '/companies' }}" class="btn ghost icon">
         <svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </a>
     <div class="av lg {{ $color }} sq">{{ $initials }}</div>
@@ -33,7 +33,7 @@
                         $cc = \App\Helpers\Avatar::color($fullName ?: $contact->email);
                         $ci = \App\Helpers\Avatar::initials($fullName ?: $contact->email);
                     @endphp
-                    <tr onclick="window.location='{{ route('contacts.show', $contact) }}'" style="cursor:pointer;">
+                    <tr onclick="window.location='{{ '/contacts/' . $contact->id }}'" style="cursor:pointer;">
                         <td>
                             <div class="flex items-center gap-2">
                                 <span class="av {{ $cc }} sm">{{ $ci }}</span>

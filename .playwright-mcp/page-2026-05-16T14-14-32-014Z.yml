@@ -1,0 +1,252 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]: C
+    - link "Dashboard" [ref=e6] [cursor=pointer]:
+      - /url: http://localhost:8080
+      - img [ref=e7]
+      - generic: Dashboard
+    - link "Deals" [ref=e12] [cursor=pointer]:
+      - /url: http://localhost:8080/api/v1/deals
+      - img [ref=e13]
+      - generic: Deals
+    - link "Pipeline" [ref=e15] [cursor=pointer]:
+      - /url: http://localhost:8080/pipeline
+      - img [ref=e16]
+      - generic: Pipeline
+    - link "Contacts" [ref=e20] [cursor=pointer]:
+      - /url: http://localhost:8080/api/v1/contacts
+      - img [ref=e21]
+      - generic: Contacts
+    - link "Entreprises" [ref=e25] [cursor=pointer]:
+      - /url: http://localhost:8080/api/v1/companies
+      - img [ref=e26]
+      - generic: Entreprises
+    - link "Activités" [ref=e28] [cursor=pointer]:
+      - /url: http://localhost:8080/api/v1/activities
+      - img [ref=e29]
+      - generic: Activités
+    - link "Étapes" [ref=e32] [cursor=pointer]:
+      - /url: http://localhost:8080/settings/stages
+      - img [ref=e33]
+      - generic: Étapes
+    - link "Champs perso" [ref=e38] [cursor=pointer]:
+      - /url: http://localhost:8080/settings/fields
+      - img [ref=e39]
+      - generic: Champs perso
+    - button "AC admin@example.com" [ref=e42] [cursor=pointer]:
+      - text: AC
+      - generic: admin@example.com
+  - main [ref=e43]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]: workspace
+        - generic [ref=e48]: /
+      - generic [ref=e49]:
+        - link "Rechercher deal, contact, entreprise… ⌘ K" [ref=e50] [cursor=pointer]:
+          - /url: http://localhost:8080/search
+          - img [ref=e51]
+          - generic [ref=e54]: Rechercher deal, contact, entreprise…
+          - generic [ref=e55]: ⌘ K
+        - link "Tâches" [ref=e56] [cursor=pointer]:
+          - /url: "#"
+          - img [ref=e57]
+          - text: Tâches
+        - link "Nouveau deal" [ref=e59] [cursor=pointer]:
+          - /url: http://localhost:8080/api/v1/deals?modal=new
+          - img [ref=e60]
+          - text: Nouveau deal
+    - generic [ref=e62]:
+      - heading "Deals" [level=1] [ref=e64]
+      - table [ref=e67]:
+        - rowgroup [ref=e68]:
+          - row "Deal Company Amount Stage Close date Owner" [ref=e69]:
+            - columnheader [ref=e70]
+            - columnheader "Deal" [ref=e71]
+            - columnheader "Company" [ref=e72]
+            - columnheader "Amount" [ref=e73]
+            - columnheader "Stage" [ref=e74]
+            - columnheader "Close date" [ref=e75]
+            - columnheader "Owner" [ref=e76]
+        - rowgroup [ref=e77]:
+          - row "orchestrate distributed e-services — Deal Block-Morissette 48 659 € Qualified 22/05/2026 AC" [ref=e78]:
+            - cell [ref=e79]
+            - cell "orchestrate distributed e-services — Deal" [ref=e81]:
+              - generic [ref=e82]: orchestrate distributed e-services — Deal
+            - cell "Block-Morissette" [ref=e83]
+            - cell "48 659 €" [ref=e84]
+            - cell "Qualified" [ref=e85]:
+              - generic [ref=e86]: Qualified
+            - cell "22/05/2026" [ref=e87]
+            - cell "AC" [ref=e88]:
+              - generic [ref=e89]: AC
+          - row "envisioneer proactive applications — Deal Bins and Sons 149 631 € Qualified 23/05/2026 AC" [ref=e90]:
+            - cell [ref=e91]
+            - cell "envisioneer proactive applications — Deal" [ref=e93]:
+              - generic [ref=e94]: envisioneer proactive applications — Deal
+            - cell "Bins and Sons" [ref=e95]
+            - cell "149 631 €" [ref=e96]
+            - cell "Qualified" [ref=e97]:
+              - generic [ref=e98]: Qualified
+            - cell "23/05/2026" [ref=e99]
+            - cell "AC" [ref=e100]:
+              - generic [ref=e101]: AC
+          - row "whiteboard 24/7 webservices — Deal Purdy, Koch and Erdman 131 366 € Qualified 28/05/2026 AC" [ref=e102]:
+            - cell [ref=e103]
+            - cell "whiteboard 24/7 webservices — Deal" [ref=e105]:
+              - generic [ref=e106]: whiteboard 24/7 webservices — Deal
+            - cell "Purdy, Koch and Erdman" [ref=e107]
+            - cell "131 366 €" [ref=e108]
+            - cell "Qualified" [ref=e109]:
+              - generic [ref=e110]: Qualified
+            - cell "28/05/2026" [ref=e111]
+            - cell "AC" [ref=e112]:
+              - generic [ref=e113]: AC
+          - row "brand end-to-end relationships — Deal Block-Morissette 45 938 € Prospecting 31/05/2026 AC" [ref=e114]:
+            - cell [ref=e115]
+            - cell "brand end-to-end relationships — Deal" [ref=e117]:
+              - generic [ref=e118]: brand end-to-end relationships — Deal
+            - cell "Block-Morissette" [ref=e119]
+            - cell "45 938 €" [ref=e120]
+            - cell "Prospecting" [ref=e121]:
+              - generic [ref=e122]: Prospecting
+            - cell "31/05/2026" [ref=e123]
+            - cell "AC" [ref=e124]:
+              - generic [ref=e125]: AC
+          - row "utilize cutting-edge partnerships — Deal Schiller-Ankunding 73 083 € Prospecting 02/06/2026 AC" [ref=e126]:
+            - cell [ref=e127]
+            - cell "utilize cutting-edge partnerships — Deal" [ref=e129]:
+              - generic [ref=e130]: utilize cutting-edge partnerships — Deal
+            - cell "Schiller-Ankunding" [ref=e131]
+            - cell "73 083 €" [ref=e132]
+            - cell "Prospecting" [ref=e133]:
+              - generic [ref=e134]: Prospecting
+            - cell "02/06/2026" [ref=e135]
+            - cell "AC" [ref=e136]:
+              - generic [ref=e137]: AC
+          - row "cultivate next-generation technologies — Deal Waters, Witting and Lockman 67 716 € Prospecting 12/06/2026 AC" [ref=e138]:
+            - cell [ref=e139]
+            - cell "cultivate next-generation technologies — Deal" [ref=e141]:
+              - generic [ref=e142]: cultivate next-generation technologies — Deal
+            - cell "Waters, Witting and Lockman" [ref=e143]
+            - cell "67 716 €" [ref=e144]
+            - cell "Prospecting" [ref=e145]:
+              - generic [ref=e146]: Prospecting
+            - cell "12/06/2026" [ref=e147]
+            - cell "AC" [ref=e148]:
+              - generic [ref=e149]: AC
+          - row "deliver strategic deliverables — Deal Schiller-Ankunding 119 897 € Qualified 21/06/2026 AC" [ref=e150]:
+            - cell [ref=e151]
+            - cell "deliver strategic deliverables — Deal" [ref=e153]:
+              - generic [ref=e154]: deliver strategic deliverables — Deal
+            - cell "Schiller-Ankunding" [ref=e155]
+            - cell "119 897 €" [ref=e156]
+            - cell "Qualified" [ref=e157]:
+              - generic [ref=e158]: Qualified
+            - cell "21/06/2026" [ref=e159]
+            - cell "AC" [ref=e160]:
+              - generic [ref=e161]: AC
+          - row "facilitate wireless e-business — Deal Deckow-O'Conner 48 043 € Proposal 25/06/2026 AC" [ref=e162]:
+            - cell [ref=e163]
+            - cell "facilitate wireless e-business — Deal" [ref=e165]:
+              - generic [ref=e166]: facilitate wireless e-business — Deal
+            - cell "Deckow-O'Conner" [ref=e167]
+            - cell "48 043 €" [ref=e168]
+            - cell "Proposal" [ref=e169]:
+              - generic [ref=e170]: Proposal
+            - cell "25/06/2026" [ref=e171]
+            - cell "AC" [ref=e172]:
+              - generic [ref=e173]: AC
+          - row "orchestrate front-end synergies — Deal Waters, Witting and Lockman 95 076 € Proposal 30/06/2026 AC" [ref=e174]:
+            - cell [ref=e175]
+            - cell "orchestrate front-end synergies — Deal" [ref=e177]:
+              - generic [ref=e178]: orchestrate front-end synergies — Deal
+            - cell "Waters, Witting and Lockman" [ref=e179]
+            - cell "95 076 €" [ref=e180]
+            - cell "Proposal" [ref=e181]:
+              - generic [ref=e182]: Proposal
+            - cell "30/06/2026" [ref=e183]
+            - cell "AC" [ref=e184]:
+              - generic [ref=e185]: AC
+          - row "architect enterprise mindshare — Deal Hahn, D'Amore and West 119 265 € Proposal 09/07/2026 AC" [ref=e186]:
+            - cell [ref=e187]
+            - cell "architect enterprise mindshare — Deal" [ref=e189]:
+              - generic [ref=e190]: architect enterprise mindshare — Deal
+            - cell "Hahn, D'Amore and West" [ref=e191]
+            - cell "119 265 €" [ref=e192]
+            - cell "Proposal" [ref=e193]:
+              - generic [ref=e194]: Proposal
+            - cell "09/07/2026" [ref=e195]
+            - cell "AC" [ref=e196]:
+              - generic [ref=e197]: AC
+      - complementary [ref=e199]:
+        - generic [ref=e200]:
+          - generic [ref=e201]:
+            - generic [ref=e202]: O
+            - generic [ref=e203]:
+              - generic [ref=e204]:
+                - heading "orchestrate distributed e-services — Deal" [level=2] [ref=e205]
+                - generic [ref=e206]: Qualified
+              - generic [ref=e208]: DEAL-0005 · créé 48 minutes ago · 0 activités · close 22/05
+          - link "Fermer" [ref=e210] [cursor=pointer]:
+            - /url: http://localhost:8080/deals
+            - img [ref=e211]
+        - generic [ref=e213]:
+          - generic [ref=e214]:
+            - generic [ref=e216]: Prospecting
+            - generic [ref=e218]: Qualified ●
+            - generic [ref=e220]: Proposal
+          - generic [ref=e222]:
+            - button "Marquer gagné ✓" [ref=e224] [cursor=pointer]
+            - button "Marquer perdu" [ref=e226] [cursor=pointer]
+        - generic [ref=e227]:
+          - generic [ref=e228]:
+            - generic [ref=e229]:
+              - button "Activité 0" [ref=e230] [cursor=pointer]:
+                - text: Activité
+                - generic [ref=e231]: "0"
+              - button "Notes" [ref=e232] [cursor=pointer]
+              - button "Emails" [ref=e233] [cursor=pointer]
+              - button "Tâches" [ref=e234] [cursor=pointer]
+            - generic [ref=e236]:
+              - generic [ref=e237]: Ajouter une note, un email, un appel…
+              - generic [ref=e238]:
+                - button "📝 Note" [ref=e239] [cursor=pointer]
+                - button "📧 Email" [ref=e240] [cursor=pointer]
+                - button "📞 Appel" [ref=e241] [cursor=pointer]
+                - button "✓ Tâche" [ref=e242] [cursor=pointer]
+            - generic [ref=e244]: Aucune activité pour ce deal.
+          - complementary [ref=e245]:
+            - generic [ref=e246]:
+              - generic [ref=e247]: Propriétés
+              - generic [ref=e248]:
+                - generic [ref=e249]:
+                  - generic [ref=e250]: Montant
+                  - generic [ref=e251]: 48 659 €
+                - generic [ref=e252]:
+                  - generic [ref=e253]: Étape
+                  - generic [ref=e254]: Qualified
+                - generic [ref=e256]:
+                  - generic [ref=e257]: Close date
+                  - generic [ref=e258]: 22/05/2026
+                - generic [ref=e259]:
+                  - generic [ref=e260]: Owner
+                  - generic [ref=e261]:
+                    - generic [ref=e262]: AC
+                    - text: Admin CRM
+                - generic [ref=e263]:
+                  - generic [ref=e264]: Statut
+                  - generic [ref=e265]: open
+              - generic [ref=e266]: Contact principal
+              - link "BJ Bella Johnson Survey Researcher" [ref=e267] [cursor=pointer]:
+                - /url: http://localhost:8080/api/v1/contacts/28
+                - generic [ref=e268]: BJ
+                - generic [ref=e269]:
+                  - generic [ref=e270]: Bella Johnson
+                  - generic [ref=e271]: Survey Researcher
+              - generic [ref=e272]: Entreprise
+              - link "BL Block-Morissette Media" [ref=e273] [cursor=pointer]:
+                - /url: http://localhost:8080/api/v1/companies/9
+                - generic [ref=e274]: BL
+                - generic [ref=e275]:
+                  - generic [ref=e276]: Block-Morissette
+                  - generic [ref=e277]: Media

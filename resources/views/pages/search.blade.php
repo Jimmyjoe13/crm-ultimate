@@ -19,7 +19,7 @@
         <div class="mono-label mb-2">Deals</div>
         <div class="card overflow-hidden">
             @foreach($results['deals'] as $deal)
-            <a href="{{ route('deals.index') }}" class="flex items-center gap-3 px-4 py-3 border-b border-default hover:bg-surface2 last:border-b-0">
+            <a href="{{ '/deals' }}" class="flex items-center gap-3 px-4 py-3 border-b border-default hover:bg-surface2 last:border-b-0">
                 <svg class="ic text-tertiary" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
                 <div>
                     <div class="text-[13px] font-medium">{{ $deal->name }}</div>
@@ -37,7 +37,7 @@
         <div class="card overflow-hidden">
             @foreach($results['contacts'] as $contact)
             @php $fullName = trim($contact->first_name . ' ' . $contact->last_name); @endphp
-            <a href="{{ route('contacts.show', $contact) }}" class="flex items-center gap-3 px-4 py-3 border-b border-default hover:bg-surface2 last:border-b-0">
+            <a href="{{ '/contacts/' . $contact->id }}" class="flex items-center gap-3 px-4 py-3 border-b border-default hover:bg-surface2 last:border-b-0">
                 <span class="av {{ \App\Helpers\Avatar::color($fullName ?: $contact->email) }} sm">{{ \App\Helpers\Avatar::initials($fullName ?: $contact->email) }}</span>
                 <div>
                     <div class="text-[13px] font-medium">{{ $fullName ?: $contact->email }}</div>
@@ -54,7 +54,7 @@
         <div class="mono-label mb-2">Entreprises</div>
         <div class="card overflow-hidden">
             @foreach($results['companies'] as $company)
-            <a href="{{ route('companies.show', $company) }}" class="flex items-center gap-3 px-4 py-3 border-b border-default hover:bg-surface2 last:border-b-0">
+            <a href="{{ '/companies/' . $company->id }}" class="flex items-center gap-3 px-4 py-3 border-b border-default hover:bg-surface2 last:border-b-0">
                 <span class="av {{ \App\Helpers\Avatar::color($company->name) }} sq sm">{{ strtoupper(mb_substr($company->name, 0, 2)) }}</span>
                 <div class="text-[13px] font-medium">{{ $company->name }}</div>
             </a>

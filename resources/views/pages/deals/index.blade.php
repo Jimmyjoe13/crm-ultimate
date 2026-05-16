@@ -111,8 +111,8 @@
                     $ownerColor    = $owner ? \App\Helpers\Avatar::color($owner->name ?? $owner->email) : 'c1';
                     $isOverdue = $deal->close_date && $deal->close_date->isPast();
                 @endphp
-                <tr>
-                    <td><span class="ckb"></span></td>
+                <tr onclick="window.location='/deals/{{ $deal->id }}'" style="cursor:pointer;">
+                    <td onclick="event.stopPropagation()"><span class="ckb"></span></td>
                     <td>
                         <div class="font-medium">{{ $deal->name }}</div>
                         <div class="text-[11.5px] text-tertiary font-mono mt-0.5">

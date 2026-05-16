@@ -1,0 +1,62 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]: C
+    - link "Dashboard" [ref=e6] [cursor=pointer]:
+      - /url: http://localhost:8080
+      - img [ref=e7]
+      - generic: Dashboard
+    - link "Deals" [ref=e12] [cursor=pointer]:
+      - /url: http://localhost:8080/api/v1/deals
+      - img [ref=e13]
+      - generic: Deals
+    - link "Pipeline" [ref=e15] [cursor=pointer]:
+      - /url: http://localhost:8080/pipeline
+      - img [ref=e16]
+      - generic: Pipeline
+    - link "Contacts" [ref=e20] [cursor=pointer]:
+      - /url: http://localhost:8080/api/v1/contacts
+      - img [ref=e21]
+      - generic: Contacts
+    - link "Entreprises" [ref=e25] [cursor=pointer]:
+      - /url: http://localhost:8080/api/v1/companies
+      - img [ref=e26]
+      - generic: Entreprises
+    - link "Activités" [ref=e28] [cursor=pointer]:
+      - /url: http://localhost:8080/api/v1/activities
+      - img [ref=e29]
+      - generic: Activités
+    - link "Étapes" [ref=e32] [cursor=pointer]:
+      - /url: http://localhost:8080/settings/stages
+      - img [ref=e33]
+      - generic: Étapes
+    - link "Champs perso" [ref=e38] [cursor=pointer]:
+      - /url: http://localhost:8080/settings/fields
+      - img [ref=e39]
+      - generic: Champs perso
+    - button "AC admin@example.com" [ref=e42] [cursor=pointer]:
+      - text: AC
+      - generic: admin@example.com
+  - main [ref=e43]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]: workspace
+        - generic [ref=e48]: /
+      - generic [ref=e49]:
+        - link "Rechercher deal, contact, entreprise… ⌘ K" [ref=e50] [cursor=pointer]:
+          - /url: http://localhost:8080/search
+          - img [ref=e51]
+          - generic [ref=e54]: Rechercher deal, contact, entreprise…
+          - generic [ref=e55]: ⌘ K
+        - link "Tâches" [ref=e56] [cursor=pointer]:
+          - /url: "#"
+          - img [ref=e57]
+          - text: Tâches
+        - link "Nouveau deal" [ref=e59] [cursor=pointer]:
+          - /url: http://localhost:8080/api/v1/deals?modal=new
+          - img [ref=e60]
+          - text: Nouveau deal
+    - generic [ref=e62]:
+      - heading "Recherche" [level=1] [ref=e64]
+      - generic [ref=e66]:
+        - textbox "Rechercher deal, contact, entreprise…" [active] [ref=e67]
+        - button "Chercher" [ref=e68] [cursor=pointer]

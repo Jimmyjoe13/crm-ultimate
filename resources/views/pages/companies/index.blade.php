@@ -7,7 +7,7 @@
             <span class="num-mono">{{ $companies->total() }}</span> entreprises
         </p>
     </div>
-    <form method="GET" action="{{ route('companies.index') }}" class="flex items-center gap-2">
+    <form method="GET" action="{{ '/companies' }}" class="flex items-center gap-2">
         <input type="text" name="search" value="{{ $search }}" placeholder="Rechercher…"
                style="padding:6px 10px; border:1px solid var(--border); border-radius:7px; font-size:13px; background:var(--surface); color:var(--text);">
         <button type="submit" class="btn sm">Chercher</button>
@@ -32,7 +32,7 @@
                     $color    = \App\Helpers\Avatar::color($company->name);
                     $initials = strtoupper(mb_substr($company->name, 0, 2));
                 @endphp
-                <tr onclick="window.location='{{ route('companies.show', $company) }}'" style="cursor:pointer;">
+                <tr onclick="window.location='{{ '/companies/' . $company->id }}'" style="cursor:pointer;">
                     <td>
                         <div class="flex items-center gap-2">
                             <span class="av {{ $color }} sq">{{ $initials }}</span>

@@ -654,6 +654,16 @@
         /* ── "Nouveau deal" sidebar shortcut ── */
         .sidebar-deal-btn { width:100%; margin-top:8px; background:rgba(255,107,53,.15); border:1px solid rgba(255,107,53,.35); color:var(--brand); border-radius:8px; padding:8px 11px; text-align:left; display:flex; align-items:center; gap:8px; font-weight:700; font-size:0.82rem; cursor:pointer; }
         .sidebar-deal-btn:hover { background:rgba(255,107,53,.25); }
+        /* ── Segment builder ── */
+        .segment-builder { display:flex; flex-direction:column; gap:6px; }
+        .seg-group { border:1.5px solid var(--line); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; background:var(--bg); }
+        .seg-group-header { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .seg-rules { display:flex; flex-direction:column; gap:6px; padding-left:16px; margin-top:4px; }
+        .seg-leaf { display:flex; align-items:center; gap:6px; flex-wrap:wrap; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:6px 10px; }
+        .seg-field-select, .seg-op-sel { font-size:0.82rem; padding:4px 6px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+        .seg-val { font-size:0.82rem; padding:4px 6px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+        .seg-rel-filter { display:flex; align-items:center; gap:4px; margin-top:4px; flex-wrap:wrap; }
+        .btn.small { padding:3px 8px; font-size:0.78rem; }
     </style>
 </head>
 <body>
@@ -786,6 +796,13 @@
                 ],
                 details: ['id', 'entity_type', 'key', 'label', 'field_type', 'is_required', 'position'],
             },
+            segments: {
+                label: 'Segments',
+                icon: 'SG',
+                adminOnly: false,
+                type: 'segments',
+                endpoint: '/segments',
+            },
         };
 
         const state = {
@@ -811,6 +828,12 @@
             detailId: null,
             detailData: null,
             detailActiveTab: 'overview',
+            // Segments
+            segmentList: [],
+            segmentDraft: null,
+            segmentPreview: null,
+            segmentFields: {},
+            segmentMembersView: null, // { id, name, rows, total, page }
         };
 
         function escapeHtml(value) {
@@ -895,7 +918,7 @@
 
         async function navigate(key) {
             state.current = key;
-            state.mode = key === 'deals' ? 'board' : 'list';
+            state.mode = key === 'deals' ? 'board' : (key === 'segments' ? 'segments-list' : 'list');
             state.search = '';
             state.selected = null;
             state.selectedDetail = null;
@@ -906,6 +929,9 @@
             state.error = '';
             state.importPreview = null;
             state.currentPage = 1;
+            state.segmentDraft = null;
+            state.segmentPreview = null;
+            state.segmentMembersView = null;
             await loadCurrent();
         }
 
@@ -916,6 +942,8 @@
                 }
                 if (state.current === 'dashboard') {
                     await loadDashboard();
+                } else if (state.current === 'segments') {
+                    await loadSegmentList();
                 } else if (state.mode === 'board') {
                     await loadBoard();
                 } else if (state.mode === 'detail' && state.detailId) {
@@ -1032,6 +1060,11 @@
         function renderContent() {
             if (state.current === 'dashboard') {
                 return renderDashboard();
+            }
+            if (state.current === 'segments') {
+                if (state.mode === 'segments-edit') return renderSegmentBuilder();
+                if (state.mode === 'segments-members') return renderSegmentMembers();
+                return renderSegmentList();
             }
             if (state.mode === 'board') {
                 return renderBoard();
@@ -1410,6 +1443,95 @@
             });
             if (state.mode === 'detail') {
                 bindDetailPageEvents();
+            }
+            // ── Segments events ────────────────────────────────────────────
+            document.getElementById('segNewBtn')?.addEventListener('click', () => {
+                state.segmentDraft = { name: '', description: '', entity_type: 'contact', rules: { op: 'AND', rules: [] } };
+                state.segmentPreview = null;
+                state.mode = 'segments-edit';
+                renderShell();
+                bindShellEvents();
+            });
+            document.getElementById('segEntitySelect')?.addEventListener('change', async event => {
+                const et = event.target.value;
+                state.segmentDraft.entity_type = et;
+                state.segmentDraft.rules = { op: 'AND', rules: [] };
+                await loadSegmentFields(et);
+                document.getElementById('segBuilderWrap')?.replaceWith(buildSegmentBuilderDOM());
+                bindSegmentBuilderEvents();
+            });
+            document.getElementById('segSaveBtn')?.addEventListener('click', saveSegment);
+            document.getElementById('segPreviewBtn')?.addEventListener('click', previewSegmentDraft);
+            document.getElementById('segBackBtn')?.addEventListener('click', () => {
+                state.mode = 'segments-list';
+                state.segmentDraft = null;
+                state.segmentPreview = null;
+                renderShell();
+                bindShellEvents();
+            });
+            document.getElementById('segMembersBackBtn')?.addEventListener('click', () => {
+                state.mode = 'segments-list';
+                state.segmentMembersView = null;
+                renderShell();
+                bindShellEvents();
+            });
+            document.getElementById('segMembersPrevBtn')?.addEventListener('click', async () => {
+                if (state.segmentMembersView && state.segmentMembersView.page > 1) {
+                    state.segmentMembersView.page--;
+                    await loadSegmentMembers(state.segmentMembersView.id, state.segmentMembersView.page);
+                }
+            });
+            document.getElementById('segMembersNextBtn')?.addEventListener('click', async () => {
+                if (state.segmentMembersView) {
+                    state.segmentMembersView.page++;
+                    await loadSegmentMembers(state.segmentMembersView.id, state.segmentMembersView.page);
+                }
+            });
+            document.querySelectorAll('[data-seg-view]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = Number(btn.dataset.segView);
+                    state.segmentMembersView = { id, name: btn.dataset.segName, rows: [], total: 0, page: 1 };
+                    state.mode = 'segments-members';
+                    await loadSegmentMembers(id, 1);
+                });
+            });
+            document.querySelectorAll('[data-seg-edit]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const seg = state.segmentList.find(s => s.id === Number(btn.dataset.segEdit));
+                    if (seg) {
+                        state.segmentDraft = { ...seg };
+                        state.segmentPreview = null;
+                        await loadSegmentFields(seg.entity_type);
+                        state.mode = 'segments-edit';
+                        renderShell();
+                        bindShellEvents();
+                    }
+                });
+            });
+            document.querySelectorAll('[data-seg-refresh]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = Number(btn.dataset.segRefresh);
+                    try {
+                        const r = await request(`/segments/${id}/refresh`, { method: 'POST' });
+                        const seg = state.segmentList.find(s => s.id === id);
+                        if (seg) { seg.last_count = r.count; seg.last_computed_at = r.computed_at; renderShell(); bindShellEvents(); }
+                    } catch (e) { alert(e.message); }
+                });
+            });
+            document.querySelectorAll('[data-seg-delete]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm('Supprimer ce segment ?')) return;
+                    try {
+                        await request(`/segments/${btn.dataset.segDelete}`, { method: 'DELETE' });
+                        await loadSegmentList();
+                        state.mode = 'segments-list';
+                        renderShell();
+                        bindShellEvents();
+                    } catch (e) { alert(e.message); }
+                });
+            });
+            if (state.mode === 'segments-edit') {
+                bindSegmentBuilderEvents();
             }
         }
 
@@ -2498,6 +2620,449 @@
                 });
             });
         }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  SEGMENTS
+        // ════════════════════════════════════════════════════════════════════
+
+        const SEG_ENTITY_LABELS = { contact: 'Contacts', company: 'Entreprises', deal: 'Deals' };
+
+        const SEG_OPERATOR_LABELS = {
+            eq: 'égal à', neq: 'différent de',
+            in: 'parmi', not_in: 'pas parmi',
+            contains: 'contient', not_contains: 'ne contient pas',
+            starts_with: 'commence par', ends_with: 'finit par',
+            gt: '>', gte: '≥', lt: '<', lte: '≤', between: 'entre',
+            is_null: 'est vide', is_not_null: 'est renseigné',
+            days_ago_lt: 'il y a moins de (jours)', days_ago_gt: 'il y a plus de (jours)',
+            exists: 'a un lien', not_exists: 'n\'a pas de lien',
+            count_gte: 'count ≥', count_lt: 'count <',
+        };
+
+        async function loadSegmentList() {
+            try {
+                const data = await request('/segments?per_page=100');
+                state.segmentList = data.data || [];
+            } catch (_) {
+                state.segmentList = [];
+            }
+        }
+
+        async function loadSegmentFields(entityType) {
+            if (state.segmentFields[entityType]) return;
+            try {
+                const data = await request(`/segments/fields/${entityType}`);
+                state.segmentFields[entityType] = data.data || [];
+            } catch (_) {
+                state.segmentFields[entityType] = [];
+            }
+        }
+
+        async function loadSegmentMembers(id, page) {
+            try {
+                const data = await request(`/segments/${id}/members?per_page=25&page=${page}`);
+                if (state.segmentMembersView) {
+                    state.segmentMembersView.rows = data.data || [];
+                    state.segmentMembersView.total = data.total || 0;
+                    state.segmentMembersView.page = page;
+                }
+                renderShell();
+                bindShellEvents();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function previewSegmentDraft() {
+            if (!state.segmentDraft) return;
+            const btn = document.getElementById('segPreviewBtn');
+            if (btn) btn.disabled = true;
+            try {
+                const r = await request('/segments/preview', {
+                    method: 'POST',
+                    body: JSON.stringify({ entity_type: state.segmentDraft.entity_type, rules: state.segmentDraft.rules }),
+                });
+                state.segmentPreview = r;
+                const panel = document.getElementById('segPreviewPanel');
+                if (panel) panel.innerHTML = renderSegmentPreviewContent();
+            } catch (e) {
+                const panel = document.getElementById('segPreviewPanel');
+                if (panel) panel.innerHTML = `<p class="error">${escapeHtml(e.message)}</p>`;
+            }
+            if (btn) btn.disabled = false;
+        }
+
+        async function saveSegment() {
+            if (!state.segmentDraft) return;
+            const nameEl = document.getElementById('segNameInput');
+            const descEl = document.getElementById('segDescInput');
+            if (nameEl) state.segmentDraft.name = nameEl.value.trim();
+            if (descEl) state.segmentDraft.description = descEl.value.trim();
+            if (!state.segmentDraft.name) { alert('Le nom est requis.'); return; }
+            try {
+                const isEdit = !!state.segmentDraft.id;
+                const url = isEdit ? `/segments/${state.segmentDraft.id}` : '/segments';
+                const method = isEdit ? 'PATCH' : 'POST';
+                await request(url, { method, body: JSON.stringify(state.segmentDraft) });
+                await loadSegmentList();
+                state.mode = 'segments-list';
+                state.segmentDraft = null;
+                state.segmentPreview = null;
+                renderShell();
+                bindShellEvents();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        // ── Render ────────────────────────────────────────────────────────
+
+        function renderSegmentList() {
+            const canWrite = ['admin', 'manager'].includes(state.user?.role);
+            return `
+            <div class="content-area" style="padding:24px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+                    <h2 style="margin:0">Segments dynamiques</h2>
+                    ${canWrite ? `<button class="btn" type="button" id="segNewBtn">+ Nouveau segment</button>` : ''}
+                </div>
+                ${state.segmentList.length === 0
+                    ? `<p class="muted">Aucun segment défini. ${canWrite ? 'Créez-en un avec le bouton ci-dessus.' : ''}</p>`
+                    : `<table class="data-table" style="width:100%">
+                        <thead><tr>
+                            <th>Nom</th><th>Entité</th><th>Count</th><th>Calculé</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody>
+                            ${state.segmentList.map(seg => `
+                            <tr>
+                                <td><strong>${escapeHtml(seg.name)}</strong>${seg.description ? `<br><small class="muted">${escapeHtml(seg.description)}</small>` : ''}</td>
+                                <td><span class="lc-badge">${escapeHtml(SEG_ENTITY_LABELS[seg.entity_type] || seg.entity_type)}</span></td>
+                                <td>${seg.last_count !== null ? seg.last_count : '–'}</td>
+                                <td>${seg.last_computed_at ? new Date(seg.last_computed_at).toLocaleString('fr-FR') : '–'}</td>
+                                <td style="white-space:nowrap">
+                                    <button class="btn secondary small" type="button" data-seg-view="${seg.id}" data-seg-name="${escapeHtml(seg.name)}">Voir membres</button>
+                                    <button class="btn secondary small" type="button" data-seg-refresh="${seg.id}">↻</button>
+                                    ${canWrite ? `<button class="btn secondary small" type="button" data-seg-edit="${seg.id}">Éditer</button>` : ''}
+                                    ${canWrite ? `<button class="btn danger small" type="button" data-seg-delete="${seg.id}">✕</button>` : ''}
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`}
+            </div>`;
+        }
+
+        function renderSegmentMembers() {
+            const mv = state.segmentMembersView;
+            if (!mv) return '<div class="content-area" style="padding:24px"><p>Chargement...</p></div>';
+            return `
+            <div class="content-area" style="padding:24px">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                    <button class="btn secondary" type="button" id="segMembersBackBtn">← Retour</button>
+                    <h2 style="margin:0">Membres : ${escapeHtml(mv.name)}</h2>
+                    <span class="muted">${mv.total} enregistrement(s)</span>
+                </div>
+                ${mv.rows.length === 0
+                    ? `<p class="muted">Aucun résultat pour ces règles, ou chargement en cours...</p>`
+                    : `<table class="data-table" style="width:100%">
+                        <thead><tr>${Object.keys(mv.rows[0]).filter(k => !k.startsWith('_')).slice(0, 6).map(k => `<th>${escapeHtml(k)}</th>`).join('')}</tr></thead>
+                        <tbody>
+                            ${mv.rows.map(row => `<tr>${Object.keys(mv.rows[0]).filter(k => !k.startsWith('_')).slice(0, 6).map(k => `<td>${escapeHtml(String(row[k] ?? ''))}</td>`).join('')}</tr>`).join('')}
+                        </tbody>
+                    </table>
+                    <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+                        <button class="btn secondary" type="button" id="segMembersPrevBtn" ${mv.page <= 1 ? 'disabled' : ''}>← Préc.</button>
+                        <span class="muted">Page ${mv.page}</span>
+                        <button class="btn secondary" type="button" id="segMembersNextBtn" ${mv.rows.length < 25 ? 'disabled' : ''}>Suiv. →</button>
+                    </div>`}
+            </div>`;
+        }
+
+        function renderSegmentBuilder() {
+            const draft = state.segmentDraft || { name: '', description: '', entity_type: 'contact', rules: { op: 'AND', rules: [] } };
+            const entityType = draft.entity_type;
+            const canWrite = ['admin', 'manager'].includes(state.user?.role);
+            if (!canWrite) {
+                return `<div class="content-area" style="padding:24px"><p class="error">Accès réservé aux administrateurs et managers.</p></div>`;
+            }
+            return `
+            <div class="content-area" style="padding:24px">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+                    <button class="btn secondary" type="button" id="segBackBtn">← Retour</button>
+                    <h2 style="margin:0">${draft.id ? 'Éditer' : 'Nouveau'} segment</h2>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start">
+                    <div>
+                        <div class="field-row" style="display:flex;gap:12px;margin-bottom:16px">
+                            <div class="field" style="flex:1">
+                                <label>Nom du segment *</label>
+                                <input id="segNameInput" type="text" value="${escapeHtml(draft.name)}" placeholder="Ex: Customers SaaS" required>
+                            </div>
+                            <div class="field" style="flex:1">
+                                <label>Description</label>
+                                <input id="segDescInput" type="text" value="${escapeHtml(draft.description || '')}" placeholder="Optionnel">
+                            </div>
+                            <div class="field">
+                                <label>Entité</label>
+                                <select id="segEntitySelect" ${draft.id ? 'disabled' : ''}>
+                                    <option value="contact" ${entityType === 'contact' ? 'selected' : ''}>Contacts</option>
+                                    <option value="company" ${entityType === 'company' ? 'selected' : ''}>Entreprises</option>
+                                    <option value="deal" ${entityType === 'deal' ? 'selected' : ''}>Deals</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="segment-builder" id="segBuilderWrap">
+                            ${renderRuleGroup(draft.rules, [], entityType)}
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:16px">
+                            <button class="btn" type="button" id="segSaveBtn">Enregistrer</button>
+                            <button class="btn secondary" type="button" id="segPreviewBtn">Aperçu</button>
+                        </div>
+                    </div>
+                    <div class="panel" id="segPreviewPanel" style="padding:16px">
+                        ${state.segmentPreview ? renderSegmentPreviewContent() : '<p class="muted">Cliquez sur "Aperçu" pour voir les résultats.</p>'}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderSegmentPreviewContent() {
+            const p = state.segmentPreview;
+            if (!p) return '<p class="muted">Aucun résultat.</p>';
+            const rows = p.sample || [];
+            const displayKeys = rows.length > 0
+                ? Object.keys(rows[0]).filter(k => !['id','custom_values','deleted_at'].includes(k)).slice(0, 4)
+                : [];
+            return `
+                <p><strong>${p.count}</strong> enregistrement(s) correspondent.</p>
+                ${rows.length > 0 ? `
+                <table class="data-table" style="width:100%;font-size:12px">
+                    <thead><tr>${displayKeys.map(k => `<th>${escapeHtml(k)}</th>`).join('')}</tr></thead>
+                    <tbody>
+                        ${rows.slice(0, 10).map(row => `<tr>${displayKeys.map(k => `<td>${escapeHtml(String(row[k] ?? ''))}</td>`).join('')}</tr>`).join('')}
+                    </tbody>
+                </table>` : ''}`;
+        }
+
+        // ── Builder tree rendering ────────────────────────────────────────
+
+        function renderRuleGroup(node, path, entityType) {
+            const op = (node.op || 'AND').toUpperCase();
+            const rules = node.rules || [];
+            const pathStr = JSON.stringify(path);
+            return `
+            <div class="seg-group" data-path="${escapeHtml(pathStr)}">
+                <div class="seg-group-header">
+                    <select class="seg-op-select" data-group-path="${escapeHtml(pathStr)}">
+                        <option value="AND" ${op === 'AND' ? 'selected' : ''}>ET (AND)</option>
+                        <option value="OR" ${op === 'OR' ? 'selected' : ''}>OU (OR)</option>
+                    </select>
+                    <button class="btn secondary small" type="button" data-add-rule="${escapeHtml(pathStr)}">+ Règle</button>
+                    <button class="btn secondary small" type="button" data-add-group="${escapeHtml(pathStr)}">+ Groupe</button>
+                    ${path.length > 0 ? `<button class="btn danger small" type="button" data-rm-group="${escapeHtml(pathStr)}">✕</button>` : ''}
+                </div>
+                <div class="seg-rules">
+                    ${rules.map((rule, idx) => rule.op !== undefined
+                        ? renderRuleGroup(rule, [...path, 'rules', idx], entityType)
+                        : renderRuleLeaf(rule, [...path, 'rules', idx], entityType)
+                    ).join('')}
+                </div>
+            </div>`;
+        }
+
+        function renderRuleLeaf(rule, path, entityType) {
+            const pathStr = JSON.stringify(path);
+            const fields = state.segmentFields[entityType] || [];
+            const selectedField = fields.find(f => f.key === rule.field) || null;
+            const operators = selectedField ? selectedField.operators : ['eq', 'neq', 'contains'];
+            const currentOp = rule.operator || 'eq';
+            const needsRelFilter = rule.field && rule.field.startsWith('rel.') &&
+                !['exists','not_exists','count_gte','count_lt'].includes(currentOp);
+            return `
+            <div class="seg-leaf" data-leaf-path="${escapeHtml(pathStr)}">
+                <select class="seg-field-select" data-leaf-path="${escapeHtml(pathStr)}" data-leaf-part="field">
+                    <option value="">-- Champ --</option>
+                    ${fields.map(f => `<option value="${escapeHtml(f.key)}" ${f.key === rule.field ? 'selected' : ''}>${escapeHtml(f.label)}</option>`).join('')}
+                </select>
+                <select class="seg-op-sel" data-leaf-path="${escapeHtml(pathStr)}" data-leaf-part="operator">
+                    ${operators.map(op => `<option value="${op}" ${op === currentOp ? 'selected' : ''}>${escapeHtml(SEG_OPERATOR_LABELS[op] || op)}</option>`).join('')}
+                </select>
+                ${renderSegValueInput(selectedField, currentOp, rule.value, pathStr)}
+                ${needsRelFilter ? renderRelFilterRow(rule.rel_filter || {}, pathStr, entityType) : ''}
+                <button class="btn danger small" type="button" data-rm-leaf="${escapeHtml(pathStr)}">✕</button>
+            </div>`;
+        }
+
+        function renderSegValueInput(fieldMeta, op, value, pathStr) {
+            if (['is_null','is_not_null','exists','not_exists'].includes(op)) return '';
+            if (['count_gte','count_lt','days_ago_lt','days_ago_gt'].includes(op)) {
+                return `<input type="number" class="seg-val" data-leaf-path="${escapeHtml(pathStr)}" data-leaf-part="value" value="${escapeHtml(String(value ?? ''))}" style="width:80px" placeholder="0">`;
+            }
+            if (op === 'between') {
+                const v = Array.isArray(value) ? value : ['', ''];
+                return `<input type="text" class="seg-val" data-leaf-path="${escapeHtml(pathStr)}" data-leaf-part="value[0]" value="${escapeHtml(String(v[0] ?? ''))}" style="width:90px">
+                        <span class="muted">et</span>
+                        <input type="text" class="seg-val" data-leaf-path="${escapeHtml(pathStr)}" data-leaf-part="value[1]" value="${escapeHtml(String(v[1] ?? ''))}" style="width:90px">`;
+            }
+            if (['in','not_in'].includes(op)) {
+                const arr = Array.isArray(value) ? value : (value ? [value] : []);
+                return `<input type="text" class="seg-val" data-leaf-path="${escapeHtml(pathStr)}" data-leaf-part="value_in" value="${escapeHtml(arr.join(', '))}" placeholder="val1, val2, ..." style="width:160px">`;
+            }
+            const type = fieldMeta?.type === 'number' ? 'number' : (fieldMeta?.type === 'date' ? 'date' : 'text');
+            return `<input type="${type}" class="seg-val" data-leaf-path="${escapeHtml(pathStr)}" data-leaf-part="value" value="${escapeHtml(String(value ?? ''))}" style="min-width:120px">`;
+        }
+
+        function renderRelFilterRow(relFilter, leafPathStr, entityType) {
+            return `<div class="seg-rel-filter" style="margin-top:4px;padding-left:12px;border-left:2px solid #ccc">
+                <small class="muted">Filtré sur : </small>
+                <input type="text" class="seg-val" data-leaf-path="${escapeHtml(leafPathStr)}" data-leaf-part="rel_filter.field" value="${escapeHtml(relFilter.field || '')}" placeholder="champ" style="width:100px">
+                <select class="seg-op-sel" data-leaf-path="${escapeHtml(leafPathStr)}" data-leaf-part="rel_filter.operator">
+                    ${['eq','neq','in','gt','lt'].map(op => `<option value="${op}" ${op === (relFilter.operator||'eq') ? 'selected':''}>${escapeHtml(SEG_OPERATOR_LABELS[op]||op)}</option>`).join('')}
+                </select>
+                <input type="text" class="seg-val" data-leaf-path="${escapeHtml(leafPathStr)}" data-leaf-part="rel_filter.value" value="${escapeHtml(String(relFilter.value ?? ''))}" style="width:100px">
+            </div>`;
+        }
+
+        // ── Builder event bindings ────────────────────────────────────────
+
+        function bindSegmentBuilderEvents() {
+            // Group op change
+            document.querySelectorAll('.seg-op-select[data-group-path]').forEach(sel => {
+                sel.addEventListener('change', () => {
+                    const path = JSON.parse(sel.dataset.groupPath);
+                    const node = getNodeAtPath(state.segmentDraft.rules, path);
+                    node.op = sel.value;
+                    rebuildSegmentBuilder();
+                });
+            });
+            // Add rule
+            document.querySelectorAll('[data-add-rule]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = JSON.parse(btn.dataset.addRule);
+                    const node = getNodeAtPath(state.segmentDraft.rules, path);
+                    node.rules.push({ field: '', operator: 'eq', value: '' });
+                    rebuildSegmentBuilder();
+                });
+            });
+            // Add group
+            document.querySelectorAll('[data-add-group]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = JSON.parse(btn.dataset.addGroup);
+                    const node = getNodeAtPath(state.segmentDraft.rules, path);
+                    node.rules.push({ op: 'AND', rules: [] });
+                    rebuildSegmentBuilder();
+                });
+            });
+            // Remove group
+            document.querySelectorAll('[data-rm-group]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = JSON.parse(btn.dataset.rmGroup);
+                    removeNodeAtPath(state.segmentDraft.rules, path);
+                    rebuildSegmentBuilder();
+                });
+            });
+            // Remove leaf
+            document.querySelectorAll('[data-rm-leaf]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = JSON.parse(btn.dataset.rmLeaf);
+                    removeNodeAtPath(state.segmentDraft.rules, path);
+                    rebuildSegmentBuilder();
+                });
+            });
+            // Leaf field change → update operator list
+            document.querySelectorAll('.seg-field-select[data-leaf-path]').forEach(sel => {
+                sel.addEventListener('change', () => {
+                    const path = JSON.parse(sel.dataset.leafPath);
+                    const leaf = getNodeAtPath(state.segmentDraft.rules, path);
+                    leaf.field = sel.value;
+                    leaf.operator = 'eq';
+                    leaf.value = '';
+                    delete leaf.rel_filter;
+                    rebuildSegmentBuilder();
+                });
+            });
+            // Leaf operator change
+            document.querySelectorAll('.seg-op-sel[data-leaf-path]').forEach(sel => {
+                sel.addEventListener('change', () => {
+                    const path = JSON.parse(sel.dataset.leafPath);
+                    const leaf = getNodeAtPath(state.segmentDraft.rules, path);
+                    leaf.operator = sel.value;
+                    leaf.value = '';
+                    rebuildSegmentBuilder();
+                });
+            });
+            // Leaf value change (debounced)
+            document.querySelectorAll('.seg-val[data-leaf-path]').forEach(input => {
+                input.addEventListener('input', debounce(() => {
+                    const path = JSON.parse(input.dataset.leafPath);
+                    const part = input.dataset.leafPart;
+                    const leaf = getNodeAtPath(state.segmentDraft.rules, path);
+                    if (part === 'value') {
+                        leaf.value = input.value;
+                    } else if (part === 'value[0]') {
+                        if (!Array.isArray(leaf.value)) leaf.value = ['', ''];
+                        leaf.value[0] = input.value;
+                    } else if (part === 'value[1]') {
+                        if (!Array.isArray(leaf.value)) leaf.value = ['', ''];
+                        leaf.value[1] = input.value;
+                    } else if (part === 'value_in') {
+                        leaf.value = input.value.split(',').map(s => s.trim()).filter(Boolean);
+                    } else if (part === 'rel_filter.field') {
+                        if (!leaf.rel_filter) leaf.rel_filter = {};
+                        leaf.rel_filter.field = input.value;
+                    } else if (part === 'rel_filter.value') {
+                        if (!leaf.rel_filter) leaf.rel_filter = {};
+                        leaf.rel_filter.value = input.value;
+                    }
+                }, 400));
+            });
+            document.querySelectorAll('.seg-op-sel[data-leaf-part="rel_filter.operator"]').forEach(sel => {
+                sel.addEventListener('change', () => {
+                    const path = JSON.parse(sel.dataset.leafPath);
+                    const leaf = getNodeAtPath(state.segmentDraft.rules, path);
+                    if (!leaf.rel_filter) leaf.rel_filter = {};
+                    leaf.rel_filter.operator = sel.value;
+                });
+            });
+        }
+
+        function rebuildSegmentBuilder() {
+            const wrap = document.getElementById('segBuilderWrap');
+            if (!wrap) return;
+            const entityType = state.segmentDraft?.entity_type || 'contact';
+            const newWrap = document.createElement('div');
+            newWrap.className = 'segment-builder';
+            newWrap.id = 'segBuilderWrap';
+            newWrap.innerHTML = renderRuleGroup(state.segmentDraft.rules, [], entityType);
+            wrap.replaceWith(newWrap);
+            bindSegmentBuilderEvents();
+        }
+
+        function buildSegmentBuilderDOM() {
+            const entityType = state.segmentDraft?.entity_type || 'contact';
+            const div = document.createElement('div');
+            div.className = 'segment-builder';
+            div.id = 'segBuilderWrap';
+            div.innerHTML = renderRuleGroup(state.segmentDraft.rules, [], entityType);
+            return div;
+        }
+
+        // ── Tree path helpers ─────────────────────────────────────────────
+
+        function getNodeAtPath(root, path) {
+            let node = root;
+            for (const key of path) {
+                node = node[key];
+            }
+            return node;
+        }
+
+        function removeNodeAtPath(root, path) {
+            const parentPath = path.slice(0, -1);
+            const idx = path[path.length - 1];
+            const parent = getNodeAtPath(root, parentPath);
+            parent.splice(idx, 1);
+        }
+
+        // ════════════════════════════════════════════════════════════════════
 
         if (state.token) {
             loadCurrent();

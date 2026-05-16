@@ -9,7 +9,7 @@
         </p>
     </div>
     <div class="flex items-center gap-2">
-        <a href="{{ route('deals.index') }}" class="btn sm ghost">
+        <a href="{{ '/deals' }}" class="btn sm ghost">
             <svg class="ic" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Table
         </a>
     </div>
@@ -62,7 +62,7 @@
         </div>
 
         {{-- Add deal --}}
-        <a href="{{ route('deals.index') }}" class="btn ghost w-full justify-center mt-1 text-[12px]">
+        <a href="{{ '/deals' }}" class="btn ghost w-full justify-center mt-1 text-[12px]">
             <svg class="ic" style="width:14px;height:14px;stroke-width:2;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
             Ajouter deal
         </a>
