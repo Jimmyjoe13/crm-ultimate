@@ -1844,7 +1844,7 @@
 
         function bindAiButtons() {
             const entity = state.current === 'deals' ? 'deal' : 'contact';
-            const id = state.selected?.id;
+            const id = state.detailId ?? state.selected?.id;
             document.getElementById('aiSummarizeBtn')?.addEventListener('click', () => aiCall(`/ai/summarize/${entity}/${id}`, 'summarize'));
             document.getElementById('aiNextActionBtn')?.addEventListener('click', () => aiCall(`/ai/next-action/deal/${id}`, 'next-action'));
             document.getElementById('aiScoreBtn')?.addEventListener('click', () => aiCall(`/ai/score/deal/${id}`, 'score'));

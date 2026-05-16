@@ -137,10 +137,10 @@ class ProcessCsvImport implements ShouldQueue
                 }
             }
 
-            $payload = array_filter(
+            $payload = $this->truncateStrings(array_filter(
                 array_intersect_key($combined, $fillable),
                 fn ($v) => $v !== '' && $v !== null
-            );
+            ));
 
             if (empty($payload) && empty($companyPayload)) {
                 $failed++;
@@ -221,6 +221,7 @@ class ProcessCsvImport implements ShouldQueue
                 $mapped[$col] = $companyPayload[$virtual];
             }
         }
+        $mapped = $this->truncateStrings($mapped);
 
         if (empty($mapped)) {
             return 0;
@@ -284,6 +285,14 @@ class ProcessCsvImport implements ShouldQueue
             'deal' => $payload['name'] ?? null,
             default => null,
         };
+    }
+
+    private function truncateStrings(array $data, int $max = 255): array
+    {
+        return array_map(
+            fn ($v) => is_string($v) ? mb_substr($v, 0, $max) : $v,
+            $data
+        );
     }
 
     private function applyUserMapping(array $rawHeaders, array $mapping): array
