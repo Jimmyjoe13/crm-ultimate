@@ -8,6 +8,7 @@ use App\Http\Controllers\Web\ContactController;
 use App\Http\Controllers\Web\CompanyController;
 use App\Http\Controllers\Web\ActivityController;
 use App\Http\Controllers\Web\SearchController;
+use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\SegmentController;
 use App\Http\Controllers\Web\Settings\StageController;
 use App\Http\Controllers\Web\Settings\CustomFieldController;
@@ -49,6 +50,11 @@ Route::middleware('web.auth')->group(function () {
     Route::get('/segments/{segment}/edit',   [SegmentController::class, 'edit']);
     Route::put('/segments/{segment}',        [SegmentController::class, 'update']);
     Route::delete('/segments/{segment}',     [SegmentController::class, 'destroy']);
+
+    Route::get('/imports/{entityType}/create', [ImportController::class, 'create']);
+    Route::post('/imports/preview',            [ImportController::class, 'preview']);
+    Route::post('/imports',                    [ImportController::class, 'store']);
+    Route::get('/imports/{id}/status',         [ImportController::class, 'status']);
 
     Route::get('/settings/stages',  [StageController::class, 'index'])->name('stages.index');
     Route::post('/settings/stages', [StageController::class, 'store']);
