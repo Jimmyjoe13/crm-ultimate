@@ -33,6 +33,9 @@
 
         <div class="my-2 h-px w-6" style="background: var(--border);"></div>
 
+        <x-rail-icon href="/segments" :active="$active === 'segments'" tooltip="Segments">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </x-rail-icon>
         <x-rail-icon route="stages.index" :active="$active === 'stages'" tooltip="Étapes">
             <svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="14" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
         </x-rail-icon>

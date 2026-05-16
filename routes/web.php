@@ -8,6 +8,7 @@ use App\Http\Controllers\Web\ContactController;
 use App\Http\Controllers\Web\CompanyController;
 use App\Http\Controllers\Web\ActivityController;
 use App\Http\Controllers\Web\SearchController;
+use App\Http\Controllers\Web\SegmentController;
 use App\Http\Controllers\Web\Settings\StageController;
 use App\Http\Controllers\Web\Settings\CustomFieldController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,15 @@ Route::middleware('web.auth')->group(function () {
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
 
     Route::get('/search',    [SearchController::class, 'index'])->name('search');
+
+    Route::get('/segments',                  [SegmentController::class, 'index']);
+    Route::get('/segments/create',           [SegmentController::class, 'create']);
+    Route::post('/segments',                 [SegmentController::class, 'store']);
+    Route::post('/segments/preview',         [SegmentController::class, 'preview']);
+    Route::get('/segments/{segment}',        [SegmentController::class, 'show']);
+    Route::get('/segments/{segment}/edit',   [SegmentController::class, 'edit']);
+    Route::put('/segments/{segment}',        [SegmentController::class, 'update']);
+    Route::delete('/segments/{segment}',     [SegmentController::class, 'destroy']);
 
     Route::get('/settings/stages',  [StageController::class, 'index'])->name('stages.index');
     Route::post('/settings/stages', [StageController::class, 'store']);
