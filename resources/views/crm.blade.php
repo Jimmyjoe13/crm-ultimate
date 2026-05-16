@@ -609,6 +609,51 @@
         .mapping-actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; align-items: center; flex-wrap: wrap; }
         /* ── Custom field inputs in forms ── */
         .custom-fields-divider { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0.85rem 0 0.35rem; border-top: 1px solid var(--line); padding-top: 0.65rem; }
+        /* ── Detail page 3-column layout ── */
+        .layout-detail { display:grid; grid-template-columns:300px 1fr 320px; gap:16px; align-items:start; }
+        @media (max-width:1200px) { .layout-detail { grid-template-columns:1fr; } }
+        .detail-breadcrumb { display:flex; align-items:center; gap:8px; font-size:0.82rem; color:var(--muted); margin-bottom:16px; }
+        .detail-breadcrumb button { background:none; border:none; padding:0; color:var(--brand); cursor:pointer; font-size:0.82rem; font-weight:700; }
+        .detail-breadcrumb button:hover { text-decoration:underline; }
+        /* ── Lifecycle badge ── */
+        .lifecycle-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+        .lc-lead { background:#e0f2fe; color:#0369a1; } .lc-mql { background:#fef9c3; color:#854d0e; } .lc-sql { background:#fed7aa; color:#9a3412; }
+        .lc-opportunity { background:#ddd6fe; color:#5b21b6; } .lc-customer { background:#dcfce7; color:#15803d; }
+        .lc-evangelist { background:#fce7f3; color:#9d174d; } .lc-other { background:var(--soft); color:var(--muted); }
+        /* ── Association chips ── */
+        .assoc-list { display:flex; flex-direction:column; gap:6px; }
+        .assoc-chip { display:flex; align-items:center; justify-content:space-between; background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:8px 10px; gap:6px; }
+        .assoc-chip-name { font-weight:600; font-size:0.85rem; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+        .assoc-chip-name:hover { color:var(--brand); }
+        .assoc-chip-role { font-size:0.7rem; color:var(--muted); background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1px 7px; white-space:nowrap; }
+        .assoc-chip-del { background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.85rem; padding:2px 4px; opacity:0.6; flex-shrink:0; }
+        .assoc-chip-del:hover { opacity:1; }
+        .assoc-section-title { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin:14px 0 6px; }
+        .assoc-section-title:first-child { margin-top:0; }
+        .assoc-add-btn { width:100%; background:none; border:1px dashed var(--line); border-radius:8px; padding:6px; color:var(--muted); font-size:0.78rem; cursor:pointer; margin-top:4px; }
+        .assoc-add-btn:hover { border-color:var(--brand); color:var(--brand); }
+        /* ── Modal ── */
+        .modal-overlay { position:fixed; inset:0; background:rgba(23,32,51,.52); z-index:1000; display:flex; align-items:center; justify-content:center; padding:24px; }
+        .modal-box { background:var(--panel); border-radius:12px; box-shadow:var(--shadow); width:min(600px,100%); max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; }
+        .modal-box.narrow { width:min(440px,100%); }
+        .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); }
+        .modal-header h3 { margin:0; font-size:1rem; }
+        .modal-close { background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--muted); padding:2px 8px; border-radius:4px; line-height:1; }
+        .modal-close:hover { background:var(--soft); }
+        .modal-body { padding:20px; flex:1; overflow-y:auto; }
+        .modal-footer { display:flex; gap:8px; justify-content:flex-end; padding:14px 20px; border-top:1px solid var(--line); flex-shrink:0; }
+        /* ── Autocomplete ── */
+        .autocomplete-wrap { position:relative; }
+        .autocomplete-dropdown { position:absolute; top:100%; left:0; right:0; background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow-soft); z-index:600; max-height:200px; overflow-y:auto; margin-top:2px; }
+        .autocomplete-item { padding:8px 12px; cursor:pointer; font-size:0.85rem; display:flex; flex-direction:column; gap:2px; border-bottom:1px solid var(--line); }
+        .autocomplete-item:last-child { border-bottom:none; }
+        .autocomplete-item:hover { background:var(--soft); }
+        .autocomplete-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+        .autocomplete-tag { display:inline-flex; align-items:center; gap:4px; background:var(--accent-soft); border:1px solid var(--accent); color:var(--accent); border-radius:20px; padding:2px 8px; font-size:0.76rem; font-weight:600; }
+        .autocomplete-tag button { background:none; border:none; color:var(--accent); cursor:pointer; padding:0 2px; font-size:1rem; line-height:1; }
+        /* ── "Nouveau deal" sidebar shortcut ── */
+        .sidebar-deal-btn { width:100%; margin-top:8px; background:rgba(255,107,53,.15); border:1px solid rgba(255,107,53,.35); color:var(--brand); border-radius:8px; padding:8px 11px; text-align:left; display:flex; align-items:center; gap:8px; font-weight:700; font-size:0.82rem; cursor:pointer; }
+        .sidebar-deal-btn:hover { background:rgba(255,107,53,.25); }
     </style>
 </head>
 <body>
@@ -631,7 +676,7 @@
                 endpoint: '/companies',
                 title: row => row.name,
                 subtitle: row => [row.domain, row.industry].filter(Boolean).join(' - '),
-                columns: ['id', 'name', 'domain', 'industry', 'city', 'country'],
+                columns: ['id', 'name', 'domain', 'industry', 'lifecycle_stage', 'city'],
                 fields: [
                     ['name', 'Nom', 'text', true],
                     ['domain', 'Domaine', 'text'],
@@ -641,7 +686,7 @@
                     ['city', 'Ville', 'text'],
                     ['country', 'Pays', 'text'],
                 ],
-                details: ['name', 'domain', 'industry', 'phone', 'website', 'city', 'country'],
+                details: ['name', 'domain', 'industry', 'phone', 'website', 'city', 'country', 'lifecycle_stage'],
             },
             contacts: {
                 label: 'Contacts',
@@ -649,16 +694,15 @@
                 endpoint: '/contacts',
                 title: row => [row.first_name, row.last_name].filter(Boolean).join(' '),
                 subtitle: row => [row.email, row.job_title].filter(Boolean).join(' - '),
-                columns: ['id', 'first_name', 'last_name', 'email', 'phone', 'job_title'],
+                columns: ['id', 'first_name', 'last_name', 'email', 'lifecycle_stage', 'job_title'],
                 fields: [
                     ['first_name', 'Prenom', 'text', true],
                     ['last_name', 'Nom', 'text'],
                     ['email', 'Email', 'email'],
                     ['phone', 'Telephone', 'text'],
                     ['job_title', 'Poste', 'text'],
-                    ['company_id', 'ID entreprise', 'number'],
                 ],
-                details: ['first_name', 'last_name', 'email', 'phone', 'job_title', 'company_id'],
+                details: ['first_name', 'last_name', 'email', 'phone', 'job_title', 'lifecycle_stage'],
             },
             deals: {
                 label: 'Deals',
@@ -674,10 +718,8 @@
                     ['close_date', 'Date de cloture', 'date'],
                     ['pipeline_id', 'ID pipeline', 'number', true],
                     ['pipeline_stage_id', 'ID etape', 'number', true],
-                    ['company_id', 'ID entreprise', 'number'],
-                    ['contact_id', 'ID contact', 'number'],
                 ],
-                details: ['name', 'amount', 'currency', 'status', 'close_date', 'company_id', 'contact_id', 'pipeline_id', 'pipeline_stage_id'],
+                details: ['name', 'amount', 'currency', 'status', 'close_date', 'pipeline_id', 'pipeline_stage_id'],
             },
             activities: {
                 label: 'Activites',
@@ -766,6 +808,9 @@
             customFieldsCache: {},
             totalRows: 0,
             currentPage: 1,
+            detailId: null,
+            detailData: null,
+            detailActiveTab: 'overview',
         };
 
         function escapeHtml(value) {
@@ -854,6 +899,9 @@
             state.search = '';
             state.selected = null;
             state.selectedDetail = null;
+            state.detailId = null;
+            state.detailData = null;
+            state.detailActiveTab = 'overview';
             state.message = '';
             state.error = '';
             state.importPreview = null;
@@ -870,6 +918,9 @@
                     await loadDashboard();
                 } else if (state.mode === 'board') {
                     await loadBoard();
+                } else if (state.mode === 'detail' && state.detailId) {
+                    const resource = resources[state.current];
+                    state.detailData = await request(`${resource.endpoint}/${state.detailId}`);
                 } else {
                     await loadList();
                 }
@@ -934,6 +985,9 @@
                                     ${escapeHtml(item.label)}
                                 </button>`).join('')}
                         </nav>
+                        <button class="sidebar-deal-btn" type="button" id="sidebarNewDealBtn">
+                            <span>+</span> Nouveau deal
+                        </button>
                     </aside>
                     <main class="main">
                         <header class="topbar">
@@ -956,6 +1010,7 @@
                                     <div id="dueDropdown" style="display:none" class="due-dropdown">${renderDueDropdown()}</div>
                                 </div>
                                 <span class="user-pill"><span class="user-dot">${escapeHtml((state.user?.name || state.user?.email || 'U').slice(0, 1).toUpperCase())}</span>${escapeHtml(state.user?.email || '')}</span>
+                                <button class="btn secondary" type="button" id="newDealTopBtn">+ Deal</button>
                                 <button class="btn secondary" type="button" id="refresh">Rafraichir</button>
                                 <button class="btn danger" type="button" id="logout">Deconnexion</button>
                             </div>
@@ -980,6 +1035,9 @@
             }
             if (state.mode === 'board') {
                 return renderBoard();
+            }
+            if (state.mode === 'detail') {
+                return renderDetailPage();
             }
             return renderListLayout();
         }
@@ -1032,7 +1090,9 @@
 
         function renderListLayout() {
             const resource = resources[state.current];
-            const canImport = ['companies', 'contacts', 'deals'].includes(state.current) && ['admin', 'manager'].includes(state.user?.role);
+            const isMainEntity = ['companies', 'contacts', 'deals'].includes(state.current);
+            const canImport = isMainEntity && ['admin', 'manager'].includes(state.user?.role);
+            const showSelected = !isMainEntity && state.selected;
             return `
                 <section class="layout">
                     <div class="panel">
@@ -1048,6 +1108,7 @@
                                     <button class="btn secondary" type="button" id="nextPageBtn" ${state.rows.length < 100 ? 'disabled' : ''} style="font-size:0.78rem;padding:0.25rem 0.5rem">→</button>
                                 ` : ''}
                                 ${canImport ? '<button class="btn secondary" type="button" id="importToggleBtn" style="font-size:0.8rem;padding:0.3rem 0.7rem">↑ Importer CSV</button>' : ''}
+                                ${isMainEntity ? '<span class="muted" style="font-size:0.78rem">Cliquer sur une ligne pour ouvrir la fiche</span>' : ''}
                             </div>
                         </div>
                         ${canImport ? renderImportPanel() : ''}
@@ -1056,29 +1117,39 @@
                     <aside class="panel">
                         <div class="panel-head">
                             <div class="detail-title">
-                                <h2>${state.selected ? 'Fiche detaillee' : 'Creation'}</h2>
-                                <p class="muted">${state.selected ? escapeHtml(resource.title(state.selected)) : 'Nouvel enregistrement'}</p>
+                                <h2>${showSelected ? 'Fiche detaillee' : 'Creation'}</h2>
+                                <p class="muted">${showSelected ? escapeHtml(resource.title(state.selected)) : 'Nouvel enregistrement'}</p>
                             </div>
                         </div>
                         <div class="panel-body">
-                            ${state.selected ? renderDetail(resource) : renderForm(resource, 'createForm')}
+                            ${showSelected ? renderDetail(resource) : renderForm(resource, 'createForm')}
                             <p class="message ${state.error ? 'error' : ''}">${escapeHtml(state.error || state.message)}</p>
                         </div>
                     </aside>
                 </section>`;
         }
 
+        function renderCell(column, value) {
+            if (column === 'lifecycle_stage' && value) {
+                const labels = { lead: 'Lead', mql: 'MQL', sql: 'SQL', opportunity: 'Opportunité', customer: 'Client', evangelist: 'Évangéliste', other: 'Autre' };
+                return `<span class="lifecycle-badge lc-${escapeHtml(value)}">${escapeHtml(labels[value] || value)}</span>`;
+            }
+            return escapeHtml(value ?? '');
+        }
+
         function renderTable(resource) {
             if (!state.rows.length) {
                 return '<div class="empty">Aucune donnee pour le moment.</div>';
             }
+            const isMainEntity = ['companies', 'contacts', 'deals'].includes(state.current);
+            const selectAttr = isMainEntity ? 'data-open-detail' : 'data-select';
             return `
                 <table>
                     <thead><tr>${resource.columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr></thead>
                     <tbody>
                         ${state.rows.map(row => `
-                            <tr data-select="${row.id}" class="${state.selected?.id === row.id ? 'selected' : ''}">
-                                ${resource.columns.map(column => `<td>${escapeHtml(row[column])}</td>`).join('')}
+                            <tr ${selectAttr}="${row.id}" class="${state.selected?.id === row.id ? 'selected' : ''}">
+                                ${resource.columns.map(column => `<td>${renderCell(column, row[column])}</td>`).join('')}
                             </tr>`).join('')}
                     </tbody>
                 </table>`;
@@ -1107,6 +1178,7 @@
         }
 
         function renderActivityForm() {
+            const detailSource = state.detailData || state.selectedDetail;
             return `
                 <form id="activityForm" class="stack">
                     <div class="split">
@@ -1124,12 +1196,12 @@
                     <div class="field"><label>Titre</label><input name="title" required></div>
                     <div class="field"><label>Description</label><textarea name="body"></textarea></div>
                     <button class="btn" type="submit">Ajouter l'activite</button>
-                    ${renderTimeline(state.selectedDetail?.activities || [])}
+                    ${renderTimeline(detailSource?.activities || [])}
                 </form>`;
         }
 
         function renderHistory() {
-            const logs = state.selectedDetail?.audit_logs || [];
+            const logs = (state.detailData || state.selectedDetail)?.audit_logs || [];
             if (!logs.length) {
                 return '<div class="empty">Aucun historique disponible.</div>';
             }
@@ -1226,7 +1298,7 @@
                         <button class="deal-card" type="button" data-open-deal="${deal.id}">
                             <strong>${escapeHtml(deal.name)}</strong>
                             <span>${escapeHtml(money(deal.amount, deal.currency))}</span>
-                            <span class="muted">${escapeHtml(deal.company?.name || deal.contact?.email || '')}</span>
+                            <span class="muted">${escapeHtml(deal.companies?.[0]?.name || deal.contacts?.[0]?.email || '')}</span>
                             <div class="move-row">
                                 <select data-move-select="${deal.id}">
                                     ${state.board.columns.map(target => `<option value="${target.stage.id}" ${target.stage.id === deal.pipeline_stage_id ? 'selected' : ''}>${escapeHtml(target.stage.name)}</option>`).join('')}
@@ -1301,14 +1373,25 @@
             document.querySelectorAll('[data-select]').forEach(row => {
                 row.addEventListener('click', () => selectRecord(Number(row.dataset.select)));
             });
+            document.querySelectorAll('[data-open-detail]').forEach(row => {
+                row.addEventListener('click', () => openDetailPage(Number(row.dataset.openDetail)));
+            });
+            document.getElementById('sidebarNewDealBtn')?.addEventListener('click', () => openDealModal({}));
+            document.getElementById('newDealTopBtn')?.addEventListener('click', () => openDealModal({}));
             document.querySelectorAll('[data-search-nav]').forEach(item => {
                 item.addEventListener('click', async () => {
                     const navKey = item.dataset.searchNav;
                     const id = Number(item.dataset.searchId);
                     state.globalSearch = '';
                     state.globalResults = null;
-                    await navigate(navKey);
-                    await selectRecord(id);
+                    state.current = navKey;
+                    state.rows = [];
+                    if (['companies', 'contacts', 'deals'].includes(navKey)) {
+                        await openDetailPage(id);
+                    } else {
+                        await navigate(navKey);
+                        await selectRecord(id);
+                    }
                 });
             });
             document.querySelectorAll('[data-detail-tab]').forEach(tab => {
@@ -1319,13 +1402,15 @@
                     if (event.target.matches('select')) {
                         return;
                     }
-                    state.mode = 'list';
-                    selectRecord(Number(card.dataset.openDeal));
+                    openDetailPage(Number(card.dataset.openDeal));
                 });
             });
             document.querySelectorAll('[data-move-select]').forEach(select => {
                 select.addEventListener('change', event => moveDeal(Number(select.dataset.moveSelect), Number(event.target.value)));
             });
+            if (state.mode === 'detail') {
+                bindDetailPageEvents();
+            }
         }
 
         async function selectRecord(id) {
@@ -1341,11 +1426,16 @@
         }
 
         async function switchDetailTab(tab) {
+            state.detailActiveTab = tab;
             const target = document.getElementById('detailTab');
+            if (!target) return;
             document.querySelectorAll('[data-detail-tab]').forEach(button => button.classList.toggle('active', button.dataset.detailTab === tab));
-            if (tab === 'activity') {
+            if (tab === 'overview') {
+                const record = state.detailData?.data || state.selected;
+                target.innerHTML = renderOverviewTab(record, resources[state.current]);
+            } else if (tab === 'activity') {
                 target.innerHTML = renderActivityForm();
-                document.getElementById('activityForm').addEventListener('submit', createActivity);
+                document.getElementById('activityForm')?.addEventListener('submit', createActivity);
             } else if (tab === 'history') {
                 target.innerHTML = renderHistory();
             } else if (tab === 'ai') {
@@ -1353,7 +1443,7 @@
                 bindAiButtons();
             } else {
                 target.innerHTML = renderEditForm(resources[state.current]);
-                document.getElementById('editForm').addEventListener('submit', updateRecord);
+                document.getElementById('editForm')?.addEventListener('submit', updateRecord);
             }
         }
 
@@ -1395,12 +1485,18 @@
             event.preventDefault();
             try {
                 const resource = resources[state.current];
-                await request(`${resource.endpoint}/${state.selected.id}`, {
+                const id = state.detailId || state.selected?.id;
+                await request(`${resource.endpoint}/${id}`, {
                     method: 'PATCH',
                     body: JSON.stringify(formPayload(event.target)),
                 });
                 state.message = 'Modification enregistree.';
-                await loadCurrent();
+                if (state.detailId) {
+                    state.detailData = await request(`${resource.endpoint}/${state.detailId}`);
+                    renderShell();
+                } else {
+                    await loadCurrent();
+                }
             } catch (error) {
                 state.error = error.message;
                 renderShell();
@@ -1408,15 +1504,20 @@
         }
 
         async function deleteRecord() {
-            if (!state.selected || !confirm('Supprimer cet enregistrement ?')) {
+            const id = state.detailId || state.selected?.id;
+            if (!id || !confirm('Supprimer cet enregistrement ?')) {
                 return;
             }
             try {
-                await request(`${resources[state.current].endpoint}/${state.selected.id}`, { method: 'DELETE' });
+                await request(`${resources[state.current].endpoint}/${id}`, { method: 'DELETE' });
                 state.selected = null;
                 state.selectedDetail = null;
                 state.message = 'Suppression effectuee.';
-                await loadCurrent();
+                if (state.detailId) {
+                    goBackToList();
+                } else {
+                    await loadCurrent();
+                }
             } catch (error) {
                 state.error = error.message;
                 renderShell();
@@ -1426,17 +1527,27 @@
         async function createActivity(event) {
             event.preventDefault();
             try {
+                const subjectId = state.detailId || state.selected?.id;
                 await request('/activities', {
                     method: 'POST',
                     body: JSON.stringify({
                         ...formPayload(event.target),
                         subject_type: subjectTypes[state.current],
-                        subject_id: state.selected.id,
+                        subject_id: subjectId,
                     }),
                 });
-                state.selectedDetail = await request(`${resources[state.current].endpoint}/${state.selected.id}`);
+                const resource = resources[state.current];
+                if (state.detailId) {
+                    state.detailData = await request(`${resource.endpoint}/${state.detailId}`);
+                } else {
+                    state.selectedDetail = await request(`${resource.endpoint}/${state.selected.id}`);
+                }
                 state.message = 'Activite ajoutee.';
                 renderShell();
+                // Restore activity tab after re-render
+                if (state.mode === 'detail') {
+                    switchDetailTab('activity');
+                }
             } catch (error) {
                 state.error = error.message;
                 renderShell();
@@ -1808,6 +1919,584 @@
                     <div><strong>${escapeHtml(data.action || '')}</strong> <span style="color:${priorityColor};font-size:0.76rem;font-weight:700;text-transform:uppercase">${escapeHtml(data.priority || '')}</span></div>
                     ${data.rationale ? `<div style="color:var(--muted);font-size:0.82rem">${escapeHtml(data.rationale)}</div>` : ''}
                 </div>`;
+        }
+
+        // ── Detail page ──────────────────────────────────────────────────────────
+
+        async function openDetailPage(id) {
+            const resource = resources[state.current];
+            state.mode = 'detail';
+            state.detailId = id;
+            state.detailActiveTab = 'overview';
+            state.error = '';
+            state.message = '';
+            try {
+                state.detailData = await request(`${resource.endpoint}/${id}`);
+                const entityType = { companies: 'company', contacts: 'contact', deals: 'deal' }[state.current];
+                if (entityType && !state.customFieldsCache[entityType]) {
+                    await loadCustomFields(entityType);
+                }
+                renderShell();
+            } catch (err) {
+                state.error = err.message;
+                state.mode = 'list';
+                renderShell();
+            }
+        }
+
+        function goBackToList() {
+            state.mode = state.current === 'deals' ? 'board' : 'list';
+            state.detailId = null;
+            state.detailData = null;
+            state.detailActiveTab = 'overview';
+            state.error = '';
+            state.message = '';
+            if (state.mode === 'board' || !state.rows.length) {
+                loadCurrent();
+            } else {
+                renderShell();
+            }
+        }
+
+        function renderDetailPage() {
+            const resource = resources[state.current];
+            const detail = state.detailData;
+            if (!detail) {
+                return '<div class="panel"><div class="empty">Chargement...</div></div>';
+            }
+            const record = detail.data;
+            return `
+                <section>
+                    <div class="detail-breadcrumb">
+                        <button type="button" id="backToListBtn">← ${escapeHtml(resource.label)}</button>
+                        <span>/</span>
+                        <span>${escapeHtml(resource.title(record))}</span>
+                    </div>
+                    <div class="layout-detail">
+                        ${renderPropertiesPanel(record, resource)}
+                        ${renderDetailCenterPanel(record, resource, detail)}
+                        ${renderAssociationsPanel(record, resource)}
+                    </div>
+                    <p class="message ${state.error ? 'error' : ''}" style="margin-top:8px">${escapeHtml(state.error || state.message)}</p>
+                </section>`;
+        }
+
+        function renderPropertiesPanel(record, resource) {
+            const entityType = { companies: 'company', contacts: 'contact', deals: 'deal' }[state.current];
+            const customFields = entityType ? (state.customFieldsCache[entityType] || []) : [];
+            const hasLifecycle = ['companies', 'contacts'].includes(state.current);
+            const lcStages = { lead: 'Lead', mql: 'MQL', sql: 'SQL', opportunity: 'Opportunité', customer: 'Client', evangelist: 'Évangéliste', other: 'Autre' };
+            const lcStatuses = { new: 'Nouveau', open: 'Ouvert', in_progress: 'En cours', connected: 'Connecté', unqualified: 'Non qualifié', bad_fit: 'Hors cible' };
+            return `
+                <div class="panel">
+                    <div class="panel-head"><h2>Propriétés</h2></div>
+                    <div class="panel-body">
+                        <form id="editForm">
+                            ${resource.fields.map(([name, label, type, required, options]) => renderField(name, label, type, required, options, record[name])).join('')}
+                            ${hasLifecycle ? `
+                                <div class="field">
+                                    <label>Lifecycle</label>
+                                    <select name="lifecycle_stage">
+                                        ${Object.entries(lcStages).map(([k, v]) => `<option value="${k}" ${record.lifecycle_stage === k ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Statut lead</label>
+                                    <select name="lead_status">
+                                        <option value="">—</option>
+                                        ${Object.entries(lcStatuses).map(([k, v]) => `<option value="${k}" ${record.lead_status === k ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}
+                                    </select>
+                                </div>` : ''}
+                            ${customFields.length ? `<div class="custom-fields-divider">Champs personnalisés</div>${customFields.map(cf => renderCustomField(cf, (record.custom_values || {})[cf.key])).join('')}` : ''}
+                            <button class="btn" type="submit">Enregistrer</button>
+                        </form>
+                        <button class="btn danger" type="button" id="deleteRecord" style="width:100%;margin-top:8px">Supprimer</button>
+                    </div>
+                </div>`;
+        }
+
+        function renderDetailCenterPanel(record, resource, detail) {
+            const cur = state.current;
+            const activeTab = state.detailActiveTab || 'overview';
+            let tabContent;
+            if (activeTab === 'overview') {
+                tabContent = renderOverviewTab(record, resource);
+            } else if (activeTab === 'activity') {
+                tabContent = renderActivityForm();
+            } else if (activeTab === 'history') {
+                tabContent = renderHistory();
+            } else if (activeTab === 'ai') {
+                tabContent = renderAiPanel();
+            } else {
+                tabContent = renderOverviewTab(record, resource);
+            }
+            return `
+                <div class="panel">
+                    <div class="panel-head">
+                        <div class="tabs">
+                            <button class="tab ${activeTab === 'overview' ? 'active' : ''}" type="button" data-detail-tab="overview">Aperçu</button>
+                            <button class="tab ${activeTab === 'activity' ? 'active' : ''}" type="button" data-detail-tab="activity">Activités</button>
+                            <button class="tab ${activeTab === 'history' ? 'active' : ''}" type="button" data-detail-tab="history">Historique</button>
+                            ${['companies', 'contacts', 'deals'].includes(cur) ? `<button class="tab ${activeTab === 'ai' ? 'active' : ''}" type="button" data-detail-tab="ai">✦ IA</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div id="detailTab">${tabContent}</div>
+                    </div>
+                </div>`;
+        }
+
+        function renderOverviewTab(record, resource) {
+            if (!record) return '<div class="empty">Aucune donnée.</div>';
+            const skipKeys = new Set(['company_id', 'contact_id', 'custom_values', 'lifecycle_stage', 'lead_status', 'owner_id', 'updated_at']);
+            const items = (resource.details || []).filter(k => !skipKeys.has(k));
+            return `<div>
+                ${items.map(key => `<div class="kv"><span>${escapeHtml(key)}</span><strong>${escapeHtml(record[key] ?? '')}</strong></div>`).join('')}
+                ${record.lifecycle_stage ? `<div class="kv"><span>Lifecycle</span><strong>${renderCell('lifecycle_stage', record.lifecycle_stage)}</strong></div>` : ''}
+                ${record.owner ? `<div class="kv"><span>Responsable</span><strong>${escapeHtml(record.owner.name || '')}</strong></div>` : ''}
+            </div>`;
+        }
+
+        function renderAssociationsPanel(record, resource) {
+            const cur = state.current;
+            let sections = '';
+
+            if (cur === 'companies') {
+                const contacts = record.contacts || [];
+                const deals = record.deals || [];
+                sections = `
+                    <div class="assoc-section-title">Contacts (${contacts.length})</div>
+                    <div class="assoc-list">
+                        ${contacts.map(c => renderAssocChip(c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim(), c.pivot?.role || 'employee', c.pivot?.is_primary, 'company-contact')).join('') || '<div class="empty" style="padding:6px 0;font-size:0.82rem">Aucun contact</div>'}
+                    </div>
+                    <button class="assoc-add-btn" type="button" data-add-assoc="company-contact">+ Ajouter un contact</button>
+                    <div class="assoc-section-title">Deals (${deals.length})</div>
+                    <div class="assoc-list">
+                        ${deals.map(d => renderAssocChip(d.id, d.name, d.pivot?.role || 'customer', null, 'company-deal')).join('') || '<div class="empty" style="padding:6px 0;font-size:0.82rem">Aucun deal</div>'}
+                    </div>
+                    <button class="assoc-add-btn" type="button" data-new-deal-prefill="company">+ Nouveau deal</button>`;
+            } else if (cur === 'contacts') {
+                const companies = record.companies || [];
+                const deals = record.deals || [];
+                sections = `
+                    <div class="assoc-section-title">Entreprises (${companies.length})</div>
+                    <div class="assoc-list">
+                        ${companies.map(c => renderAssocChip(c.id, c.name, c.pivot?.role || 'employee', c.pivot?.is_primary, 'contact-company')).join('') || '<div class="empty" style="padding:6px 0;font-size:0.82rem">Aucune entreprise</div>'}
+                    </div>
+                    <button class="assoc-add-btn" type="button" data-add-assoc="contact-company">+ Ajouter une entreprise</button>
+                    <div class="assoc-section-title">Deals (${deals.length})</div>
+                    <div class="assoc-list">
+                        ${deals.map(d => renderAssocChip(d.id, d.name, d.pivot?.role || 'primary', null, 'contact-deal')).join('') || '<div class="empty" style="padding:6px 0;font-size:0.82rem">Aucun deal</div>'}
+                    </div>
+                    <button class="assoc-add-btn" type="button" data-new-deal-prefill="contact">+ Nouveau deal</button>`;
+            } else if (cur === 'deals') {
+                const companies = record.companies || [];
+                const contacts = record.contacts || [];
+                sections = `
+                    <div class="assoc-section-title">Entreprises (${companies.length})</div>
+                    <div class="assoc-list">
+                        ${companies.map(c => renderAssocChip(c.id, c.name, c.pivot?.role || 'customer', c.pivot?.is_primary, 'deal-company')).join('') || '<div class="empty" style="padding:6px 0;font-size:0.82rem">Aucune entreprise</div>'}
+                    </div>
+                    <button class="assoc-add-btn" type="button" data-add-assoc="deal-company">+ Ajouter une entreprise</button>
+                    <div class="assoc-section-title">Contacts (${contacts.length})</div>
+                    <div class="assoc-list">
+                        ${contacts.map(c => renderAssocChip(c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim(), c.pivot?.role || 'primary', null, 'deal-contact')).join('') || '<div class="empty" style="padding:6px 0;font-size:0.82rem">Aucun contact</div>'}
+                    </div>
+                    <button class="assoc-add-btn" type="button" data-add-assoc="deal-contact">+ Ajouter un contact</button>`;
+            }
+
+            return `
+                <div class="panel">
+                    <div class="panel-head"><h2>Associations</h2></div>
+                    <div class="panel-body" style="padding:12px 16px">${sections}</div>
+                </div>`;
+        }
+
+        function renderAssocChip(id, name, role, isPrimary, assocType) {
+            const primaryBadge = isPrimary ? '<span class="status" style="font-size:0.62rem;padding:1px 5px;margin-left:4px">Princ.</span>' : '';
+            return `<div class="assoc-chip">
+                <span class="assoc-chip-name" data-nav-to-detail="${assocType.split('-')[1]}s" data-nav-to-id="${id}">${escapeHtml(name)}${primaryBadge}</span>
+                <span class="assoc-chip-role">${escapeHtml(role)}</span>
+                <button class="assoc-chip-del" type="button" data-detach-assoc="${escapeHtml(assocType)}" data-detach-id="${id}" title="Détacher">×</button>
+            </div>`;
+        }
+
+        function bindDetailPageEvents() {
+            document.getElementById('backToListBtn')?.addEventListener('click', goBackToList);
+            document.getElementById('editForm')?.addEventListener('submit', updateRecord);
+            document.getElementById('deleteRecord')?.addEventListener('click', deleteRecord);
+            document.querySelectorAll('[data-detail-tab]').forEach(tab => {
+                tab.addEventListener('click', () => switchDetailTab(tab.dataset.detailTab));
+            });
+            if (state.detailActiveTab === 'activity') {
+                document.getElementById('activityForm')?.addEventListener('submit', createActivity);
+            } else if (state.detailActiveTab === 'ai') {
+                bindAiButtons();
+            }
+            // Association add buttons
+            document.querySelectorAll('[data-add-assoc]').forEach(btn => {
+                btn.addEventListener('click', () => openAssociationPicker(btn.dataset.addAssoc));
+            });
+            // Detach buttons
+            document.querySelectorAll('[data-detach-assoc]').forEach(btn => {
+                btn.addEventListener('click', () => detachAssociation(btn.dataset.detachAssoc, Number(btn.dataset.detachId)));
+            });
+            // New deal from association panel
+            document.querySelectorAll('[data-new-deal-prefill]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const side = btn.dataset.newDealPrefill;
+                    const record = state.detailData?.data;
+                    const prefill = {};
+                    if (side === 'company' && record) prefill.companies = [{ id: record.id, name: record.name }];
+                    if (side === 'contact' && record) prefill.contacts = [{ id: record.id, name: `${record.first_name || ''} ${record.last_name || ''}`.trim() }];
+                    openDealModal(prefill);
+                });
+            });
+            // Navigate to another record's detail from chip name
+            document.querySelectorAll('[data-nav-to-detail]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const targetResource = el.dataset.navToDetail;
+                    const targetId = Number(el.dataset.navToId);
+                    if (resources[targetResource]) {
+                        state.current = targetResource;
+                        state.rows = [];
+                        openDetailPage(targetId);
+                    }
+                });
+            });
+        }
+
+        async function detachAssociation(assocType, childId) {
+            if (!confirm('Détacher cette association ?')) return;
+            const parentId = state.detailId;
+            let endpoint;
+            if (assocType === 'company-contact') endpoint = `/companies/${parentId}/contacts/${childId}`;
+            else if (assocType === 'contact-company') endpoint = `/contacts/${parentId}/companies/${childId}`;
+            else if (assocType === 'deal-contact') endpoint = `/deals/${parentId}/contacts/${childId}`;
+            else if (assocType === 'deal-company') endpoint = `/deals/${parentId}/companies/${childId}`;
+            else if (assocType === 'contact-deal') endpoint = `/deals/${childId}/contacts/${parentId}`;
+            else if (assocType === 'company-deal') endpoint = `/deals/${childId}/companies/${parentId}`;
+            else return;
+            try {
+                await request(endpoint, { method: 'DELETE' });
+                state.detailData = await request(`${resources[state.current].endpoint}/${parentId}`);
+                renderShell();
+            } catch (err) {
+                state.error = err.message;
+                renderShell();
+            }
+        }
+
+        // ── Association picker modal ─────────────────────────────────────────────
+
+        function openAssociationPicker(assocType) {
+            const parentId = state.detailId;
+            const childType = assocType.split('-')[1];
+            const childLabel = { contact: 'contact', company: 'entreprise', deal: 'deal' }[childType] || childType;
+            const childEndpoint = { contact: '/contacts', company: '/companies', deal: '/deals' }[childType];
+            const childNameFn = childType === 'contact'
+                ? r => `${r.first_name || ''} ${r.last_name || ''}`.trim()
+                : r => r.name;
+            const childSubFn = childType === 'contact'
+                ? r => r.email || ''
+                : childType === 'company'
+                    ? r => r.domain || r.industry || ''
+                    : r => money(r.amount, r.currency);
+
+            const roleOptions = {
+                'company-contact': ['employee', 'decision_maker', 'influencer', 'former'],
+                'contact-company': ['employee', 'decision_maker', 'influencer', 'former'],
+                'deal-contact': ['primary', 'technical', 'billing', 'other'],
+                'deal-company': ['customer', 'partner', 'reseller'],
+                'contact-deal': ['primary', 'technical', 'billing', 'other'],
+            }[assocType] || ['employee'];
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.id = 'assocModal';
+            modal.innerHTML = `
+                <div class="modal-box narrow">
+                    <div class="modal-header">
+                        <h3>Associer un ${escapeHtml(childLabel)}</h3>
+                        <button class="modal-close" type="button" id="assocModalClose">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="field">
+                            <label>Rôle</label>
+                            <select id="pickerRole">
+                                ${roleOptions.map(r => `<option value="${r}">${escapeHtml(r)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Rechercher</label>
+                            <div class="autocomplete-wrap">
+                                <input id="pickerSearch" type="text" placeholder="Tapez pour rechercher..." autocomplete="off">
+                                <div class="autocomplete-dropdown" id="pickerDropdown" style="display:none"></div>
+                            </div>
+                        </div>
+                        <p id="pickerMsg" class="message"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn secondary" type="button" id="assocModalCancel">Annuler</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+
+            const closeModal = () => modal.remove();
+            document.getElementById('assocModalClose').addEventListener('click', closeModal);
+            document.getElementById('assocModalCancel').addEventListener('click', closeModal);
+            modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+            const searchInput = document.getElementById('pickerSearch');
+            const dropdown = document.getElementById('pickerDropdown');
+            const msgEl = document.getElementById('pickerMsg');
+
+            searchInput.addEventListener('input', debounce(async () => {
+                const q = searchInput.value.trim();
+                if (q.length < 1) { dropdown.style.display = 'none'; return; }
+                try {
+                    const data = await request(`${childEndpoint}?search=${encodeURIComponent(q)}&per_page=10`);
+                    const items = data.data || [];
+                    dropdown.style.display = items.length ? 'block' : 'none';
+                    dropdown.innerHTML = items.length
+                        ? items.map(item => `<div class="autocomplete-item" data-pick-id="${item.id}"><strong>${escapeHtml(childNameFn(item))}</strong><span class="muted">${escapeHtml(childSubFn(item))}</span></div>`).join('')
+                        : '<div class="autocomplete-item"><span class="muted">Aucun résultat</span></div>';
+                    dropdown.querySelectorAll('[data-pick-id]').forEach(el => {
+                        el.addEventListener('click', async () => {
+                            const childId = Number(el.dataset.pickId);
+                            const role = document.getElementById('pickerRole')?.value || roleOptions[0];
+                            let endpoint, payload;
+                            if (assocType === 'contact-deal') {
+                                endpoint = `/deals/${childId}/contacts`;
+                                payload = { contact_id: parentId, role };
+                            } else if (assocType === 'company-deal') {
+                                endpoint = `/deals/${childId}/companies`;
+                                payload = { company_id: parentId, role };
+                            } else if (assocType === 'company-contact') {
+                                endpoint = `/companies/${parentId}/contacts`;
+                                payload = { contact_id: childId, role };
+                            } else if (assocType === 'contact-company') {
+                                endpoint = `/contacts/${parentId}/companies`;
+                                payload = { company_id: childId, role };
+                            } else if (assocType === 'deal-contact') {
+                                endpoint = `/deals/${parentId}/contacts`;
+                                payload = { contact_id: childId, role };
+                            } else if (assocType === 'deal-company') {
+                                endpoint = `/deals/${parentId}/companies`;
+                                payload = { company_id: childId, role };
+                            }
+                            try {
+                                await request(endpoint, { method: 'POST', body: JSON.stringify(payload) });
+                                closeModal();
+                                state.detailData = await request(`${resources[state.current].endpoint}/${parentId}`);
+                                renderShell();
+                            } catch (err) {
+                                msgEl.className = 'message error';
+                                msgEl.textContent = err.message;
+                            }
+                        });
+                    });
+                } catch (_) {
+                    dropdown.style.display = 'none';
+                }
+            }, 300));
+
+            setTimeout(() => searchInput.focus(), 50);
+        }
+
+        // ── Deal modal ───────────────────────────────────────────────────────────
+
+        async function openDealModal(prefill = {}) {
+            let pipelines = [], users = [], stages = [];
+            try {
+                const [pipData, usersData] = await Promise.all([
+                    request('/pipelines?per_page=100'),
+                    request('/users?per_page=100'),
+                ]);
+                pipelines = pipData.data || [];
+                users = usersData.data || [];
+            } catch (_) {}
+
+            const firstPipeline = pipelines[0];
+            if (firstPipeline) {
+                try {
+                    const pipDetail = await request(`/pipelines/${firstPipeline.id}`);
+                    stages = pipDetail.data?.stages || [];
+                } catch (_) {}
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.id = 'dealModal';
+            modal.innerHTML = buildDealModalHtml(pipelines, stages, users, prefill);
+            document.body.appendChild(modal);
+
+            // State for autocomplete selections
+            const selectedCompanies = prefill.companies ? [...prefill.companies] : [];
+            const selectedContacts = prefill.contacts ? [...prefill.contacts] : [];
+
+            const closeModal = () => modal.remove();
+            document.getElementById('dealModalClose').addEventListener('click', closeModal);
+            document.getElementById('dealModalCancel').addEventListener('click', closeModal);
+            modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+            // Pipeline → stage dependency
+            const pipelineSelect = document.getElementById('dealPipelineSelect');
+            const stageSelect = document.getElementById('dealStageSelect');
+            pipelineSelect?.addEventListener('change', async () => {
+                const pipId = Number(pipelineSelect.value);
+                const pipData = await request(`/pipelines/${pipId}`).catch(() => null);
+                const pipeStages = pipData?.data?.stages || [];
+                stageSelect.innerHTML = pipeStages.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+            });
+
+            // Company autocomplete
+            bindModalAutocomplete('dealCompanySearch', 'dealCompanyDropdown', 'dealCompanyTags',
+                '/companies', r => r.name, r => r.domain || '', selectedCompanies);
+            // Contact autocomplete
+            bindModalAutocomplete('dealContactSearch', 'dealContactDropdown', 'dealContactTags',
+                '/contacts', r => `${r.first_name || ''} ${r.last_name || ''}`.trim(), r => r.email || '', selectedContacts);
+
+            renderTagList('dealCompanyTags', selectedCompanies);
+            renderTagList('dealContactTags', selectedContacts);
+
+            document.getElementById('dealModalSubmit').addEventListener('click', async () => {
+                const form = document.getElementById('dealModalForm');
+                if (!form.reportValidity()) return;
+                const btn = document.getElementById('dealModalSubmit');
+                const msgEl = document.getElementById('dealModalMsg');
+                btn.disabled = true;
+                msgEl.textContent = '';
+                try {
+                    const payload = formPayload(form);
+                    const deal = await request('/deals', { method: 'POST', body: JSON.stringify(payload) });
+                    const dealId = deal.data.id;
+                    // Attach companies
+                    for (const [i, co] of selectedCompanies.entries()) {
+                        await request(`/deals/${dealId}/companies`, {
+                            method: 'POST',
+                            body: JSON.stringify({ company_id: co.id, role: 'customer', is_primary: i === 0 }),
+                        }).catch(() => {});
+                    }
+                    // Attach contacts
+                    for (const [i, ct] of selectedContacts.entries()) {
+                        await request(`/deals/${dealId}/contacts`, {
+                            method: 'POST',
+                            body: JSON.stringify({ contact_id: ct.id, role: i === 0 ? 'primary' : 'technical' }),
+                        }).catch(() => {});
+                    }
+                    closeModal();
+                    // Navigate to new deal detail page
+                    state.current = 'deals';
+                    await openDetailPage(dealId);
+                } catch (err) {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = err.message;
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        function buildDealModalHtml(pipelines, stages, users, prefill) {
+            return `
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h3>Nouveau deal</h3>
+                        <button class="modal-close" type="button" id="dealModalClose">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="dealModalForm">
+                            <div class="field"><label>Nom <span style="color:var(--danger)">*</span></label><input name="name" required placeholder="Nom du deal"></div>
+                            <div style="display:grid;grid-template-columns:1fr 80px;gap:8px">
+                                <div class="field"><label>Montant</label><input name="amount" type="number" min="0" step="0.01" placeholder="0"></div>
+                                <div class="field"><label>Devise</label><select name="currency"><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option></select></div>
+                            </div>
+                            <div class="field"><label>Date de clôture</label><input name="close_date" type="date"></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                                <div class="field">
+                                    <label>Pipeline <span style="color:var(--danger)">*</span></label>
+                                    <select name="pipeline_id" id="dealPipelineSelect" required>
+                                        ${pipelines.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('') || '<option value="">Aucun pipeline</option>'}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Étape <span style="color:var(--danger)">*</span></label>
+                                    <select name="pipeline_stage_id" id="dealStageSelect" required>
+                                        ${stages.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('') || '<option value="">Choisir un pipeline</option>'}
+                                    </select>
+                                </div>
+                            </div>
+                            ${users.length ? `<div class="field"><label>Responsable</label><select name="owner_id"><option value="">—</option>${users.map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('')}</select></div>` : ''}
+                            <div class="field">
+                                <label>Entreprises</label>
+                                <div class="autocomplete-wrap">
+                                    <input id="dealCompanySearch" type="text" placeholder="Rechercher une entreprise..." autocomplete="off">
+                                    <div class="autocomplete-dropdown" id="dealCompanyDropdown" style="display:none"></div>
+                                </div>
+                                <div class="autocomplete-tags" id="dealCompanyTags"></div>
+                            </div>
+                            <div class="field">
+                                <label>Contacts</label>
+                                <div class="autocomplete-wrap">
+                                    <input id="dealContactSearch" type="text" placeholder="Rechercher un contact..." autocomplete="off">
+                                    <div class="autocomplete-dropdown" id="dealContactDropdown" style="display:none"></div>
+                                </div>
+                                <div class="autocomplete-tags" id="dealContactTags"></div>
+                            </div>
+                        </form>
+                        <p id="dealModalMsg" class="message"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn secondary" type="button" id="dealModalCancel">Annuler</button>
+                        <button class="btn" type="button" id="dealModalSubmit">Créer le deal →</button>
+                    </div>
+                </div>`;
+        }
+
+        function bindModalAutocomplete(inputId, dropdownId, tagsId, endpoint, nameFn, subFn, selectedList) {
+            const input = document.getElementById(inputId);
+            const dropdown = document.getElementById(dropdownId);
+            if (!input || !dropdown) return;
+            input.addEventListener('input', debounce(async () => {
+                const q = input.value.trim();
+                if (q.length < 1) { dropdown.style.display = 'none'; return; }
+                try {
+                    const data = await request(`${endpoint}?search=${encodeURIComponent(q)}&per_page=8`);
+                    const items = (data.data || []).filter(it => !selectedList.find(s => s.id === it.id));
+                    dropdown.style.display = items.length ? 'block' : 'none';
+                    dropdown.innerHTML = items.map(item => `
+                        <div class="autocomplete-item" data-sel-id="${item.id}" data-sel-name="${escapeHtml(nameFn(item))}">
+                            <strong>${escapeHtml(nameFn(item))}</strong>
+                            <span class="muted">${escapeHtml(subFn(item))}</span>
+                        </div>`).join('');
+                    dropdown.querySelectorAll('[data-sel-id]').forEach(el => {
+                        el.addEventListener('click', () => {
+                            selectedList.push({ id: Number(el.dataset.selId), name: el.dataset.selName });
+                            input.value = '';
+                            dropdown.style.display = 'none';
+                            renderTagList(tagsId, selectedList);
+                        });
+                    });
+                } catch (_) {
+                    dropdown.style.display = 'none';
+                }
+            }, 300));
+        }
+
+        function renderTagList(containerId, items) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = items.map((item, idx) => `
+                <span class="autocomplete-tag">
+                    ${escapeHtml(item.name)}
+                    <button type="button" data-rm-tag="${idx}" title="Retirer">×</button>
+                </span>`).join('');
+            container.querySelectorAll('[data-rm-tag]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    items.splice(Number(btn.dataset.rmTag), 1);
+                    renderTagList(containerId, items);
+                });
+            });
         }
 
         if (state.token) {

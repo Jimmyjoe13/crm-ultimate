@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\PipelineStageController;
 use App\Http\Controllers\Api\SavedViewController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -43,6 +44,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::get('/users', [UserController::class, 'index']);
         Route::get('/search', [SearchController::class, 'index']);
 
         Route::prefix('ai')->group(function (): void {
