@@ -341,6 +341,103 @@ class SegmentQueryEngineTest extends TestCase
         $this->assertCount(2, $ids);
     }
 
+    // ── Missing coverage: not_contains, lt, pure AND/OR, empty rules ────
+
+    public function test_not_contains_operator(): void
+    {
+        Contact::factory()->create(['email' => 'alice@acme.com']);
+        Contact::factory()->create(['email' => 'bob@other.com']);
+
+        $ids = $this->engine->buildQuery($this->segment('contact', [
+            'op' => 'AND', 'rules' => [
+                ['field' => 'email', 'operator' => 'not_contains', 'value' => 'acme'],
+            ],
+        ]))->pluck('id');
+
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_lt_operator_on_amount(): void
+    {
+        $pipeline = Pipeline::query()->create(['name' => 'P', 'is_default' => true]);
+        $stage = $pipeline->stages()->create(['name' => 'S', 'position' => 1, 'probability' => 50]);
+
+        Deal::factory()->create(['amount' => 5000, 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id]);
+        Deal::factory()->create(['amount' => 15000, 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id]);
+
+        $ids = $this->engine->buildQuery($this->segment('deal', [
+            'op' => 'AND', 'rules' => [
+                ['field' => 'amount', 'operator' => 'lt', 'value' => 10000],
+            ],
+        ]))->pluck('id');
+
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_pure_and_two_conditions(): void
+    {
+        Contact::factory()->create(['first_name' => 'Alice', 'lifecycle_stage' => 'customer']);
+        Contact::factory()->create(['first_name' => 'Alice', 'lifecycle_stage' => 'lead']);
+        Contact::factory()->create(['first_name' => 'Bob', 'lifecycle_stage' => 'customer']);
+
+        $ids = $this->engine->buildQuery($this->segment('contact', [
+            'op' => 'AND', 'rules' => [
+                ['field' => 'first_name', 'operator' => 'eq', 'value' => 'Alice'],
+                ['field' => 'lifecycle_stage', 'operator' => 'eq', 'value' => 'customer'],
+            ],
+        ]))->pluck('id');
+
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_or_group_combines_with_previous_sibling(): void
+    {
+        // Engine OR semantic: OR connects the group to previous sibling conditions
+        // AND root: condition1 OR (group2_child1 AND group2_child2)
+        Contact::factory()->create(['first_name' => 'Alice', 'lifecycle_stage' => 'customer']);
+        Contact::factory()->create(['first_name' => 'Bob', 'lifecycle_stage' => 'lead']);
+        Contact::factory()->create(['first_name' => 'Charlie', 'lifecycle_stage' => 'customer']);
+
+        $ids = $this->engine->buildQuery($this->segment('contact', [
+            'op' => 'AND', 'rules' => [
+                ['field' => 'first_name', 'operator' => 'eq', 'value' => 'Alice'],
+                [
+                    'op' => 'OR', 'rules' => [
+                        ['field' => 'first_name', 'operator' => 'eq', 'value' => 'Charlie'],
+                    ],
+                ],
+            ],
+        ]))->pluck('id');
+
+        // Alice (matches first rule) OR Charlie (matches OR group) = 2
+        $this->assertCount(2, $ids);
+    }
+
+    public function test_empty_rules_returns_all(): void
+    {
+        Contact::factory()->count(3)->create();
+
+        $ids = $this->engine->buildQuery($this->segment('contact', [
+            'op' => 'AND', 'rules' => [],
+        ]))->pluck('id');
+
+        $this->assertCount(3, $ids);
+    }
+
+    public function test_eq_on_first_name_string(): void
+    {
+        Contact::factory()->create(['first_name' => 'Sophie']);
+        Contact::factory()->create(['first_name' => 'Marc']);
+
+        $ids = $this->engine->buildQuery($this->segment('contact', [
+            'op' => 'AND', 'rules' => [
+                ['field' => 'first_name', 'operator' => 'eq', 'value' => 'Sophie'],
+            ],
+        ]))->pluck('id');
+
+        $this->assertCount(1, $ids);
+    }
+
     // ── Validation ────────────────────────────────────────────────────────
 
     public function test_validate_unknown_operator_throws(): void
