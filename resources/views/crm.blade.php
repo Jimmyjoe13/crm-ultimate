@@ -1468,17 +1468,41 @@
         }
 
         function renderMappingStep(p, entityType) {
-            const opts = p.available_fields.map(f => `<option value="${escapeHtml(f.key)}">${escapeHtml(f.label)} (${f.type === 'custom' ? 'perso' : 'core'})</option>`).join('');
+            const opts = p.available_fields.map(f => {
+                const badge = f.type === 'custom' ? ' (perso)' : f.type === 'virtual' ? ' ✦' : '';
+                return `<option value="${escapeHtml(f.key)}">${escapeHtml(f.label)}${badge}</option>`;
+            }).join('');
             const rows = p.headers.map((header, i) => {
                 const mapped = p.auto_mapping[header] || '';
                 const samples = (p.sample_rows || []).map(r => escapeHtml(r[i] || '')).join(', ');
-                return `<tr>
+                return `<tr id="map-row-${i}">
                     <td><strong>${escapeHtml(header)}</strong></td>
                     <td>
-                        <select data-map-header="${escapeHtml(header)}">
+                        <select data-map-header="${escapeHtml(header)}" data-row-idx="${i}">
                             <option value="">(ignorer)</option>
                             ${opts.replace(`value="${escapeHtml(mapped)}"`, `value="${escapeHtml(mapped)}" selected`)}
+                            <option value="__create_new__">+ Créer un champ personnalisé…</option>
                         </select>
+                        <div id="create-field-form-${i}" style="display:none;margin-top:0.4rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:0.5rem;font-size:0.79rem">
+                            <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:flex-end">
+                                <div>
+                                    <div style="font-size:0.72rem;color:var(--muted);margin-bottom:2px">Libellé</div>
+                                    <input id="cf-label-${i}" type="text" placeholder="ex: Segment" style="width:110px;padding:0.2rem 0.35rem;border:1px solid var(--line);border-radius:4px;font-size:0.79rem">
+                                </div>
+                                <div>
+                                    <div style="font-size:0.72rem;color:var(--muted);margin-bottom:2px">Type</div>
+                                    <select id="cf-type-${i}" style="padding:0.2rem 0.35rem;border:1px solid var(--line);border-radius:4px;font-size:0.79rem">
+                                        <option value="text">Texte</option>
+                                        <option value="number">Nombre</option>
+                                        <option value="date">Date</option>
+                                        <option value="select">Liste</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn" style="padding:0.2rem 0.5rem;font-size:0.79rem" onclick="createCustomFieldFromMapping(${i}, '${escapeHtml(entityType)}', '${escapeHtml(header)}')">Créer</button>
+                                <button type="button" class="btn secondary" style="padding:0.2rem 0.5rem;font-size:0.79rem" onclick="cancelCreateField(${i})">Annuler</button>
+                            </div>
+                            <div id="cf-error-${i}" style="color:var(--danger);font-size:0.75rem;margin-top:0.25rem"></div>
+                        </div>
                     </td>
                     <td class="sample-val" title="${samples}">${samples}</td>
                 </tr>`;
@@ -1500,6 +1524,49 @@
                     <button class="btn secondary" type="button" id="importResetBtn">← Recommencer</button>
                     <span id="importMsg" class="muted" style="font-size:0.82rem"></span>
                 </div>`;
+        }
+
+        async function createCustomFieldFromMapping(rowIdx, entityType, csvHeader) {
+            const label = document.getElementById(`cf-label-${rowIdx}`)?.value?.trim();
+            const fieldType = document.getElementById(`cf-type-${rowIdx}`)?.value;
+            const errEl = document.getElementById(`cf-error-${rowIdx}`);
+            if (!label) { errEl.textContent = 'Le libellé est requis.'; return; }
+            const key = label.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+            try {
+                const cf = await request('/custom-fields', {
+                    method: 'POST',
+                    body: JSON.stringify({ entity_type: entityType, key, label, field_type: fieldType }),
+                });
+                // Add option to all selects and select it for this row
+                const sel = document.querySelector(`[data-map-header="${CSS.escape(csvHeader)}"]`);
+                if (sel) {
+                    const opt = new Option(`${label} (perso)`, cf.data.key);
+                    const createOpt = sel.querySelector('option[value="__create_new__"]');
+                    sel.insertBefore(opt, createOpt);
+                    sel.value = cf.data.key;
+                }
+                // Also add to other selects so it's available for other columns
+                document.querySelectorAll('[data-map-header]').forEach(s => {
+                    if (s !== sel && !s.querySelector(`option[value="${cf.data.key}"]`)) {
+                        const o = new Option(`${label} (perso)`, cf.data.key);
+                        const co = s.querySelector('option[value="__create_new__"]');
+                        s.insertBefore(o, co);
+                    }
+                });
+                document.getElementById(`create-field-form-${rowIdx}`).style.display = 'none';
+                errEl.textContent = '';
+                if (state.importPreview) {
+                    state.importPreview.available_fields.push({ key: cf.data.key, label, type: 'custom' });
+                }
+            } catch (err) {
+                errEl.textContent = err.message;
+            }
+        }
+
+        function cancelCreateField(rowIdx) {
+            document.getElementById(`create-field-form-${rowIdx}`).style.display = 'none';
+            const sel = document.querySelectorAll('[data-map-header]')[rowIdx];
+            if (sel) sel.value = '';
         }
 
         async function previewImport(event) {
@@ -1532,6 +1599,15 @@
                 document.getElementById('importForm')?.addEventListener('submit', previewImport);
             });
             document.getElementById('importConfirmBtn')?.addEventListener('click', () => finishImport(entityType));
+            // Show inline create-field form when "__ create_new__" is chosen
+            document.querySelectorAll('[data-map-header]').forEach(sel => {
+                sel.addEventListener('change', () => {
+                    const idx = sel.dataset.rowIdx;
+                    const form = document.getElementById(`create-field-form-${idx}`);
+                    if (form) form.style.display = sel.value === '__create_new__' ? 'block' : 'none';
+                    if (sel.value === '__create_new__') sel.value = '';
+                });
+            });
         }
 
         async function finishImport(entityType) {

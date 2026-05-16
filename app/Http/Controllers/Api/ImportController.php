@@ -22,7 +22,8 @@ class ImportController extends Controller
             'email' => 'Email',
             'phone' => 'Téléphone',
             'job_title' => 'Poste',
-            'company_id' => 'Entreprise (ID)',
+            '__company_name' => 'Nom entreprise (créer/lier)',
+            'company_id' => 'Entreprise (ID numérique)',
             'owner_id' => 'Propriétaire (ID)',
         ],
         'company' => [

@@ -8,7 +8,6 @@ use App\Models\Deal;
 use App\Models\ImportJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ProcessCsvImport implements ShouldQueue
@@ -115,12 +114,20 @@ class ProcessCsvImport implements ShouldQueue
                 continue;
             }
 
+            $combined = array_combine($headers, $row);
+
+            // Virtual field: resolve company name → company_id before fillable filter
+            $companyName = null;
+            if (isset($combined['__company_name']) && $combined['__company_name'] !== '') {
+                $companyName = $combined['__company_name'];
+            }
+
             $payload = array_filter(
-                array_intersect_key(array_combine($headers, $row), $fillable),
+                array_intersect_key($combined, $fillable),
                 fn ($v) => $v !== '' && $v !== null
             );
 
-            if (empty($payload)) {
+            if (empty($payload) && $companyName === null) {
                 $failed++;
                 if (count($errors) < 100) {
                     $errors[] = ['row' => $processed, 'message' => 'Aucun champ reconnu — vérifiez les en-têtes CSV.'];
@@ -131,6 +138,12 @@ class ProcessCsvImport implements ShouldQueue
 
             if (! isset($payload['owner_id']) && isset($fillable['owner_id'])) {
                 $payload['owner_id'] = $job->user_id;
+            }
+
+            // Resolve company name → ID (creates company if it doesn't exist)
+            if ($companyName !== null && $job->entity_type === 'contact') {
+                $company = Company::query()->firstOrCreate(['name' => $companyName]);
+                $payload['company_id'] = $company->id;
             }
 
             // Duplicate detection
@@ -172,18 +185,19 @@ class ProcessCsvImport implements ShouldQueue
 
     private function flushBuffer(array $buffer, string $model, int &$failed, array &$errors): void
     {
-        DB::transaction(function () use ($buffer, $model, &$failed, &$errors): void {
-            foreach ($buffer as ['row' => $row, 'payload' => $payload]) {
-                try {
-                    $model::query()->create($payload);
-                } catch (\Throwable $e) {
-                    $failed++;
-                    if (count($errors) < 100) {
-                        $errors[] = ['row' => $row, 'message' => $e->getMessage()];
-                    }
+        // Each create is independent — no wrapping transaction.
+        // PostgreSQL aborts the whole transaction on any error, so wrapping
+        // a batch in one transaction would silently kill all rows after the first failure.
+        foreach ($buffer as ['row' => $row, 'payload' => $payload]) {
+            try {
+                $model::query()->create($payload);
+            } catch (\Throwable $e) {
+                $failed++;
+                if (count($errors) < 100) {
+                    $errors[] = ['row' => $row, 'message' => $e->getMessage()];
                 }
             }
-        });
+        }
     }
 
     private function loadExistingKeys(string $entityType): array
