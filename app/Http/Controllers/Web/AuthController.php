@@ -27,13 +27,6 @@ class AuthController extends Controller
         $email = strtolower($credentials['email']);
         $user = User::query()->where('email', $email)->first();
 
-        \Illuminate\Support\Facades\Log::info('Login attempt', [
-            'email_provided' => $credentials['email'],
-            'password_provided' => $credentials['password'],
-            'user_found' => $user ? true : false,
-            'hash_check' => $user ? Hash::check($credentials['password'], $user->password) : false,
-        ]);
-
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return back()->withErrors(['email' => 'Identifiants invalides.'])->withInput();
         }

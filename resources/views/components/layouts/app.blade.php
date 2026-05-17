@@ -21,5 +21,13 @@
 </head>
 <body>
 {{ $slot }}
+<x-toast-container />
+@if(session('flash_toast'))
+<script>
+document.addEventListener('alpine:initialized', function () {
+    window.toast(@js(session('flash_toast.message')), @js(session('flash_toast.type', 'success')));
+});
+</script>
+@endif
 </body>
 </html>

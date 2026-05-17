@@ -52,16 +52,19 @@ Route::middleware('web.auth')->group(function () {
     Route::delete('/segments/{segment}',     [SegmentController::class, 'destroy']);
     Route::get('/segments/{segment}/export', [SegmentController::class, 'export'])->name('segments.export');
 
-    Route::get('/imports/{entityType}/create', [ImportController::class, 'create']);
-    Route::post('/imports/preview',            [ImportController::class, 'preview']);
-    Route::post('/imports',                    [ImportController::class, 'store']);
-    Route::get('/imports/{id}/status',         [ImportController::class, 'status']);
+    // ─── Admin + Manager uniquement ──────────────────────────────────────────
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::get('/imports/{entityType}/create', [ImportController::class, 'create']);
+        Route::post('/imports/preview',            [ImportController::class, 'preview']);
+        Route::post('/imports',                    [ImportController::class, 'store']);
+        Route::get('/imports/{id}/status',         [ImportController::class, 'status']);
 
-    Route::get('/settings/stages',           [StageController::class, 'index'])->name('stages.index');
-    Route::post('/settings/stages',          [StageController::class, 'store']);
-    Route::post('/settings/stages/reorder',  [StageController::class, 'reorder'])->name('stages.reorder');
-    Route::patch('/settings/stages/{stage}', [StageController::class, 'update']);
+        Route::get('/settings/stages',           [StageController::class, 'index'])->name('stages.index');
+        Route::post('/settings/stages',          [StageController::class, 'store']);
+        Route::post('/settings/stages/reorder',  [StageController::class, 'reorder'])->name('stages.reorder');
+        Route::patch('/settings/stages/{stage}', [StageController::class, 'update']);
 
-    Route::get('/settings/fields',  [CustomFieldController::class, 'index'])->name('fields.index');
-    Route::post('/settings/fields', [CustomFieldController::class, 'store']);
+        Route::get('/settings/fields',  [CustomFieldController::class, 'index'])->name('fields.index');
+        Route::post('/settings/fields', [CustomFieldController::class, 'store']);
+    });
 });

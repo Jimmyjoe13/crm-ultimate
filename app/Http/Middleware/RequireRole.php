@@ -11,7 +11,11 @@ class RequireRole
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         if (! $request->user() || ! in_array($request->user()->role, $roles, true)) {
-            return response()->json(['message' => 'Forbidden.'], 403);
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Forbidden.'], 403);
+            }
+
+            abort(403);
         }
 
         return $next($request);
