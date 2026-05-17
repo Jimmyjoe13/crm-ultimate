@@ -153,23 +153,7 @@
         </table>
 
         {{-- Pagination --}}
-        @if($deals->hasPages())
-        <div class="px-4 py-3 border-t border-default flex items-center justify-between text-[12px] text-secondary">
-            <span class="num-mono">{{ $deals->firstItem() }}–{{ $deals->lastItem() }} sur {{ $deals->total() }}</span>
-            <div class="flex gap-2">
-                @if($deals->onFirstPage())
-                <span class="btn sm" style="opacity:.4; cursor:not-allowed;">← Précédent</span>
-                @else
-                <a href="{{ $deals->previousPageUrl() }}" class="btn sm">← Précédent</a>
-                @endif
-                @if($deals->hasMorePages())
-                <a href="{{ $deals->nextPageUrl() }}" class="btn sm">Suivant →</a>
-                @else
-                <span class="btn sm" style="opacity:.4; cursor:not-allowed;">Suivant →</span>
-                @endif
-            </div>
-        </div>
-        @endif
+        <x-pagination :paginator="$deals" />
     </div>
 </div>
 

@@ -150,10 +150,21 @@ class SegmentQueryEngine
     {
         if (isset($node['op'])) {
             // Group node: { op: 'AND'|'OR', rules: [...] }
-            $method = strtoupper($node['op'] ?? 'AND') === 'OR' ? 'orWhere' : 'where';
-            $query->$method(function (Builder $sub) use ($node, $entityType): void {
+            // OR group: children are OR'd together inside a WHERE () wrapper.
+            // AND group: children are AND'd together inside a WHERE () wrapper.
+            $isOrGroup = strtoupper($node['op'] ?? 'AND') === 'OR';
+            $query->where(function (Builder $sub) use ($node, $entityType, $isOrGroup): void {
+                $first = true;
                 foreach ($node['rules'] ?? [] as $child) {
-                    $this->applyNode($sub, $child, $entityType);
+                    if ($isOrGroup && ! $first) {
+                        // Subsequent children in an OR group are connected with OR
+                        $sub->orWhere(function (Builder $inner) use ($child, $entityType): void {
+                            $this->applyNode($inner, $child, $entityType);
+                        });
+                    } else {
+                        $this->applyNode($sub, $child, $entityType);
+                    }
+                    $first = false;
                 }
             });
         } else {

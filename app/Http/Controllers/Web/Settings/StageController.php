@@ -37,6 +37,20 @@ class StageController extends Controller
         return back()->with('success', 'Étape créée.');
     }
 
+    public function reorder(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'ids'   => ['required', 'array'],
+            'ids.*' => ['integer'],
+        ]);
+
+        foreach ($data['ids'] as $position => $id) {
+            PipelineStage::where('id', $id)->update(['position' => $position + 1]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
     public function update(Request $request, PipelineStage $stage)
     {
         $data = $request->validate([

@@ -390,27 +390,31 @@ class SegmentQueryEngineTest extends TestCase
         $this->assertCount(1, $ids);
     }
 
-    public function test_or_group_combines_with_previous_sibling(): void
+    public function test_or_group_children_are_ored_together(): void
     {
-        // Engine OR semantic: OR connects the group to previous sibling conditions
-        // AND root: condition1 OR (group2_child1 AND group2_child2)
-        Contact::factory()->create(['first_name' => 'Alice', 'lifecycle_stage' => 'customer']);
-        Contact::factory()->create(['first_name' => 'Bob', 'lifecycle_stage' => 'lead']);
-        Contact::factory()->create(['first_name' => 'Charlie', 'lifecycle_stage' => 'customer']);
+        // OR group children are OR'd between each other, the group itself is AND'd to the parent.
+        // Query: lifecycle_stage=customer AND (first_name=Alice OR first_name=Charlie)
+        // Alice: customer + Alice  → matches ✓
+        // Bob:   customer + Bob    → excluded (not in OR group)
+        // Charlie: lead  + Charlie → excluded (not customer)
+        Contact::factory()->create(['first_name' => 'Alice',   'lifecycle_stage' => 'customer']);
+        Contact::factory()->create(['first_name' => 'Bob',     'lifecycle_stage' => 'customer']);
+        Contact::factory()->create(['first_name' => 'Charlie', 'lifecycle_stage' => 'lead']);
 
         $ids = $this->engine->buildQuery($this->segment('contact', [
-            'op' => 'AND', 'rules' => [
-                ['field' => 'first_name', 'operator' => 'eq', 'value' => 'Alice'],
+            'op' => 'AND',
+            'rules' => [
+                ['field' => 'lifecycle_stage', 'operator' => 'eq', 'value' => 'customer'],
                 [
                     'op' => 'OR', 'rules' => [
+                        ['field' => 'first_name', 'operator' => 'eq', 'value' => 'Alice'],
                         ['field' => 'first_name', 'operator' => 'eq', 'value' => 'Charlie'],
                     ],
                 ],
             ],
         ]))->pluck('id');
 
-        // Alice (matches first rule) OR Charlie (matches OR group) = 2
-        $this->assertCount(2, $ids);
+        $this->assertCount(1, $ids); // Only Alice: customer AND (Alice OR Charlie)
     }
 
     public function test_empty_rules_returns_all(): void

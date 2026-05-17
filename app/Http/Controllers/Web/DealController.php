@@ -58,7 +58,8 @@ class DealController extends Controller
             'owner_id'          => auth()->id(),
         ]);
 
-        return redirect()->route('deals.index')->with('success', "Deal « {$deal->name} » créé.");
+        return redirect()->route('deals.index')
+            ->with('flash_toast', ['message' => "Deal « {$deal->name} » créé.", 'type' => 'success']);
     }
 
     public function show(Deal $deal)
@@ -95,7 +96,8 @@ class DealController extends Controller
             'pipeline_stage_id' => $wonStage?->id ?? $deal->pipeline_stage_id,
         ]);
 
-        return redirect()->route('deals.index')->with('success', "Deal « {$deal->name} » marqué gagné ✓");
+        return redirect()->route('deals.index')
+            ->with('flash_toast', ['message' => "Deal « {$deal->name} » marqué gagné ✓", 'type' => 'success']);
     }
 
     public function markLost(Deal $deal)
@@ -106,6 +108,7 @@ class DealController extends Controller
             'pipeline_stage_id' => $lostStage?->id ?? $deal->pipeline_stage_id,
         ]);
 
-        return redirect()->route('deals.index')->with('success', "Deal « {$deal->name} » marqué perdu.");
+        return redirect()->route('deals.index')
+            ->with('flash_toast', ['message' => "Deal « {$deal->name} » marqué perdu.", 'type' => 'warning']);
     }
 }

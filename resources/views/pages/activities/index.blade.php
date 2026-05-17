@@ -30,19 +30,7 @@
         <div class="py-12 text-center text-tertiary text-sm">Aucune activité.</div>
         @endforelse
 
-        @if($activities->hasPages())
-        <div class="mt-4 pt-4 border-t border-default flex items-center justify-between text-[12px] text-secondary">
-            <span class="num-mono">{{ $activities->firstItem() }}–{{ $activities->lastItem() }} sur {{ $activities->total() }}</span>
-            <div class="flex gap-2">
-                @if(!$activities->onFirstPage())
-                <a href="{{ $activities->previousPageUrl() }}" class="btn sm">← Précédent</a>
-                @endif
-                @if($activities->hasMorePages())
-                <a href="{{ $activities->nextPageUrl() }}" class="btn sm">Suivant →</a>
-                @endif
-            </div>
-        </div>
-        @endif
+        <x-pagination :paginator="$activities" class="mt-4 pt-4 border-t border-default flex items-center justify-between text-[12px] text-secondary" />
     </div>
 </div>
 

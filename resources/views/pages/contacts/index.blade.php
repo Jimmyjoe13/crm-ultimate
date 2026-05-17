@@ -70,19 +70,7 @@
                 @endforelse
             </tbody>
         </table>
-        @if($contacts->hasPages())
-        <div class="px-4 py-3 border-t border-default flex items-center justify-between text-[12px] text-secondary">
-            <span class="num-mono">{{ $contacts->firstItem() }}–{{ $contacts->lastItem() }} sur {{ $contacts->total() }}</span>
-            <div class="flex gap-2">
-                @if(!$contacts->onFirstPage())
-                <a href="{{ $contacts->previousPageUrl() }}" class="btn sm">← Précédent</a>
-                @endif
-                @if($contacts->hasMorePages())
-                <a href="{{ $contacts->nextPageUrl() }}" class="btn sm">Suivant →</a>
-                @endif
-            </div>
-        </div>
-        @endif
+        <x-pagination :paginator="$contacts" />
     </div>
 </div>
 

@@ -18,10 +18,10 @@
         <template x-for="(label, i) in ['Fichier', 'Mapping', 'Import']" :key="i">
             <div class="flex items-center">
                 <div class="flex items-center gap-1.5">
-                    <div :class="step > i+1 ? 'bg-[var(--ok)] text-white' : step === i+1 ? 'bg-[var(--accent)] text-white' : 'bg-[var(--surface2)] text-[var(--text-tertiary)]'"
+                    <div :class="step > i+1 ? 'bg-[var(--ok)] text-white' : step === i+1 ? 'bg-[var(--accent)] text-white' : 'bg-[var(--surface2)] text-tertiary'"
                          class="w-6 h-6 rounded-full text-[11px] font-mono font-bold flex items-center justify-center flex-shrink-0"
                          x-text="step > i+1 ? '✓' : i+1"></div>
-                    <span :class="step === i+1 ? 'text-[var(--text)]' : 'text-[var(--text-tertiary)]'"
+                    <span :class="step === i+1 ? 'text-primary' : 'text-tertiary'"
                           class="text-[12px] font-mono" x-text="label"></span>
                 </div>
                 <div x-show="i < 2" class="w-8 h-px bg-[var(--border)] mx-2"></div>
@@ -307,7 +307,7 @@ function csvImporter(initEntityType) {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 const d = await r.json();
-                this.jobStatus = d.status;
+                const prevStatus = this.jobStatus;
                 this.jobErrors = d.errors ?? [];
 
                 if (d.total_rows > 0) {
@@ -317,6 +317,15 @@ function csvImporter(initEntityType) {
                 } else {
                     this.jobProgress = 'En attente…';
                 }
+
+                // Toasts sur transition de statut
+                if (d.status === 'done' && prevStatus !== 'done') {
+                    window.toast('Import terminé ! ' + this.jobProgress, 'success');
+                } else if (d.status === 'failed' && prevStatus !== 'failed') {
+                    window.toast('Échec de l\'import.', 'error');
+                }
+
+                this.jobStatus = d.status;
             } catch(e) {
                 // ignore transient errors
             }

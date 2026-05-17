@@ -58,7 +58,7 @@ class SegmentController extends Controller
         }
 
         return redirect('/segments/' . $segment->id)
-            ->with('success', "Segment « {$segment->name} » créé.");
+            ->with('flash_toast', ['message' => "Segment « {$segment->name} » créé.", 'type' => 'success']);
     }
 
     public function show(Segment $segment, Request $request)
@@ -154,7 +154,7 @@ class SegmentController extends Controller
         ]);
 
         return redirect('/segments/' . $segment->id)
-            ->with('success', "Segment « {$segment->name} » mis à jour.");
+            ->with('flash_toast', ['message' => "Segment « {$segment->name} » mis à jour.", 'type' => 'success']);
     }
 
     public function export(Segment $segment): StreamedResponse

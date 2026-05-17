@@ -14,14 +14,23 @@
     <div class="card overflow-hidden mb-4">
         <div class="card-h">
             <span class="title">Étapes</span>
-            <span class="meta">{{ $stages->count() }} étapes</span>
+            <span class="meta">{{ $stages->count() }} étapes · glisser pour réordonner</span>
         </div>
         <table class="t">
-            <thead><tr><th>#</th><th>Nom</th><th>Probabilité</th><th>Type</th></tr></thead>
-            <tbody>
-                @foreach($stages as $stage)
+            <thead>
                 <tr>
-                    <td class="num-mono text-tertiary text-[11px]">{{ $stage->position }}</td>
+                    <th style="width:32px;"></th>
+                    <th>#</th>
+                    <th>Nom</th>
+                    <th>Probabilité</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody id="stages-list" x-data="stagesSort()">
+                @foreach($stages as $stage)
+                <tr data-id="{{ $stage->id }}" style="cursor: default;">
+                    <td class="drag-handle text-tertiary select-none text-center" style="cursor: grab; font-size: 16px; padding: 0 8px;">⠿</td>
+                    <td class="num-mono text-tertiary text-[11px]" data-pos>{{ $stage->position }}</td>
                     <td class="font-medium">{{ $stage->name }}</td>
                     <td><span class="num-mono text-[12px]">{{ $stage->probability }}%</span></td>
                     <td>
@@ -55,5 +64,39 @@
         </form>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+function stagesSort() {
+    return {
+        init() {
+            new Sortable(this.$el, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'opacity-50',
+                onEnd: () => this.saveOrder(),
+            });
+        },
+        saveOrder() {
+            const ids = [...this.$el.querySelectorAll('tr[data-id]')]
+                .map(tr => parseInt(tr.dataset.id));
+
+            // Update visual position numbers
+            this.$el.querySelectorAll('[data-pos]').forEach((el, i) => {
+                el.textContent = i + 1;
+            });
+
+            fetch('/settings/stages/reorder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                },
+                body: JSON.stringify({ ids }),
+            });
+        },
+    };
+}
+</script>
 
 </x-app-shell>

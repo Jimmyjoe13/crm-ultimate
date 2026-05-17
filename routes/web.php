@@ -57,8 +57,9 @@ Route::middleware('web.auth')->group(function () {
     Route::post('/imports',                    [ImportController::class, 'store']);
     Route::get('/imports/{id}/status',         [ImportController::class, 'status']);
 
-    Route::get('/settings/stages',  [StageController::class, 'index'])->name('stages.index');
-    Route::post('/settings/stages', [StageController::class, 'store']);
+    Route::get('/settings/stages',           [StageController::class, 'index'])->name('stages.index');
+    Route::post('/settings/stages',          [StageController::class, 'store']);
+    Route::post('/settings/stages/reorder',  [StageController::class, 'reorder'])->name('stages.reorder');
     Route::patch('/settings/stages/{stage}', [StageController::class, 'update']);
 
     Route::get('/settings/fields',  [CustomFieldController::class, 'index'])->name('fields.index');

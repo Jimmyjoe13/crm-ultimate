@@ -57,19 +57,7 @@
                 @endforelse
             </tbody>
         </table>
-        @if($companies->hasPages())
-        <div class="px-4 py-3 border-t border-default flex items-center justify-between text-[12px] text-secondary">
-            <span class="num-mono">{{ $companies->firstItem() }}–{{ $companies->lastItem() }} sur {{ $companies->total() }}</span>
-            <div class="flex gap-2">
-                @if(!$companies->onFirstPage())
-                <a href="{{ $companies->previousPageUrl() }}" class="btn sm">← Précédent</a>
-                @endif
-                @if($companies->hasMorePages())
-                <a href="{{ $companies->nextPageUrl() }}" class="btn sm">Suivant →</a>
-                @endif
-            </div>
-        </div>
-        @endif
+        <x-pagination :paginator="$companies" />
     </div>
 </div>
 

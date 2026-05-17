@@ -121,23 +121,9 @@
         </table>
 
         {{-- Pagination --}}
-        @if($lastPage > 1)
-        <div class="px-4 py-3 border-t border-default flex items-center justify-between text-[12px] text-secondary">
-            <span class="num-mono">{{ ($page - 1) * $perPage + 1 }}–{{ min($page * $perPage, $total) }} sur {{ $total }}</span>
-            <div class="flex gap-2">
-                @if($page <= 1)
-                <span class="btn sm" style="opacity:.4; cursor:not-allowed;">← Précédent</span>
-                @else
-                <a href="/segments/{{ $segment->id }}?page={{ $page - 1 }}" class="btn sm">← Précédent</a>
-                @endif
-                @if($page >= $lastPage)
-                <span class="btn sm" style="opacity:.4; cursor:not-allowed;">Suivant →</span>
-                @else
-                <a href="/segments/{{ $segment->id }}?page={{ $page + 1 }}" class="btn sm">Suivant →</a>
-                @endif
-            </div>
-        </div>
-        @endif
+        <x-pagination
+            :page="$page" :last-page="$lastPage" :total="$total" :per-page="$perPage"
+            base-url="/segments/{{ $segment->id }}" />
         @endif
     </div>
 </div>
