@@ -21,3 +21,8 @@
 /*.png
 /*.zip
 /docs/
+
+# Playwright
+/playwright-report/
+/test-results/
+

@@ -44,7 +44,7 @@
     {{-- Modal overlay --}}
     <div x-show="open" x-cloak @keydown.escape.window="open = false" class="fixed inset-0 z-40 flex items-center justify-center">
         <div @click="open = false" class="absolute inset-0 drawer-backdrop"></div>
-        <div class="relative card shadow-pop z-50" style="width: 580px; max-height: 90vh; overflow: auto;">
+        <div @click.stop class="relative card shadow-pop z-50" style="width: 580px; max-height: 90vh; overflow: auto;">
             <div class="flex items-center justify-between px-6 py-4 border-b border-default">
                 <div>
                     <div class="text-base font-semibold text-primary">Nouveau deal</div>
@@ -54,7 +54,7 @@
                     <svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
-            <form method="POST" action="{{ route('deals.store') }}" class="px-6 py-5 grid grid-cols-2 gap-4">
+            <form method="POST" action="/deals" class="px-6 py-5 grid grid-cols-2 gap-4">
                 @csrf
                 <div class="field col-span-2">
                     <label>Nom du deal *</label>

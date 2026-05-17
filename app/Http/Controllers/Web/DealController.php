@@ -49,16 +49,19 @@ class DealController extends Controller
             'close_date'        => ['nullable', 'date'],
         ]);
 
+        $stage = PipelineStage::findOrFail($data['pipeline_stage_id']);
+
         $deal = Deal::create([
             'name'              => $data['name'],
             'amount'            => $data['amount'],
+            'pipeline_id'       => $stage->pipeline_id,
             'pipeline_stage_id' => $data['pipeline_stage_id'],
             'close_date'        => $data['close_date'] ?? null,
             'status'            => 'open',
             'owner_id'          => auth()->id(),
         ]);
 
-        return redirect()->route('deals.index')
+        return redirect('/deals')
             ->with('flash_toast', ['message' => "Deal « {$deal->name} » créé.", 'type' => 'success']);
     }
 
@@ -96,7 +99,7 @@ class DealController extends Controller
             'pipeline_stage_id' => $wonStage?->id ?? $deal->pipeline_stage_id,
         ]);
 
-        return redirect()->route('deals.index')
+        return redirect('/deals')
             ->with('flash_toast', ['message' => "Deal « {$deal->name} » marqué gagné ✓", 'type' => 'success']);
     }
 
@@ -108,7 +111,7 @@ class DealController extends Controller
             'pipeline_stage_id' => $lostStage?->id ?? $deal->pipeline_stage_id,
         ]);
 
-        return redirect()->route('deals.index')
+        return redirect('/deals')
             ->with('flash_toast', ['message' => "Deal « {$deal->name} » marqué perdu.", 'type' => 'warning']);
     }
 }
