@@ -32,11 +32,19 @@ Route::middleware('web.auth')->group(function () {
 
     Route::get('/pipeline',  [PipelineController::class, 'index'])->name('pipeline.index');
 
-    Route::get('/contacts',          [ContactController::class, 'index'])->name('contacts.index');
-    Route::get('/contacts/{contact}',[ContactController::class, 'show'])->name('contacts.show');
+    Route::get('/contacts',               [ContactController::class, 'index'])->name('contacts.index');
+    Route::get('/contacts/create',        [ContactController::class, 'create']);
+    Route::post('/contacts',              [ContactController::class, 'store']);
+    Route::get('/contacts/{contact}',     [ContactController::class, 'show'])->name('contacts.show');
+    Route::get('/contacts/{contact}/edit',[ContactController::class, 'edit']);
+    Route::put('/contacts/{contact}',     [ContactController::class, 'update']);
 
-    Route::get('/companies',           [CompanyController::class, 'index'])->name('companies.index');
-    Route::get('/companies/{company}', [CompanyController::class, 'show'])->name('companies.show');
+    Route::get('/companies',               [CompanyController::class, 'index'])->name('companies.index');
+    Route::get('/companies/create',        [CompanyController::class, 'create']);
+    Route::post('/companies',              [CompanyController::class, 'store']);
+    Route::get('/companies/{company}',     [CompanyController::class, 'show'])->name('companies.show');
+    Route::get('/companies/{company}/edit',[CompanyController::class, 'edit']);
+    Route::put('/companies/{company}',     [CompanyController::class, 'update']);
 
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
 
@@ -54,6 +62,9 @@ Route::middleware('web.auth')->group(function () {
 
     // ─── Admin + Manager uniquement ──────────────────────────────────────────
     Route::middleware('role:admin,manager')->group(function () {
+        Route::delete('/contacts/{contact}',  [ContactController::class, 'destroy']);
+        Route::delete('/companies/{company}', [CompanyController::class, 'destroy']);
+
         Route::get('/imports/{entityType}/create', [ImportController::class, 'create']);
         Route::post('/imports/preview',            [ImportController::class, 'preview']);
         Route::post('/imports',                    [ImportController::class, 'store']);

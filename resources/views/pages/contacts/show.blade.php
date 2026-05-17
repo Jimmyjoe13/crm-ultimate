@@ -12,13 +12,23 @@
         <svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </a>
     <div class="av lg {{ $color }}">{{ $initials }}</div>
-    <div>
+    <div class="flex-1">
         <h1 class="text-2xl">{{ $fullName ?: $contact->email }}</h1>
         <p class="text-sm text-secondary">{{ $contact->job_title ?? '' }} @if($company) · {{ $company->name }} @endif</p>
     </div>
     @if($contact->lifecycle_stage)
     <span class="chip ml-2">{{ $contact->lifecycle_stage }}</span>
     @endif
+    <div class="flex items-center gap-2 ml-auto">
+        <a href="{{ '/contacts/' . $contact->id . '/edit' }}" class="btn ghost">Modifier</a>
+        @if(in_array(auth()->user()?->role, ['admin','manager']))
+        <form method="POST" action="{{ '/contacts/' . $contact->id }}"
+              onsubmit="return confirm('Supprimer ce contact ? Cette action est irréversible.')">
+            @csrf @method('DELETE')
+            <button type="submit" class="btn ghost" style="color:var(--err)">Supprimer</button>
+        </form>
+        @endif
+    </div>
 </div>
 
 <div class="px-7 pb-12 grid grid-cols-3 gap-5">

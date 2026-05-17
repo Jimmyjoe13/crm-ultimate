@@ -14,6 +14,7 @@
             Importer CSV
         </x-button>
         @endif
+        <x-button href="/contacts/create" size="sm">Nouveau contact</x-button>
         <form method="GET" action="{{ '/contacts' }}" class="flex items-center gap-2">
             <input type="text" name="search" value="{{ $search }}" placeholder="Rechercher…"
                    class="field" style="padding: 6px 10px; border: 1px solid var(--border); border-radius:7px; font-size:13px; background: var(--surface); color: var(--text);">

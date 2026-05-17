@@ -22,9 +22,69 @@ class ContactController extends Controller
         return view('pages.contacts.index', compact('contacts', 'search'));
     }
 
+    public function create()
+    {
+        return view('pages.contacts.create');
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'first_name'       => ['required', 'string', 'max:255'],
+            'last_name'        => ['nullable', 'string', 'max:255'],
+            'email'            => ['nullable', 'email', 'max:255'],
+            'phone'            => ['nullable', 'string', 'max:255'],
+            'job_title'        => ['nullable', 'string', 'max:255'],
+            'lifecycle_stage'  => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+            'custom_values'    => ['nullable', 'array'],
+        ]);
+
+        $contact = Contact::create($data);
+
+        return redirect('/contacts/' . $contact->id)->with('flash_toast', [
+            'message' => 'Contact créé.',
+            'type'    => 'success',
+        ]);
+    }
+
     public function show(Contact $contact)
     {
         $contact->load('companies', 'deals.stage');
         return view('pages.contacts.show', compact('contact'));
+    }
+
+    public function edit(Contact $contact)
+    {
+        return view('pages.contacts.edit', compact('contact'));
+    }
+
+    public function update(Request $request, Contact $contact)
+    {
+        $data = $request->validate([
+            'first_name'       => ['required', 'string', 'max:255'],
+            'last_name'        => ['nullable', 'string', 'max:255'],
+            'email'            => ['nullable', 'email', 'max:255'],
+            'phone'            => ['nullable', 'string', 'max:255'],
+            'job_title'        => ['nullable', 'string', 'max:255'],
+            'lifecycle_stage'  => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+            'custom_values'    => ['nullable', 'array'],
+        ]);
+
+        $contact->update($data);
+
+        return redirect('/contacts/' . $contact->id)->with('flash_toast', [
+            'message' => 'Contact mis à jour.',
+            'type'    => 'success',
+        ]);
+    }
+
+    public function destroy(Contact $contact)
+    {
+        $contact->delete();
+
+        return redirect('/contacts')->with('flash_toast', [
+            'message' => 'Contact supprimé.',
+            'type'    => 'success',
+        ]);
     }
 }
