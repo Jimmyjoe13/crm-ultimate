@@ -108,4 +108,51 @@ class WebDealControllerTest extends TestCase
             'status' => 'lost',
         ]);
     }
+
+    public function test_edit_page_loads(): void
+    {
+        $ctx = $this->createDealWithStages();
+
+        $response = $this->withAuth($ctx['admin'])->get('/deals/' . $ctx['deal']->id . '/edit');
+        $response->assertStatus(200)->assertSee('Modifier le deal');
+    }
+
+    public function test_update_modifies_deal(): void
+    {
+        $ctx = $this->createDealWithStages();
+
+        $response = $this->withAuth($ctx['admin'])->put('/deals/' . $ctx['deal']->id, [
+            'name'              => 'Updated Deal',
+            'amount'            => 9999,
+            'pipeline_stage_id' => $ctx['stage']->id,
+            '_token'            => 'test',
+        ]);
+
+        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $this->assertDatabaseHas('deals', ['id' => $ctx['deal']->id, 'name' => 'Updated Deal', 'amount' => 9999]);
+    }
+
+    public function test_destroy_soft_deletes_deal(): void
+    {
+        $ctx = $this->createDealWithStages();
+
+        $response = $this->withAuth($ctx['admin'])->delete('/deals/' . $ctx['deal']->id, ['_token' => 'test']);
+
+        $response->assertRedirect('/deals');
+        $this->assertSoftDeleted('deals', ['id' => $ctx['deal']->id]);
+    }
+
+    public function test_viewer_cannot_delete_deal(): void
+    {
+        $ctx = $this->createDealWithStages();
+        $viewer = User::create([
+            'name' => 'Viewer', 'email' => 'viewer@test.com',
+            'password' => bcrypt('password'), 'role' => User::ROLE_SALES,
+        ]);
+
+        $response = $this->withAuth($viewer)->delete('/deals/' . $ctx['deal']->id, ['_token' => 'test']);
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('deals', ['id' => $ctx['deal']->id, 'deleted_at' => null]);
+    }
 }

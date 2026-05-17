@@ -70,6 +70,16 @@
                 @if($deal->close_date) · close {{ $deal->close_date->format('d/m') }}@endif
             </div>
         </div>
+        <div class="flex items-center gap-2 ml-auto flex-shrink-0">
+            <a href="{{ '/deals/' . $deal->id . '/edit' }}" class="btn ghost" style="font-size:12px; padding:4px 10px;">Modifier</a>
+            @if(in_array(auth()->user()?->role, ['admin','manager']))
+            <form method="POST" action="{{ '/deals/' . $deal->id }}"
+                  onsubmit="return confirm('Supprimer ce deal ?')">
+                @csrf @method('DELETE')
+                <button type="submit" class="btn ghost" style="font-size:12px; padding:4px 10px; color:var(--err)">Supprimer</button>
+            </form>
+            @endif
+        </div>
     </x-slot:header>
 
     {{-- Body : stage progress + grille 2 colonnes --}}

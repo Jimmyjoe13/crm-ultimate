@@ -91,6 +91,44 @@ class DealController extends Controller
         return view('pages.deals.show', compact('deal', 'stages', 'activities', 'bgDeals'));
     }
 
+    public function edit(Deal $deal)
+    {
+        $stages = PipelineStage::where('is_won', false)->where('is_lost', false)->orderBy('position')->get();
+
+        return view('pages.deals.edit', compact('deal', 'stages'));
+    }
+
+    public function update(Request $request, Deal $deal)
+    {
+        $data = $request->validate([
+            'name'              => ['required', 'string', 'max:255'],
+            'amount'            => ['required', 'numeric', 'min:0'],
+            'pipeline_stage_id' => ['required', 'exists:pipeline_stages,id'],
+            'close_date'        => ['nullable', 'date'],
+            'custom_values'     => ['nullable', 'array'],
+        ]);
+
+        $stage = PipelineStage::findOrFail($data['pipeline_stage_id']);
+        $data['pipeline_id'] = $stage->pipeline_id;
+
+        $deal->update($data);
+
+        return redirect('/deals/' . $deal->id)->with('flash_toast', [
+            'message' => "Deal « {$deal->name} » mis à jour.",
+            'type'    => 'success',
+        ]);
+    }
+
+    public function destroy(Deal $deal)
+    {
+        $deal->delete();
+
+        return redirect('/deals')->with('flash_toast', [
+            'message' => 'Deal supprimé.',
+            'type'    => 'success',
+        ]);
+    }
+
     public function markWon(Deal $deal)
     {
         $wonStage = PipelineStage::where('is_won', true)->first();

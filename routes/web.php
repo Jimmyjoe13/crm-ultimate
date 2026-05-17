@@ -24,11 +24,13 @@ Route::middleware('web.auth')->group(function () {
 
     Route::get('/',          [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/deals',             [DealController::class, 'index'])->name('deals.index');
-    Route::post('/deals',            [DealController::class, 'store'])->name('deals.store');
-    Route::get('/deals/{deal}',      [DealController::class, 'show'])->name('deals.show');
-    Route::post('/deals/{deal}/won', [DealController::class, 'markWon'])->name('deals.won');
-    Route::post('/deals/{deal}/lost',[DealController::class, 'markLost'])->name('deals.lost');
+    Route::get('/deals',              [DealController::class, 'index'])->name('deals.index');
+    Route::post('/deals',             [DealController::class, 'store'])->name('deals.store');
+    Route::get('/deals/{deal}',       [DealController::class, 'show'])->name('deals.show');
+    Route::get('/deals/{deal}/edit',  [DealController::class, 'edit']);
+    Route::put('/deals/{deal}',       [DealController::class, 'update']);
+    Route::post('/deals/{deal}/won',  [DealController::class, 'markWon'])->name('deals.won');
+    Route::post('/deals/{deal}/lost', [DealController::class, 'markLost'])->name('deals.lost');
 
     Route::get('/pipeline',  [PipelineController::class, 'index'])->name('pipeline.index');
 
@@ -64,6 +66,7 @@ Route::middleware('web.auth')->group(function () {
     Route::middleware('role:admin,manager')->group(function () {
         Route::delete('/contacts/{contact}',  [ContactController::class, 'destroy']);
         Route::delete('/companies/{company}', [CompanyController::class, 'destroy']);
+        Route::delete('/deals/{deal}',        [DealController::class, 'destroy']);
 
         Route::get('/imports/{entityType}/create', [ImportController::class, 'create']);
         Route::post('/imports/preview',            [ImportController::class, 'preview']);
