@@ -21,9 +21,71 @@ class CompanyController extends Controller
         return view('pages.companies.index', compact('companies', 'search'));
     }
 
+    public function create()
+    {
+        return view('pages.companies.create');
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'name'          => ['required', 'string', 'max:255'],
+            'domain'        => ['nullable', 'string', 'max:255'],
+            'industry'      => ['nullable', 'string', 'max:255'],
+            'phone'         => ['nullable', 'string', 'max:255'],
+            'website'       => ['nullable', 'url', 'max:255'],
+            'city'          => ['nullable', 'string', 'max:255'],
+            'country'       => ['nullable', 'string', 'max:255'],
+            'custom_values' => ['nullable', 'array'],
+        ]);
+
+        $company = Company::create($data);
+
+        return redirect('/companies/' . $company->id)->with('flash_toast', [
+            'message' => 'Entreprise créée.',
+            'type'    => 'success',
+        ]);
+    }
+
     public function show(Company $company)
     {
         $company->load('contacts', 'deals.stage');
         return view('pages.companies.show', compact('company'));
+    }
+
+    public function edit(Company $company)
+    {
+        return view('pages.companies.edit', compact('company'));
+    }
+
+    public function update(Request $request, Company $company)
+    {
+        $data = $request->validate([
+            'name'          => ['required', 'string', 'max:255'],
+            'domain'        => ['nullable', 'string', 'max:255'],
+            'industry'      => ['nullable', 'string', 'max:255'],
+            'phone'         => ['nullable', 'string', 'max:255'],
+            'website'       => ['nullable', 'url', 'max:255'],
+            'city'          => ['nullable', 'string', 'max:255'],
+            'country'       => ['nullable', 'string', 'max:255'],
+            'custom_values' => ['nullable', 'array'],
+        ]);
+
+        $company->update($data);
+
+        return redirect('/companies/' . $company->id)->with('flash_toast', [
+            'message' => 'Entreprise mise à jour.',
+            'type'    => 'success',
+        ]);
+    }
+
+    public function destroy(Company $company)
+    {
+        $company->delete();
+
+        return redirect('/companies')->with('flash_toast', [
+            'message' => 'Entreprise supprimée.',
+            'type'    => 'success',
+        ]);
     }
 }

@@ -10,9 +10,19 @@
         <svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </a>
     <div class="av lg {{ $color }} sq">{{ $initials }}</div>
-    <div>
+    <div class="flex-1">
         <h1 class="text-2xl">{{ $company->name }}</h1>
         <p class="text-sm text-secondary">{{ $company->industry ?? '' }}</p>
+    </div>
+    <div class="flex items-center gap-2 ml-auto">
+        <a href="{{ '/companies/' . $company->id . '/edit' }}" class="btn ghost">Modifier</a>
+        @if(in_array(auth()->user()?->role, ['admin','manager']))
+        <form method="POST" action="{{ '/companies/' . $company->id }}"
+              onsubmit="return confirm('Supprimer cette entreprise ? Cette action est irréversible.')">
+            @csrf @method('DELETE')
+            <button type="submit" class="btn ghost" style="color:var(--err)">Supprimer</button>
+        </form>
+        @endif
     </div>
 </div>
 
