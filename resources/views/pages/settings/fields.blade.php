@@ -17,17 +17,42 @@
             <span class="meta">{{ $fields->count() }} champs</span>
         </div>
         <table class="t">
-            <thead><tr><th>Entité</th><th>Label</th><th>Clé</th><th>Type</th></tr></thead>
+            <thead><tr><th>Entité</th><th>Label</th><th>Clé</th><th>Type</th><th style="width:120px;"></th></tr></thead>
             <tbody>
                 @forelse($fields as $field)
-                <tr>
+                <tr x-data="{ editing: false }">
                     <td><span class="chip">{{ $field->entity_type }}</span></td>
-                    <td class="font-medium">{{ $field->label }}</td>
-                    <td><span class="num-mono text-[12px] text-tertiary">{{ $field->key }}</span></td>
-                    <td><span class="chip">{{ $field->field_type }}</span></td>
+                    <td class="font-medium" x-show="!editing">{{ $field->label }}</td>
+                    <td x-show="!editing"><span class="num-mono text-[12px] text-tertiary">{{ $field->key }}</span></td>
+                    <td x-show="!editing"><span class="chip">{{ $field->field_type }}</span></td>
+
+                    {{-- Edit inline form (spans cols 2-4) --}}
+                    <td colspan="3" x-show="editing" x-cloak>
+                        <form method="POST" action="/settings/fields/{{ $field->id }}" class="flex items-center gap-2 py-1">
+                            @csrf @method('PATCH')
+                            <input type="text" name="label" value="{{ $field->label }}"
+                                   class="field" style="padding:4px 8px; font-size:12px; width:140px;">
+                            <select name="field_type" class="select-arrow" style="padding:4px 8px; font-size:12px;">
+                                @foreach(['text','number','date','boolean','select'] as $ft)
+                                <option value="{{ $ft }}" @selected($field->field_type === $ft)>{{ $ft }}</option>
+                                @endforeach
+                            </select>
+                            <button type="submit" class="btn sm primary" style="font-size:11px; padding:3px 8px;">OK</button>
+                            <button type="button" @click="editing = false" class="btn sm ghost" style="font-size:11px; padding:3px 8px;">✕</button>
+                        </form>
+                    </td>
+
+                    <td class="text-right" style="white-space:nowrap;">
+                        <button @click="editing = !editing" class="btn ghost" style="font-size:11px; padding:3px 8px;">Modifier</button>
+                        <form method="POST" action="/settings/fields/{{ $field->id }}" class="inline"
+                              onsubmit="return confirm('Supprimer le champ « {{ $field->label }} » ?')">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn ghost" style="font-size:11px; padding:3px 8px; color:var(--err);">Suppr.</button>
+                        </form>
+                    </td>
                 </tr>
                 @empty
-                <tr><td colspan="4" class="text-center py-8 text-tertiary text-sm">Aucun champ personnalisé.</td></tr>
+                <tr><td colspan="5" class="text-center py-8 text-tertiary text-sm">Aucun champ personnalisé.</td></tr>
                 @endforelse
             </tbody>
         </table>

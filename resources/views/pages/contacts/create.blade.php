@@ -53,6 +53,7 @@
                         @endforeach
                     </select>
                 </div>
+                <x-custom-fields-form entity-type="contact" :values="old('custom_values', [])" />
             </div>
         </div>
 

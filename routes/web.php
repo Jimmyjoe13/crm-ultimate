@@ -81,7 +81,9 @@ Route::middleware('web.auth')->group(function () {
         Route::post('/settings/stages/reorder',  [StageController::class, 'reorder'])->name('stages.reorder');
         Route::patch('/settings/stages/{stage}', [StageController::class, 'update']);
 
-        Route::get('/settings/fields',  [CustomFieldController::class, 'index'])->name('fields.index');
-        Route::post('/settings/fields', [CustomFieldController::class, 'store']);
+        Route::get('/settings/fields',            [CustomFieldController::class, 'index'])->name('fields.index');
+        Route::post('/settings/fields',           [CustomFieldController::class, 'store']);
+        Route::patch('/settings/fields/{field}',  [CustomFieldController::class, 'update']);
+        Route::delete('/settings/fields/{field}', [CustomFieldController::class, 'destroy']);
     });
 });

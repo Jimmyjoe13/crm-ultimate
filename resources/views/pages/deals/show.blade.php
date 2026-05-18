@@ -257,17 +257,7 @@
                     </a>
                     @endif
 
-                    @if($deal->custom_values && count($deal->custom_values))
-                    <div class="mono-label mt-6 mb-3">Champs perso</div>
-                    <div class="flex flex-col gap-2.5 text-[13px]">
-                        @foreach($deal->custom_values as $key => $val)
-                        <div class="flex justify-between">
-                            <span class="text-tertiary">{{ $key }}</span>
-                            <span class="font-mono text-[11.5px]">{{ is_array($val) ? implode(', ', $val) : $val }}</span>
-                        </div>
-                        @endforeach
-                    </div>
-                    @endif
+                    <x-custom-fields-show :entity="$deal" entity-type="deal" />
                 </div>
             </aside>
         </div>

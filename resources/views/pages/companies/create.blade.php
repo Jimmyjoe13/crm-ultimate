@@ -52,6 +52,7 @@
                     <label>Pays</label>
                     <input type="text" name="country" value="{{ old('country') }}">
                 </div>
+                <x-custom-fields-form entity-type="company" :values="old('custom_values', [])" />
             </div>
         </div>
 

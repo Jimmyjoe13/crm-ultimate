@@ -48,6 +48,7 @@
                     </select>
                     @error('pipeline_stage_id')<span class="text-xs text-err">{{ $message }}</span>@enderror
                 </div>
+                <x-custom-fields-form entity-type="deal" :values="old('custom_values', $deal->custom_values ?? [])" />
             </div>
         </div>
 
