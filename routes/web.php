@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\ActivityController;
 use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\SegmentController;
+use App\Http\Controllers\Web\TrashController;
 use App\Http\Controllers\Web\Settings\StageController;
 use App\Http\Controllers\Web\Settings\CustomFieldController;
 use Illuminate\Support\Facades\Route;
@@ -95,5 +96,10 @@ Route::middleware('web.auth')->group(function () {
         Route::post('/settings/fields',           [CustomFieldController::class, 'store']);
         Route::patch('/settings/fields/{field}',  [CustomFieldController::class, 'update']);
         Route::delete('/settings/fields/{field}', [CustomFieldController::class, 'destroy']);
+
+        Route::get('/trash', [TrashController::class, 'index'])->name('trash.index');
+        Route::post('/contacts/{id}/restore',  [TrashController::class, 'restoreContact'])->name('contacts.restore');
+        Route::post('/companies/{id}/restore', [TrashController::class, 'restoreCompany'])->name('companies.restore');
+        Route::post('/deals/{id}/restore',     [TrashController::class, 'restoreDeal'])->name('deals.restore');
     });
 });

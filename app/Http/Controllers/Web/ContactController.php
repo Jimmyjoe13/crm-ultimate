@@ -4,22 +4,27 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Contact;
+use App\Support\CustomValueValidator;
 use Illuminate\Http\Request;
 
 class ContactController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->get('search');
+        $search  = $request->get('search');
+        $allowed = ['last_name', 'email', 'created_at'];
+        $sort    = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'last_name';
+        $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
 
-        $query = Contact::with('companies')
+        $contacts = Contact::with('companies')
             ->when($search, fn($q) => $q->where('first_name', 'ilike', "%{$search}%")
                 ->orWhere('last_name', 'ilike', "%{$search}%")
-                ->orWhere('email', 'ilike', "%{$search}%"));
+                ->orWhere('email', 'ilike', "%{$search}%"))
+            ->orderBy($sort, $dir)
+            ->paginate(25)
+            ->withQueryString();
 
-        $contacts = $query->orderBy('last_name')->paginate(25)->withQueryString();
-
-        return view('pages.contacts.index', compact('contacts', 'search'));
+        return view('pages.contacts.index', compact('contacts', 'search', 'sort', 'dir'));
     }
 
     public function create()
@@ -29,15 +34,16 @@ class ContactController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'first_name'       => ['required', 'string', 'max:255'],
-            'last_name'        => ['nullable', 'string', 'max:255'],
-            'email'            => ['nullable', 'email', 'max:255'],
-            'phone'            => ['nullable', 'string', 'max:255'],
-            'job_title'        => ['nullable', 'string', 'max:255'],
-            'lifecycle_stage'  => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
-            'custom_values'    => ['nullable', 'array'],
-        ]);
+        $data = $request->validate(array_merge([
+            'first_name'      => ['required', 'string', 'max:255'],
+            'last_name'       => ['nullable', 'string', 'max:255'],
+            'email'           => ['nullable', 'email', 'max:255'],
+            'phone'           => ['nullable', 'string', 'max:255'],
+            'job_title'       => ['nullable', 'string', 'max:255'],
+            'lifecycle_stage' => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+        ], CustomValueValidator::validationRules('contact')));
+
+        $data['custom_values'] = CustomValueValidator::cast('contact', $data['custom_values'] ?? []);
 
         $contact = Contact::create($data);
 
@@ -66,15 +72,16 @@ class ContactController extends Controller
 
     public function update(Request $request, Contact $contact)
     {
-        $data = $request->validate([
-            'first_name'       => ['required', 'string', 'max:255'],
-            'last_name'        => ['nullable', 'string', 'max:255'],
-            'email'            => ['nullable', 'email', 'max:255'],
-            'phone'            => ['nullable', 'string', 'max:255'],
-            'job_title'        => ['nullable', 'string', 'max:255'],
-            'lifecycle_stage'  => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
-            'custom_values'    => ['nullable', 'array'],
-        ]);
+        $data = $request->validate(array_merge([
+            'first_name'      => ['required', 'string', 'max:255'],
+            'last_name'       => ['nullable', 'string', 'max:255'],
+            'email'           => ['nullable', 'email', 'max:255'],
+            'phone'           => ['nullable', 'string', 'max:255'],
+            'job_title'       => ['nullable', 'string', 'max:255'],
+            'lifecycle_stage' => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+        ], CustomValueValidator::validationRules('contact')));
+
+        $data['custom_values'] = CustomValueValidator::cast('contact', $data['custom_values'] ?? []);
 
         $contact->update($data);
 

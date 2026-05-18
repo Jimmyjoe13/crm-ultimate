@@ -98,7 +98,7 @@ class CustomFieldsWebTest extends TestCase
 
         $contact = Contact::where('email', 'cftest@example.com')->first();
         $this->assertNotNull($contact);
-        $this->assertEquals('5000', $contact->custom_values['budget'] ?? null);
+        $this->assertEquals(5000.0, $contact->custom_values['budget'] ?? null);
     }
 
     public function test_custom_value_shown_in_edit_form(): void

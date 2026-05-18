@@ -6,48 +6,43 @@ use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\Deal;
 use App\Models\PipelineStage;
+use App\Support\CustomValueValidator;
 use Illuminate\Http\Request;
 
 class DealController extends Controller
 {
     public function index(Request $request)
     {
-        $filter = $request->get('filter', 'all');
-        $sort   = $request->get('sort', 'close_date');
-        $search = $request->get('search');
+        $filter  = $request->get('filter', 'all');
+        $search  = $request->get('search');
+        $allowed = ['name', 'amount', 'close_date', 'created_at'];
+        $sort    = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'close_date';
+        $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
 
         $base = Deal::with('stage', 'companies', 'contacts', 'owner')->where('status', 'open');
 
         $allCount = (clone $base)->count();
-        $hotCount = 0;
         $total    = (clone $base)->sum('amount');
 
-        $query = clone $base;
-
-        if ($search) {
-            $query->where('name', 'ilike', "%{$search}%");
-        }
-
-        $query = match($sort) {
-            'amount' => $query->orderByDesc('amount'),
-            default  => $query->orderBy('close_date'),
-        };
-
-        $deals = $query->paginate(20)->withQueryString();
+        $deals = (clone $base)
+            ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%"))
+            ->orderBy($sort, $dir)
+            ->paginate(20)
+            ->withQueryString();
 
         $stages = PipelineStage::orderBy('position')->get();
 
-        return view('pages.deals.index', compact('deals', 'filter', 'sort', 'search', 'allCount', 'total', 'stages'));
+        return view('pages.deals.index', compact('deals', 'filter', 'sort', 'dir', 'search', 'allCount', 'total', 'stages'));
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'name'              => ['required', 'string', 'max:255'],
             'amount'            => ['required', 'numeric', 'min:0'],
             'pipeline_stage_id' => ['required', 'exists:pipeline_stages,id'],
             'close_date'        => ['nullable', 'date'],
-        ]);
+        ], CustomValueValidator::validationRules('deal')));
 
         $stage = PipelineStage::findOrFail($data['pipeline_stage_id']);
 
@@ -59,6 +54,7 @@ class DealController extends Controller
             'close_date'        => $data['close_date'] ?? null,
             'status'            => 'open',
             'owner_id'          => auth()->id(),
+            'custom_values'     => CustomValueValidator::cast('deal', $data['custom_values'] ?? []),
         ]);
 
         return redirect('/deals')
@@ -100,16 +96,16 @@ class DealController extends Controller
 
     public function update(Request $request, Deal $deal)
     {
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'name'              => ['required', 'string', 'max:255'],
             'amount'            => ['required', 'numeric', 'min:0'],
             'pipeline_stage_id' => ['required', 'exists:pipeline_stages,id'],
             'close_date'        => ['nullable', 'date'],
-            'custom_values'     => ['nullable', 'array'],
-        ]);
+        ], CustomValueValidator::validationRules('deal')));
 
         $stage = PipelineStage::findOrFail($data['pipeline_stage_id']);
-        $data['pipeline_id'] = $stage->pipeline_id;
+        $data['pipeline_id']    = $stage->pipeline_id;
+        $data['custom_values']  = CustomValueValidator::cast('deal', $data['custom_values'] ?? []);
 
         $deal->update($data);
 

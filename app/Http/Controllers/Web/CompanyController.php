@@ -4,21 +4,26 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Support\CustomValueValidator;
 use Illuminate\Http\Request;
 
 class CompanyController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->get('search');
+        $search  = $request->get('search');
+        $allowed = ['name', 'industry', 'city', 'created_at'];
+        $sort    = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'name';
+        $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
 
-        $query = Company::with('contacts')
+        $companies = Company::with('contacts')
             ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%")
-                ->orWhere('industry', 'ilike', "%{$search}%"));
+                ->orWhere('industry', 'ilike', "%{$search}%"))
+            ->orderBy($sort, $dir)
+            ->paginate(25)
+            ->withQueryString();
 
-        $companies = $query->orderBy('name')->paginate(25)->withQueryString();
-
-        return view('pages.companies.index', compact('companies', 'search'));
+        return view('pages.companies.index', compact('companies', 'search', 'sort', 'dir'));
     }
 
     public function create()
@@ -28,16 +33,17 @@ class CompanyController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name'          => ['required', 'string', 'max:255'],
-            'domain'        => ['nullable', 'string', 'max:255'],
-            'industry'      => ['nullable', 'string', 'max:255'],
-            'phone'         => ['nullable', 'string', 'max:255'],
-            'website'       => ['nullable', 'url', 'max:255'],
-            'city'          => ['nullable', 'string', 'max:255'],
-            'country'       => ['nullable', 'string', 'max:255'],
-            'custom_values' => ['nullable', 'array'],
-        ]);
+        $data = $request->validate(array_merge([
+            'name'     => ['required', 'string', 'max:255'],
+            'domain'   => ['nullable', 'string', 'max:255'],
+            'industry' => ['nullable', 'string', 'max:255'],
+            'phone'    => ['nullable', 'string', 'max:255'],
+            'website'  => ['nullable', 'url', 'max:255'],
+            'city'     => ['nullable', 'string', 'max:255'],
+            'country'  => ['nullable', 'string', 'max:255'],
+        ], CustomValueValidator::validationRules('company')));
+
+        $data['custom_values'] = CustomValueValidator::cast('company', $data['custom_values'] ?? []);
 
         $company = Company::create($data);
 
@@ -66,16 +72,17 @@ class CompanyController extends Controller
 
     public function update(Request $request, Company $company)
     {
-        $data = $request->validate([
-            'name'          => ['required', 'string', 'max:255'],
-            'domain'        => ['nullable', 'string', 'max:255'],
-            'industry'      => ['nullable', 'string', 'max:255'],
-            'phone'         => ['nullable', 'string', 'max:255'],
-            'website'       => ['nullable', 'url', 'max:255'],
-            'city'          => ['nullable', 'string', 'max:255'],
-            'country'       => ['nullable', 'string', 'max:255'],
-            'custom_values' => ['nullable', 'array'],
-        ]);
+        $data = $request->validate(array_merge([
+            'name'     => ['required', 'string', 'max:255'],
+            'domain'   => ['nullable', 'string', 'max:255'],
+            'industry' => ['nullable', 'string', 'max:255'],
+            'phone'    => ['nullable', 'string', 'max:255'],
+            'website'  => ['nullable', 'url', 'max:255'],
+            'city'     => ['nullable', 'string', 'max:255'],
+            'country'  => ['nullable', 'string', 'max:255'],
+        ], CustomValueValidator::validationRules('company')));
+
+        $data['custom_values'] = CustomValueValidator::cast('company', $data['custom_values'] ?? []);
 
         $company->update($data);
 

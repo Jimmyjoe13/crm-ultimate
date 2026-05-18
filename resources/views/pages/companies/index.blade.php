@@ -37,11 +37,11 @@
                               style="cursor:pointer;"></span>
                     </th>
                     @endif
-                    <th>Entreprise</th>
-                    <th>Industrie</th>
+                    <x-sort-th column="name"       label="Entreprise" :sort="$sort" :dir="$dir" />
+                    <x-sort-th column="industry"   label="Industrie"  :sort="$sort" :dir="$dir" />
                     <th>Contacts</th>
-                    <th>Ville</th>
-                    <th>Ajouté le</th>
+                    <x-sort-th column="city"       label="Ville"      :sort="$sort" :dir="$dir" />
+                    <x-sort-th column="created_at" label="Ajouté le"  :sort="$sort" :dir="$dir" />
                 </tr>
             </thead>
             <tbody>

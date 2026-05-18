@@ -24,7 +24,9 @@
 {{-- Filter bar --}}
 <div class="px-7 pb-3 flex items-center gap-2 flex-wrap">
     <x-chip color="gray" :dot="true">All · {{ $allCount }}</x-chip>
-    <span class="ml-auto text-xs text-tertiary font-mono">Sort: close date ↑</span>
+    <span class="ml-auto text-xs text-tertiary font-mono">
+        Tri : {{ $sort }} {{ $dir === 'asc' ? '↑' : '↓' }}
+    </span>
 </div>
 
 {{-- Flash success --}}
@@ -101,11 +103,11 @@
                               style="cursor:pointer;"></span>
                     </th>
                     @endif
-                    <th>Deal</th>
-                    <th>Company</th>
-                    <th>Amount</th>
-                    <th>Stage</th>
-                    <th>Close date</th>
+                    <x-sort-th column="name"       label="Deal"       :sort="$sort" :dir="$dir" />
+                    <th>Entreprise</th>
+                    <x-sort-th column="amount"     label="Montant"    :sort="$sort" :dir="$dir" />
+                    <th>Étape</th>
+                    <x-sort-th column="close_date" label="Clôture"    :sort="$sort" :dir="$dir" />
                     <th>Owner</th>
                     <th style="width:32px;"></th>
                 </tr>

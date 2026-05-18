@@ -42,6 +42,11 @@
         <x-rail-icon route="fields.index" :active="$active === 'fields'" tooltip="Champs perso">
             <svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </x-rail-icon>
+        @if(in_array(auth()->user()?->role, ['admin','manager']))
+        <x-rail-icon route="trash.index" :active="$active === 'trash'" tooltip="Corbeille">
+            <svg class="ic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </x-rail-icon>
+        @endif
 
         {{-- User avatar (bottom) --}}
         <div class="mt-auto"></div>

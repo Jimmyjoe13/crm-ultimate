@@ -21,6 +21,14 @@
 /*.png
 /*.zip
 
+# Session handoff / scratch files
+/handoff.md
+/list_users.php
+/test_curl.html
+/test_headers.txt
+/test_redis.php
+/check_hash.php
+
 # Playwright
 /playwright-report/
 /test-results/

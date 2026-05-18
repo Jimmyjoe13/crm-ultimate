@@ -37,8 +37,8 @@
                               style="cursor:pointer;"></span>
                     </th>
                     @endif
-                    <th>Contact</th>
-                    <th>Email</th>
+                    <x-sort-th column="last_name" label="Contact"  :sort="$sort" :dir="$dir" />
+                    <x-sort-th column="email"    label="Email"    :sort="$sort" :dir="$dir" />
                     <th>Téléphone</th>
                     <th>Entreprise</th>
                     <th>Lifecycle</th>
