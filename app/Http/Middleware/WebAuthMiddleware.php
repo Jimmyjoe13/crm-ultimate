@@ -7,6 +7,7 @@ use App\Services\JwtService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class WebAuthMiddleware
@@ -23,7 +24,8 @@ class WebAuthMiddleware
 
         try {
             $payload = $this->jwt->decode($token);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::error('JWT decode failed', ['error' => $e->getMessage()]);
             return redirect()->route('login')->withCookie(cookie()->forget('crm_jwt'));
         }
 
