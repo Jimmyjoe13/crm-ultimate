@@ -129,6 +129,21 @@ class DealController extends Controller
         ]);
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $data = $request->validate([
+            'ids'   => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:deals,id'],
+        ]);
+
+        $count = Deal::whereIn('id', $data['ids'])->delete();
+
+        return redirect('/deals')->with('flash_toast', [
+            'message' => "{$count} deal(s) supprimé(s).",
+            'type'    => 'success',
+        ]);
+    }
+
     public function markWon(Deal $deal)
     {
         $wonStage = PipelineStage::where('is_won', true)->first();

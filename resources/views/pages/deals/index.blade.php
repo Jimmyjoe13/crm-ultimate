@@ -89,10 +89,18 @@
 {{-- Table --}}
 <div class="px-7 pb-12">
     <div class="card overflow-hidden">
-        <table class="t">
+        @php $pageIds = $deals->pluck('id')->toArray(); @endphp
+        <table class="t" x-data>
             <thead>
                 <tr>
-                    <th style="width:32px;"><span class="ckb"></span></th>
+                    @if(in_array(auth()->user()?->role, ['admin','manager']))
+                    <th style="width:36px;">
+                        <span class="ckb"
+                              :class="{ 'on': $store.bulk.allSelected('deal', {{ json_encode($pageIds) }}) }"
+                              @click.stop="$store.bulk.toggleAll('deal', {{ json_encode($pageIds) }})"
+                              style="cursor:pointer;"></span>
+                    </th>
+                    @endif
                     <th>Deal</th>
                     <th>Company</th>
                     <th>Amount</th>
@@ -111,8 +119,16 @@
                     $ownerColor    = $owner ? \App\Helpers\Avatar::color($owner->name ?? $owner->email) : 'c1';
                     $isOverdue = $deal->close_date && $deal->close_date->isPast();
                 @endphp
-                <tr onclick="window.location='/deals/{{ $deal->id }}'" style="cursor:pointer;">
-                    <td onclick="event.stopPropagation()"><span class="ckb"></span></td>
+                <tr onclick="window.location='/deals/{{ $deal->id }}'" style="cursor:pointer;"
+                    :class="{ 'bg-surface2': $store.bulk.selections.deal.has({{ $deal->id }}) }">
+                    @if(in_array(auth()->user()?->role, ['admin','manager']))
+                    <td @click.stop>
+                        <span class="ckb"
+                              :class="{ 'on': $store.bulk.selections.deal.has({{ $deal->id }}) }"
+                              @click.stop="$store.bulk.toggle('deal', {{ $deal->id }})"
+                              style="cursor:pointer;"></span>
+                    </td>
+                    @endif
                     <td>
                         <div class="font-medium">{{ $deal->name }}</div>
                         <div class="text-[11.5px] text-tertiary font-mono mt-0.5">
@@ -144,7 +160,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center py-12 text-tertiary text-sm">
+                    <td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 9 : 8 }}" class="text-center py-12 text-tertiary text-sm">
                         Aucun deal ouvert pour le moment.
                     </td>
                 </tr>
@@ -156,5 +172,9 @@
         <x-pagination :paginator="$deals" />
     </div>
 </div>
+
+@if(in_array(auth()->user()?->role, ['admin','manager']))
+<x-bulk-bar entity="deal" delete-action="/deals/bulk-destroy" />
+@endif
 
 </x-app-shell>

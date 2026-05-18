@@ -25,9 +25,18 @@
 
 <div class="px-7 pb-12">
     <div class="card overflow-hidden">
-        <table class="t">
+        @php $pageIds = $companies->pluck('id')->toArray(); @endphp
+        <table class="t" x-data>
             <thead>
                 <tr>
+                    @if(in_array(auth()->user()?->role, ['admin','manager']))
+                    <th style="width:36px;">
+                        <span class="ckb"
+                              :class="{ 'on': $store.bulk.allSelected('company', {{ json_encode($pageIds) }}) }"
+                              @click.stop="$store.bulk.toggleAll('company', {{ json_encode($pageIds) }})"
+                              style="cursor:pointer;"></span>
+                    </th>
+                    @endif
                     <th>Entreprise</th>
                     <th>Industrie</th>
                     <th>Contacts</th>
@@ -41,7 +50,16 @@
                     $color    = \App\Helpers\Avatar::color($company->name);
                     $initials = strtoupper(mb_substr($company->name, 0, 2));
                 @endphp
-                <tr onclick="window.location='{{ '/companies/' . $company->id }}'" style="cursor:pointer;">
+                <tr onclick="window.location='{{ '/companies/' . $company->id }}'" style="cursor:pointer;"
+                    :class="{ 'bg-surface2': $store.bulk.selections.company.has({{ $company->id }}) }">
+                    @if(in_array(auth()->user()?->role, ['admin','manager']))
+                    <td @click.stop>
+                        <span class="ckb"
+                              :class="{ 'on': $store.bulk.selections.company.has({{ $company->id }}) }"
+                              @click.stop="$store.bulk.toggle('company', {{ $company->id }})"
+                              style="cursor:pointer;"></span>
+                    </td>
+                    @endif
                     <td>
                         <div class="flex items-center gap-2">
                             <span class="av {{ $color }} sq">{{ $initials }}</span>
@@ -54,12 +72,16 @@
                     <td><span class="num-mono text-[12px] text-tertiary">{{ $company->created_at->format('d/m/Y') }}</span></td>
                 </tr>
                 @empty
-                <tr><td colspan="5" class="text-center py-12 text-tertiary text-sm">Aucune entreprise.</td></tr>
+                <tr><td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 6 : 5 }}" class="text-center py-12 text-tertiary text-sm">Aucune entreprise.</td></tr>
                 @endforelse
             </tbody>
         </table>
         <x-pagination :paginator="$companies" />
     </div>
 </div>
+
+@if(in_array(auth()->user()?->role, ['admin','manager']))
+<x-bulk-bar entity="company" delete-action="/companies/bulk-destroy" />
+@endif
 
 </x-app-shell>

@@ -25,9 +25,18 @@
 
 <div class="px-7 pb-12">
     <div class="card overflow-hidden">
-        <table class="t">
+        @php $pageIds = $contacts->pluck('id')->toArray(); @endphp
+        <table class="t" x-data>
             <thead>
                 <tr>
+                    @if(in_array(auth()->user()?->role, ['admin','manager']))
+                    <th style="width:36px;">
+                        <span class="ckb"
+                              :class="{ 'on': $store.bulk.allSelected('contact', {{ json_encode($pageIds) }}) }"
+                              @click.stop="$store.bulk.toggleAll('contact', {{ json_encode($pageIds) }})"
+                              style="cursor:pointer;"></span>
+                    </th>
+                    @endif
                     <th>Contact</th>
                     <th>Email</th>
                     <th>Téléphone</th>
@@ -43,7 +52,16 @@
                     $initials = \App\Helpers\Avatar::initials($fullName ?: $contact->email);
                     $company  = $contact->companies->first();
                 @endphp
-                <tr onclick="window.location='{{ '/contacts/' . $contact->id }}'" style="cursor:pointer;">
+                <tr onclick="window.location='{{ '/contacts/' . $contact->id }}'" style="cursor:pointer;"
+                    :class="{ 'bg-surface2': $store.bulk.selections.contact.has({{ $contact->id }}) }">
+                    @if(in_array(auth()->user()?->role, ['admin','manager']))
+                    <td @click.stop>
+                        <span class="ckb"
+                              :class="{ 'on': $store.bulk.selections.contact.has({{ $contact->id }}) }"
+                              @click.stop="$store.bulk.toggle('contact', {{ $contact->id }})"
+                              style="cursor:pointer;"></span>
+                    </td>
+                    @endif
                     <td>
                         <div class="flex items-center gap-2">
                             <span class="av {{ $color }}">{{ $initials }}</span>
@@ -67,12 +85,16 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="5" class="text-center py-12 text-tertiary text-sm">Aucun contact.</td></tr>
+                <tr><td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 6 : 5 }}" class="text-center py-12 text-tertiary text-sm">Aucun contact.</td></tr>
                 @endforelse
             </tbody>
         </table>
         <x-pagination :paginator="$contacts" />
     </div>
 </div>
+
+@if(in_array(auth()->user()?->role, ['admin','manager']))
+<x-bulk-bar entity="contact" delete-action="/contacts/bulk-destroy" />
+@endif
 
 </x-app-shell>

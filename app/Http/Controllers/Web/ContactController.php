@@ -87,4 +87,19 @@ class ContactController extends Controller
             'type'    => 'success',
         ]);
     }
+
+    public function bulkDestroy(Request $request)
+    {
+        $data = $request->validate([
+            'ids'   => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:contacts,id'],
+        ]);
+
+        $count = Contact::whereIn('id', $data['ids'])->delete();
+
+        return redirect('/contacts')->with('flash_toast', [
+            'message' => "{$count} contact(s) supprimé(s).",
+            'type'    => 'success',
+        ]);
+    }
 }

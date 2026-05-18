@@ -65,8 +65,11 @@ Route::middleware('web.auth')->group(function () {
     // ─── Admin + Manager uniquement ──────────────────────────────────────────
     Route::middleware('role:admin,manager')->group(function () {
         Route::delete('/contacts/{contact}',  [ContactController::class, 'destroy']);
+        Route::post('/contacts/bulk-destroy', [ContactController::class, 'bulkDestroy']);
         Route::delete('/companies/{company}', [CompanyController::class, 'destroy']);
+        Route::post('/companies/bulk-destroy',[CompanyController::class, 'bulkDestroy']);
         Route::delete('/deals/{deal}',        [DealController::class, 'destroy']);
+        Route::post('/deals/bulk-destroy',    [DealController::class, 'bulkDestroy']);
 
         Route::get('/imports/{entityType}/create', [ImportController::class, 'create']);
         Route::post('/imports/preview',            [ImportController::class, 'preview']);
