@@ -50,7 +50,13 @@ class ContactController extends Controller
     public function show(Contact $contact)
     {
         $contact->load('companies', 'deals.stage');
-        return view('pages.contacts.show', compact('contact'));
+        $activities = \App\Models\Activity::where('subject_type', Contact::class)
+            ->where('subject_id', $contact->id)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
+        return view('pages.contacts.show', compact('contact', 'activities'));
     }
 
     public function edit(Contact $contact)

@@ -1,0 +1,86 @@
+@props([
+    'activities'   => collect(),
+    'subjectType'  => '',
+    'subjectId'    => null,
+    'showComposer' => false,
+])
+
+<div class="flex flex-col gap-0">
+    @if($showComposer)
+    <form method="POST" action="/activities" class="card p-4 mb-4">
+        @csrf
+        <input type="hidden" name="subject_type" value="{{ $subjectType }}">
+        <input type="hidden" name="subject_id" value="{{ $subjectId }}">
+        <div class="mono-label mb-3">Ajouter une activité</div>
+        <div class="grid grid-cols-2 gap-3">
+            <div class="field">
+                <label>Type</label>
+                <select name="type" class="select-arrow" required>
+                    <option value="note">📝 Note</option>
+                    <option value="call">📞 Appel</option>
+                    <option value="email">📧 Email</option>
+                    <option value="task">✓ Tâche</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Titre *</label>
+                <input type="text" name="title" required placeholder="Objet…">
+            </div>
+            <div class="field col-span-2">
+                <label>Détails</label>
+                <textarea name="body" rows="2" placeholder="Notes…"></textarea>
+            </div>
+        </div>
+        <div class="flex justify-end mt-2">
+            <button type="submit" class="btn primary sm">Ajouter</button>
+        </div>
+    </form>
+    @endif
+
+    @forelse($activities as $activity)
+    @php
+        $dot   = match($activity->type) { 'email' => 'info', 'call' => 'accent', default => '' };
+        $emoji = match($activity->type) { 'email' => '📧', 'call' => '📞', 'note' => '📝', 'task' => '✓', default => '➕' };
+        $isTask = $activity->type === 'task';
+    @endphp
+    <div class="tl-item"
+         @if($isTask)
+         x-data="{ done: {{ $activity->status === 'completed' ? 'true' : 'false' }} }"
+         :class="{ 'opacity-60': done }"
+         @endif>
+        <span class="tl-time">
+            {{ $activity->created_at->format('d/m') }}<br>
+            <span style="font-size:9.5px;">{{ $activity->created_at->format('H:i') }}</span>
+        </span>
+        <div class="tl-axis">
+            @if($isTask)
+            <span class="ckb"
+                  :class="{ 'on': done }"
+                  style="cursor:pointer; margin-top:3px;"
+                  @click.prevent="
+                      done = !done;
+                      fetch('/activities/{{ $activity->id }}/toggle-done', {
+                          method: 'POST',
+                          headers: {
+                              'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                              'Accept': 'application/json',
+                          },
+                          credentials: 'same-origin',
+                      }).then(r => r.json()).then(d => { done = d.status === 'completed'; })
+                          .catch(() => { done = !done; });
+                  "></span>
+            @else
+            <div class="tl-dot {{ $dot }}"></div>
+            @endif
+        </div>
+        <div class="tl-content">
+            <div class="ti">{{ $emoji }} {{ $activity->title }}</div>
+            @if($activity->body)
+            <div class="ts">{{ Str::limit($activity->body, 100) }}</div>
+            @endif
+        </div>
+    </div>
+    @empty
+    <div class="py-8 text-center text-tertiary text-sm">Aucune activité pour l'instant.</div>
+    @endforelse
+</div>

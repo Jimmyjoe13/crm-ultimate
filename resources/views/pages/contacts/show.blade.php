@@ -31,61 +31,84 @@
     </div>
 </div>
 
-<div class="px-7 pb-12 grid grid-cols-3 gap-5">
-    {{-- Infos --}}
+<div class="px-7 pb-12 grid grid-cols-3 gap-5" x-data="{ tab: 'info' }">
+    {{-- Infos + Activité --}}
     <div class="col-span-2 flex flex-col gap-4">
-        <div class="card p-5">
-            <div class="card-h mb-4" style="margin: -20px -20px 16px; padding: 10px 14px;">
-                <span class="title">Informations</span>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                @if($contact->email)
-                <div class="field">
-                    <label>Email</label>
-                    <div class="text-[13px] font-mono">{{ $contact->email }}</div>
-                </div>
-                @endif
-                @if($contact->phone)
-                <div class="field">
-                    <label>Téléphone</label>
-                    <div class="text-[13px] font-mono">{{ $contact->phone }}</div>
-                </div>
-                @endif
-                @if($contact->job_title)
-                <div class="field">
-                    <label>Poste</label>
-                    <div class="text-[13px]">{{ $contact->job_title }}</div>
-                </div>
-                @endif
-                @if($company)
-                <div class="field">
-                    <label>Entreprise</label>
-                    <a href="{{ '/companies/' . $company->id }}" class="text-[13px] text-accent hover:underline">{{ $company->name }}</a>
-                </div>
-                @endif
-            </div>
+        {{-- Onglets --}}
+        <div class="flex border-b border-default gap-0 -mb-2">
+            <button @click="tab = 'info'" class="px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors"
+                    :style="tab === 'info' ? 'border-color: var(--accent); color: var(--text);' : 'border-color: transparent; color: var(--text-tertiary);'">
+                Informations
+            </button>
+            <button @click="tab = 'activity'" class="px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors"
+                    :style="tab === 'activity' ? 'border-color: var(--accent); color: var(--text);' : 'border-color: transparent; color: var(--text-tertiary);'">
+                Activité <span class="chip ml-1" style="padding: 0 5px; font-size:10px;">{{ $activities->count() }}</span>
+            </button>
         </div>
 
-        @if($contact->deals->count())
-        <div class="card overflow-hidden">
-            <div class="card-h">
-                <span class="title">Deals associés</span>
-                <span class="meta">{{ $contact->deals->count() }}</span>
+        <div x-show="tab === 'info'" class="flex flex-col gap-4">
+            <div class="card p-5">
+                <div class="card-h mb-4" style="margin: -20px -20px 16px; padding: 10px 14px;">
+                    <span class="title">Informations</span>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    @if($contact->email)
+                    <div class="field">
+                        <label>Email</label>
+                        <div class="text-[13px] font-mono">{{ $contact->email }}</div>
+                    </div>
+                    @endif
+                    @if($contact->phone)
+                    <div class="field">
+                        <label>Téléphone</label>
+                        <div class="text-[13px] font-mono">{{ $contact->phone }}</div>
+                    </div>
+                    @endif
+                    @if($contact->job_title)
+                    <div class="field">
+                        <label>Poste</label>
+                        <div class="text-[13px]">{{ $contact->job_title }}</div>
+                    </div>
+                    @endif
+                    @if($company)
+                    <div class="field">
+                        <label>Entreprise</label>
+                        <a href="{{ '/companies/' . $company->id }}" class="text-[13px] text-accent hover:underline">{{ $company->name }}</a>
+                    </div>
+                    @endif
+                </div>
             </div>
-            <table class="t">
-                <thead><tr><th>Deal</th><th>Montant</th><th>Étape</th></tr></thead>
-                <tbody>
-                    @foreach($contact->deals as $deal)
-                    <tr>
-                        <td class="font-medium">{{ $deal->name }}</td>
-                        <td><span class="num-mono">{{ number_format($deal->amount, 0, ',', "\xc2\xa0") }} €</span></td>
-                        <td><span class="chip">{{ $deal->stage?->name ?? '—' }}</span></td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+
+            @if($contact->deals->count())
+            <div class="card overflow-hidden">
+                <div class="card-h">
+                    <span class="title">Deals associés</span>
+                    <span class="meta">{{ $contact->deals->count() }}</span>
+                </div>
+                <table class="t">
+                    <thead><tr><th>Deal</th><th>Montant</th><th>Étape</th></tr></thead>
+                    <tbody>
+                        @foreach($contact->deals as $deal)
+                        <tr>
+                            <td class="font-medium">{{ $deal->name }}</td>
+                            <td><span class="num-mono">{{ number_format($deal->amount, 0, ',', "\xc2\xa0") }} €</span></td>
+                            <td><span class="chip">{{ $deal->stage?->name ?? '—' }}</span></td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
         </div>
-        @endif
+
+        <div x-show="tab === 'activity'" x-cloak>
+            <x-activity-timeline
+                :activities="$activities"
+                subject-type="contact"
+                :subject-id="$contact->id"
+                :show-composer="true"
+            />
+        </div>
     </div>
 
     {{-- Sidebar --}}

@@ -50,7 +50,13 @@ class CompanyController extends Controller
     public function show(Company $company)
     {
         $company->load('contacts', 'deals.stage');
-        return view('pages.companies.show', compact('company'));
+        $activities = \App\Models\Activity::where('subject_type', Company::class)
+            ->where('subject_id', $company->id)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
+        return view('pages.companies.show', compact('company', 'activities'));
     }
 
     public function edit(Company $company)

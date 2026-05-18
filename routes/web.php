@@ -49,7 +49,9 @@ Route::middleware('web.auth')->group(function () {
     Route::get('/companies/{company}/edit',[CompanyController::class, 'edit']);
     Route::put('/companies/{company}',     [CompanyController::class, 'update']);
 
-    Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
+    Route::get('/activities',                            [ActivityController::class, 'index'])->name('activities.index');
+    Route::post('/activities',                           [ActivityController::class, 'store']);
+    Route::post('/activities/{activity}/toggle-done',    [ActivityController::class, 'toggleDone']);
 
     Route::middleware('throttle:20,1')->group(function () {
         Route::post('/web/ai/deal/{id}/{action}',       [AiController::class, 'dealInsight']);
