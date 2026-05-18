@@ -152,6 +152,8 @@
                 </a>
             </div>
         </div>
+
+        <x-ai-insight-card endpoint="/web/ai/dashboard/suggestions" title="Suggestions du jour" />
     </div>
 </div>
 

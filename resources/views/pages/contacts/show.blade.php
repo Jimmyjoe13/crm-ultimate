@@ -103,8 +103,11 @@
                     <span class="chip">{{ $contact->lifecycle_stage }}</span>
                 </div>
                 @endif
+                <x-custom-fields-show :entity="$contact" entity-type="contact" />
             </div>
         </div>
+
+        <x-ai-insight-card endpoint="/web/ai/contact/{{ $contact->id }}/summarize" title="Brief IA" />
     </div>
 </div>
 

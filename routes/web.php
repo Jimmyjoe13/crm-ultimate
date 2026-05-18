@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\AiController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\DealController;
@@ -49,6 +50,13 @@ Route::middleware('web.auth')->group(function () {
     Route::put('/companies/{company}',     [CompanyController::class, 'update']);
 
     Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
+
+    Route::middleware('throttle:20,1')->group(function () {
+        Route::post('/web/ai/deal/{id}/{action}',       [AiController::class, 'dealInsight']);
+        Route::post('/web/ai/contact/{id}/summarize',   [AiController::class, 'contactInsight']);
+        Route::post('/web/ai/company/{id}/summarize',   [AiController::class, 'companyInsight']);
+        Route::post('/web/ai/dashboard/suggestions',    [AiController::class, 'dashboardSuggestions']);
+    });
 
     Route::get('/search',    [SearchController::class, 'index'])->name('search');
 

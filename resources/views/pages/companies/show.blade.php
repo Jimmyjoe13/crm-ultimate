@@ -85,26 +85,31 @@
         @endif
     </div>
 
-    <div class="card p-4 h-fit">
-        <div class="mono-label mb-3">Propriétés</div>
-        <div class="flex flex-col gap-3">
-            @if($company->website)
-            <div>
-                <div class="text-[11px] text-tertiary font-mono mb-0.5">Site web</div>
-                <a href="{{ $company->website }}" target="_blank" class="text-[13px] text-accent hover:underline">{{ $company->website }}</a>
-            </div>
-            @endif
-            @if($company->phone)
-            <div>
-                <div class="text-[11px] text-tertiary font-mono mb-0.5">Téléphone</div>
-                <div class="text-[13px] font-mono">{{ $company->phone }}</div>
-            </div>
-            @endif
-            <div>
-                <div class="text-[11px] text-tertiary font-mono mb-0.5">Créé le</div>
-                <div class="text-[13px] num-mono">{{ $company->created_at->format('d/m/Y') }}</div>
+    <div class="flex flex-col gap-3">
+        <div class="card p-4 h-fit">
+            <div class="mono-label mb-3">Propriétés</div>
+            <div class="flex flex-col gap-3">
+                @if($company->website)
+                <div>
+                    <div class="text-[11px] text-tertiary font-mono mb-0.5">Site web</div>
+                    <a href="{{ $company->website }}" target="_blank" class="text-[13px] text-accent hover:underline">{{ $company->website }}</a>
+                </div>
+                @endif
+                @if($company->phone)
+                <div>
+                    <div class="text-[11px] text-tertiary font-mono mb-0.5">Téléphone</div>
+                    <div class="text-[13px] font-mono">{{ $company->phone }}</div>
+                </div>
+                @endif
+                <div>
+                    <div class="text-[11px] text-tertiary font-mono mb-0.5">Créé le</div>
+                    <div class="text-[13px] num-mono">{{ $company->created_at->format('d/m/Y') }}</div>
+                </div>
+                <x-custom-fields-show :entity="$company" entity-type="company" />
             </div>
         </div>
+
+        <x-ai-insight-card endpoint="/web/ai/company/{{ $company->id }}/summarize" title="Résumé entreprise" />
     </div>
 </div>
 

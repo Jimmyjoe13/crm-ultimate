@@ -258,6 +258,13 @@
                     @endif
 
                     <x-custom-fields-show :entity="$deal" entity-type="deal" />
+
+                    <div class="mono-label mt-6 mb-3">Insights IA</div>
+                    <div class="flex flex-col gap-3">
+                        <x-ai-insight-card endpoint="/web/ai/deal/{{ $deal->id }}/summarize" title="Résumé" />
+                        <x-ai-insight-card endpoint="/web/ai/deal/{{ $deal->id }}/next-action" title="Prochaine action" />
+                        <x-ai-insight-card endpoint="/web/ai/deal/{{ $deal->id }}/score" title="Score deal" />
+                    </div>
                 </div>
             </aside>
         </div>
