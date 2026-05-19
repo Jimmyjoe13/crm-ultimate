@@ -4,7 +4,6 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile.prod
     container_name: crm-app
-    command: php artisan serve --host=0.0.0.0 --port=8080
     restart: unless-stopped
     env_file: .env
     expose:
