@@ -1,23 +1,9 @@
 services:
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    env_file: .env
-    depends_on:
-      - app
-
   app:
     build:
       context: .
       dockerfile: docker/php/Dockerfile.prod
+    container_name: crm-app
     command: php artisan serve --host=0.0.0.0 --port=8080
     restart: unless-stopped
     env_file: .env
@@ -25,25 +11,42 @@ services:
       - "8080"
     volumes:
       - app-storage:/var/www/html/storage
+    networks:
+      - web
+      - internal
     depends_on:
       - postgres
       - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   queue:
     build:
       context: .
       dockerfile: docker/php/Dockerfile.prod
+    container_name: crm-queue
     command: php artisan queue:work --sleep=1 --tries=3 --timeout=600 --memory=512
     restart: unless-stopped
     env_file: .env
     volumes:
       - app-storage:/var/www/html/storage
+    networks:
+      - internal
     depends_on:
-      - app
+      - postgres
       - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   postgres:
     image: postgres:17-alpine
+    container_name: crm-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_DATABASE}
@@ -51,16 +54,35 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   redis:
     image: redis:7-alpine
+    container_name: crm-redis
     restart: unless-stopped
     volumes:
       - redisdata:/data
+    networks:
+      - internal
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+networks:
+  web:
+    external: true
+  internal:
+    driver: bridge
 
 volumes:
   pgdata:
   redisdata:
-  caddy-data:
-  caddy-config:
   app-storage:
