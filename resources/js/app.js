@@ -16,10 +16,12 @@ Alpine.store('toasts', {
 
 Alpine.store('bulk', {
     selections: { contact: new Set(), company: new Set(), deal: new Set() },
+    selectAllMode: { contact: false, company: false, deal: false },
 
     toggle(entity, id) {
         const s = this.selections[entity];
         if (s.has(id)) { s.delete(id); } else { s.add(id); }
+        this.selectAllMode[entity] = false;
     },
 
     toggleAll(entity, ids) {
@@ -29,6 +31,7 @@ Alpine.store('bulk', {
         } else {
             ids.forEach(id => s.add(id));
         }
+        this.selectAllMode[entity] = false;
     },
 
     count(entity) {
@@ -41,10 +44,19 @@ Alpine.store('bulk', {
 
     clear(entity) {
         this.selections[entity] = new Set();
+        this.selectAllMode[entity] = false;
     },
 
     allSelected(entity, ids) {
         return ids.length > 0 && ids.every(id => this.selections[entity]?.has(id));
+    },
+
+    enableSelectAll(entity) {
+        this.selectAllMode[entity] = true;
+    },
+
+    isSelectAllMode(entity) {
+        return this.selectAllMode[entity] === true;
     },
 });
 

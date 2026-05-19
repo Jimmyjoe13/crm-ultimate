@@ -7,8 +7,9 @@ suppression/sélection multiple des entités, propriétés personnalisées dynam
 réintégration des fonctionnalités IA dans l'UI, toggle de tâches, timeline d'activités,
 corbeille/restauration et validation typée des champs personnalisés.
 
-**Done :** 178 tests Feature verts, assets buildés, commits propres sur `master`.
+**Done :** 192 tests Feature verts, assets buildés, commits propres sur `master`.
 **v2.0 :** Déploiement production stabilisé — Nginx+PHP-FPM, HTTPS assets, import CSV 50MB.
+**v2.1 :** Refonte UX import CSV — custom fields, stratégie doublons, validation requis, indicateurs visuels.
 
 ---
 
@@ -79,7 +80,7 @@ corbeille/restauration et validation typée des champs personnalisés.
 - `TrashController` avec `index`, `restoreContact`, `restoreCompany`, `restoreDeal`
 
 ### Dernière action effectuée
-v2.0 — Stabilisation déploiement production (voir section 5). Suite complète 178/178 tests.
+v2.1 — Refonte UX import CSV + bug custom fields. Suite complète 192/192 tests.
 
 ---
 

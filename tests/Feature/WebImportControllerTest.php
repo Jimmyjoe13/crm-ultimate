@@ -85,6 +85,8 @@ class WebImportControllerTest extends TestCase
         $this->assertEquals('first_name', $json['auto_mapping']['first_name']);
         $this->assertArrayHasKey('available_fields', $json);
         $this->assertArrayHasKey('sample_rows', $json);
+        $this->assertArrayHasKey('required_fields', $json);
+        $this->assertContains('email', $json['required_fields']);
     }
 
     public function test_store_creates_import_job_and_dispatches(): void
@@ -106,14 +108,16 @@ class WebImportControllerTest extends TestCase
                     'first_name' => 'first_name',
                     'email' => 'email',
                 ],
+                'duplicate_strategy' => 'skip',
             ]);
 
         $response->assertStatus(202);
         $response->assertJsonStructure(['id', 'status']);
         $this->assertDatabaseHas('import_jobs', [
-            'user_id' => $admin->id,
-            'entity_type' => 'contact',
-            'status' => 'pending',
+            'user_id'            => $admin->id,
+            'entity_type'        => 'contact',
+            'status'             => 'pending',
+            'duplicate_strategy' => 'skip',
         ]);
 
         // Cleanup

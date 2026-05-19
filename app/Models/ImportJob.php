@@ -20,6 +20,7 @@ class ImportJob extends Model
         'failed_rows',
         'duplicates_skipped',
         'mapping',
+        'duplicate_strategy',
         'errors',
     ];
 

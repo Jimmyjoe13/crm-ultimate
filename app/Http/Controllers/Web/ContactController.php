@@ -55,7 +55,7 @@ class ContactController extends Controller
 
     public function show(Contact $contact)
     {
-        $contact->load('companies', 'deals.stage');
+        $contact->load('companies', 'deals.stage', 'owner');
         $activities = \App\Models\Activity::where('subject_type', Contact::class)
             ->where('subject_id', $contact->id)
             ->orderByDesc('created_at')
@@ -103,6 +103,16 @@ class ContactController extends Controller
 
     public function bulkDestroy(Request $request)
     {
+        if ($request->boolean('select_all')) {
+            $count = Contact::query()->count();
+            Contact::query()->delete();
+
+            return redirect('/contacts')->with('flash_toast', [
+                'message' => "{$count} contacts supprimés.",
+                'type'    => 'success',
+            ]);
+        }
+
         $data = $request->validate([
             'ids'   => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:contacts,id'],

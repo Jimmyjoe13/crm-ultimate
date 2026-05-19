@@ -4,8 +4,10 @@ namespace App\Jobs;
 
 use App\Models\Company;
 use App\Models\Contact;
+use App\Models\CustomField;
 use App\Models\Deal;
 use App\Models\ImportJob;
+use App\Support\CustomValueValidator;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
@@ -101,6 +103,13 @@ class ProcessCsvImport implements ShouldQueue
         $model = $this->modelFor($job->entity_type);
         $fillable = array_flip((new $model)->getFillable());
 
+        // Keys of custom fields for this entity type, used to route values into custom_values
+        $customFieldKeys = CustomField::query()
+            ->where('entity_type', $job->entity_type)
+            ->pluck('key')
+            ->flip()
+            ->toArray();
+
         if (! empty($job->mapping)) {
             $headers = $this->applyUserMapping($rawHeaders, $job->mapping);
         } else {
@@ -108,6 +117,7 @@ class ProcessCsvImport implements ShouldQueue
         }
 
         $existing = $this->loadExistingKeys($job->entity_type);
+        $strategy = $job->duplicate_strategy ?? 'skip';
 
         $errors = [];
         $processed = 0;
@@ -129,7 +139,7 @@ class ProcessCsvImport implements ShouldQueue
 
             $combined = array_combine($headers, $row);
 
-            // Extract all virtual __company_* fields before fillable filter
+            // Extract virtual __company_* fields before fillable filter
             $companyPayload = [];
             foreach (self::COMPANY_VIRTUAL_FIELDS as $vf) {
                 if (isset($combined[$vf]) && $combined[$vf] !== '') {
@@ -137,10 +147,22 @@ class ProcessCsvImport implements ShouldQueue
                 }
             }
 
+            // Partition custom field keys out of combined before fillable filter
+            $customRaw = array_intersect_key($combined, $customFieldKeys);
+            $combined = array_diff_key($combined, $customFieldKeys);
+
             $payload = $this->truncateStrings(array_filter(
                 array_intersect_key($combined, $fillable),
                 fn ($v) => $v !== '' && $v !== null
             ));
+
+            // Cast and attach custom field values
+            if (! empty($customRaw)) {
+                $castedCustom = CustomValueValidator::cast($job->entity_type, $customRaw);
+                if (! empty($castedCustom)) {
+                    $payload['custom_values'] = $castedCustom;
+                }
+            }
 
             if (empty($payload) && empty($companyPayload)) {
                 $failed++;
@@ -161,15 +183,30 @@ class ProcessCsvImport implements ShouldQueue
                 $attachCompanyId = $this->resolveCompany($companyPayload);
             }
 
-            // Duplicate detection
+            // Duplicate detection + strategy branching
             $dupeKey = $this->duplicateKey($payload, $job->entity_type);
-            if ($dupeKey !== null && isset($existing[$dupeKey])) {
-                $duplicatesSkipped++;
 
-                continue;
+            if ($dupeKey !== null && isset($existing[$dupeKey])) {
+                if ($strategy === 'skip') {
+                    $duplicatesSkipped++;
+                    continue;
+                }
+
+                if ($strategy === 'update') {
+                    $buffer[] = [
+                        'action' => 'update',
+                        'row' => $processed,
+                        'dupeKey' => $dupeKey,
+                        'payload' => $payload,
+                        'attachCompanyId' => $attachCompanyId,
+                    ];
+                    continue;
+                }
+                // 'create' falls through to normal insert
             }
 
             $buffer[] = [
+                'action' => 'create',
                 'row' => $processed,
                 'payload' => $payload,
                 'attachCompanyId' => $attachCompanyId,
@@ -180,13 +217,13 @@ class ProcessCsvImport implements ShouldQueue
             }
 
             if (count($buffer) >= 500) {
-                $this->flushBuffer($buffer, $model, $failed, $errors);
+                $this->flushBuffer($buffer, $model, $job->entity_type, $failed, $errors);
                 $buffer = [];
             }
         }
 
         if (! empty($buffer)) {
-            $this->flushBuffer($buffer, $model, $failed, $errors);
+            $this->flushBuffer($buffer, $model, $job->entity_type, $failed, $errors);
         }
 
         fclose($handle);
@@ -243,25 +280,42 @@ class ProcessCsvImport implements ShouldQueue
         return $company->id;
     }
 
-    private function flushBuffer(array $buffer, string $model, int &$failed, array &$errors): void
+    private function flushBuffer(array $buffer, string $model, string $entityType, int &$failed, array &$errors): void
     {
-        // Each create is independent — no wrapping transaction.
+        // Each operation is independent — no wrapping transaction.
         // PostgreSQL aborts the whole transaction on any error, so wrapping
         // a batch in one transaction would silently kill all rows after the first failure.
-        foreach ($buffer as ['row' => $row, 'payload' => $payload, 'attachCompanyId' => $attachCompanyId]) {
+        foreach ($buffer as $item) {
             try {
-                $record = $model::query()->create($payload);
+                if ($item['action'] === 'update') {
+                    $dupeField = self::DUPE_KEYS[$entityType];
+                    $record = $model::query()->where($dupeField, $item['dupeKey'])->first();
 
-                if ($attachCompanyId && $model === Contact::class) {
-                    $record->companies()->attach($attachCompanyId, [
-                        'role' => 'employee',
-                        'is_primary' => true,
-                    ]);
+                    if ($record) {
+                        $payload = $item['payload'];
+                        // Merge custom_values instead of overwriting
+                        if (isset($payload['custom_values'])) {
+                            $payload['custom_values'] = array_merge(
+                                $record->custom_values ?? [],
+                                $payload['custom_values']
+                            );
+                        }
+                        $record->fill($payload)->save();
+                    }
+                } else {
+                    $record = $model::query()->create($item['payload']);
+
+                    if ($item['attachCompanyId'] && $model === Contact::class) {
+                        $record->companies()->attach($item['attachCompanyId'], [
+                            'role' => 'employee',
+                            'is_primary' => true,
+                        ]);
+                    }
                 }
             } catch (\Throwable $e) {
                 $failed++;
                 if (count($errors) < 100) {
-                    $errors[] = ['row' => $row, 'message' => $e->getMessage()];
+                    $errors[] = ['row' => $item['row'], 'message' => $e->getMessage()];
                 }
             }
         }

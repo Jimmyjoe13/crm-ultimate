@@ -9,6 +9,8 @@ use App\Models\ImportJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ImportController extends Controller
 {
@@ -53,6 +55,12 @@ class ImportController extends Controller
             'pipeline_id'       => 'Pipeline (ID)',
             'pipeline_stage_id' => 'Étape (ID)',
         ],
+    ];
+
+    private const REQUIRED_FIELDS = [
+        'contact' => ['email'],
+        'company' => ['name'],
+        'deal'    => ['name'],
     ];
 
     private const COMPANY_NAME_ALIASES = [
@@ -109,6 +117,7 @@ class ImportController extends Controller
             'headers'         => $rawHeaders,
             'auto_mapping'    => $this->buildAutoMapping($rawHeaders, $data['entity_type']),
             'available_fields'=> $this->buildAvailableFields($data['entity_type']),
+            'required_fields' => self::REQUIRED_FIELDS[$data['entity_type']],
             'sample_rows'     => $sampleRows,
         ]);
     }
@@ -116,10 +125,11 @@ class ImportController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'entity_type'   => ['required', 'in:contact,company,deal'],
-            'preview_token' => ['required', 'string'],
-            'mapping'       => ['required', 'array'],
-            'mapping.*'     => ['nullable', 'string'],
+            'entity_type'        => ['required', 'in:contact,company,deal'],
+            'preview_token'      => ['required', 'string'],
+            'mapping'            => ['required', 'array'],
+            'mapping.*'          => ['nullable', 'string'],
+            'duplicate_strategy' => ['nullable', Rule::in(['skip', 'update', 'create'])],
         ]);
 
         $token = $data['preview_token'];
@@ -127,15 +137,24 @@ class ImportController extends Controller
             return response()->json(['message' => 'Token invalide.'], 422);
         }
 
+        // Server-side validation of required fields
+        $entity = $data['entity_type'];
+        $mappedTargets = array_values(array_filter($data['mapping']));
+        $missing = array_values(array_diff(self::REQUIRED_FIELDS[$entity], $mappedTargets));
+        if (! empty($missing)) {
+            return response()->json(['message' => 'Champs requis non mappés.', 'missing' => $missing], 422);
+        }
+
         $newPath = 'imports/' . basename($token);
         Storage::disk('local')->move($token, $newPath);
 
         $job = ImportJob::query()->create([
-            'user_id'     => auth()->id(),
-            'entity_type' => $data['entity_type'],
-            'filename'    => basename($newPath),
-            'status'      => 'pending',
-            'mapping'     => $data['mapping'],
+            'user_id'            => auth()->id(),
+            'entity_type'        => $entity,
+            'filename'           => basename($newPath),
+            'status'             => 'pending',
+            'mapping'            => $data['mapping'],
+            'duplicate_strategy' => $data['duplicate_strategy'] ?? 'skip',
         ]);
 
         ProcessCsvImport::dispatch($job->id, $newPath);
@@ -168,10 +187,12 @@ class ImportController extends Controller
         $mapping = [];
         foreach ($rawHeaders as $header) {
             $lower = mb_strtolower(trim($header));
+            $ascii = Str::ascii($lower);
             $snake = preg_replace('/[\s\-\.]+/', '_', $lower);
+            $asciiSnake = preg_replace('/[\s\-\.]+/', '_', $ascii);
 
             if ($entityType === 'contact') {
-                if (in_array($snake, self::COMPANY_NAME_ALIASES, true)) {
+                if (in_array($snake, self::COMPANY_NAME_ALIASES, true) || in_array($asciiSnake, self::COMPANY_NAME_ALIASES, true)) {
                     $mapping[$header] = '__company_name';
                     continue;
                 }
@@ -183,6 +204,10 @@ class ImportController extends Controller
                     $mapping[$header] = self::COMPANY_FIELD_ALIASES[$snake];
                     continue;
                 }
+                if (isset(self::COMPANY_FIELD_ALIASES[$asciiSnake])) {
+                    $mapping[$header] = self::COMPANY_FIELD_ALIASES[$asciiSnake];
+                    continue;
+                }
             }
 
             $coreKeys = array_keys(self::CORE_FIELD_LABELS[$entityType] ?? []);
@@ -191,12 +216,18 @@ class ImportController extends Controller
                 $mapping[$header] = $columnMaps[$lower];
             } elseif (isset($columnMaps[$snake])) {
                 $mapping[$header] = $columnMaps[$snake];
+            } elseif (isset($columnMaps[$ascii])) {
+                $mapping[$header] = $columnMaps[$ascii];
+            } elseif (isset($columnMaps[$asciiSnake])) {
+                $mapping[$header] = $columnMaps[$asciiSnake];
             } elseif (in_array($lower, $coreKeys, true)) {
                 $mapping[$header] = $lower;
             } elseif (in_array($snake, $coreKeys, true)) {
                 $mapping[$header] = $snake;
             } elseif (isset($customFields[$snake])) {
                 $mapping[$header] = $snake;
+            } elseif (isset($customFields[$lower])) {
+                $mapping[$header] = $lower;
             } else {
                 $mapping[$header] = null;
             }
@@ -207,12 +238,23 @@ class ImportController extends Controller
 
     private function buildAvailableFields(string $entityType): array
     {
+        $required = self::REQUIRED_FIELDS[$entityType];
         $fields = [];
         foreach (self::CORE_FIELD_LABELS[$entityType] ?? [] as $key => $label) {
-            $fields[] = ['key' => $key, 'label' => $label, 'type' => 'core'];
+            $fields[] = [
+                'key'      => $key,
+                'label'    => $label,
+                'type'     => 'core',
+                'required' => in_array($key, $required, true),
+            ];
         }
-        foreach (CustomField::query()->where('entity_type', $entityType)->orderBy('position')->get(['key', 'label']) as $cf) {
-            $fields[] = ['key' => $cf->key, 'label' => $cf->label, 'type' => 'custom'];
+        foreach (CustomField::query()->where('entity_type', $entityType)->orderBy('position')->get(['key', 'label', 'is_required']) as $cf) {
+            $fields[] = [
+                'key'      => $cf->key,
+                'label'    => $cf->label,
+                'type'     => 'custom',
+                'required' => (bool) $cf->is_required,
+            ];
         }
         return $fields;
     }

@@ -1,14 +1,27 @@
 <x-app-shell active="contacts" breadcrumb="Contacts">
 
-<div class="px-7 pt-6 pb-3 flex items-end justify-between">
+@php $total = $contacts->total(); @endphp
+
+<div x-data class="px-7 pt-6 pb-3 flex items-end justify-between">
     <div>
         <h1>Contacts</h1>
         <p class="text-sm text-secondary mt-0.5">
-            <span class="num-mono">{{ $contacts->total() }}</span> contacts
+            <span class="num-mono">{{ $total }}</span> contacts
         </p>
     </div>
     <div class="flex items-center gap-2">
         @if(in_array(auth()->user()?->role, ['admin','manager']))
+        {{-- Bouton "Tout sélectionner / Désélectionner" --}}
+        <button x-show="!$store.bulk.isSelectAllMode('contact')"
+                @click="$store.bulk.enableSelectAll('contact')"
+                class="btn ghost sm">
+            Tout sélectionner ({{ $total }})
+        </button>
+        <button x-show="$store.bulk.isSelectAllMode('contact')"
+                @click="$store.bulk.clear('contact')"
+                class="btn ghost sm" style="color:var(--err)">
+            Désélectionner tout
+        </button>
         <x-button variant="ghost" size="sm" href="/imports/contact/create"
                   icon='<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>'>
             Importer CSV
@@ -32,8 +45,14 @@
                     @if(in_array(auth()->user()?->role, ['admin','manager']))
                     <th style="width:36px;">
                         <span class="ckb"
-                              :class="{ 'on': $store.bulk.allSelected('contact', {{ json_encode($pageIds) }}) }"
-                              @click.stop="$store.bulk.toggleAll('contact', {{ json_encode($pageIds) }})"
+                              :class="{ 'on': $store.bulk.isSelectAllMode('contact') || $store.bulk.allSelected('contact', {{ json_encode($pageIds) }}) }"
+                              @click.stop="
+                                if ($store.bulk.isSelectAllMode('contact')) {
+                                    $store.bulk.clear('contact');
+                                } else {
+                                    $store.bulk.toggleAll('contact', {{ json_encode($pageIds) }});
+                                }
+                              "
                               style="cursor:pointer;"></span>
                     </th>
                     @endif
@@ -45,6 +64,19 @@
                 </tr>
             </thead>
             <tbody>
+                {{-- Bannière "tous sélectionnés" --}}
+                @if(in_array(auth()->user()?->role, ['admin','manager']))
+                <tr x-show="$store.bulk.isSelectAllMode('contact')" style="display:none;">
+                    <td colspan="6" class="text-center py-2.5 text-[12.5px] font-medium" style="background:var(--ok-soft);color:var(--ok)">
+                        Les {{ $total }} contacts sont sélectionnés.
+                        <button @click="$store.bulk.clear('contact')"
+                                class="underline ml-1" style="color:var(--err)">
+                            Annuler la sélection
+                        </button>
+                    </td>
+                </tr>
+                @endif
+
                 @forelse($contacts as $contact)
                 @php
                     $fullName = trim($contact->first_name . ' ' . $contact->last_name);
@@ -53,12 +85,18 @@
                     $company  = $contact->companies->first();
                 @endphp
                 <tr onclick="window.location='{{ '/contacts/' . $contact->id }}'" style="cursor:pointer;"
-                    :class="{ 'bg-surface2': $store.bulk.selections.contact.has({{ $contact->id }}) }">
+                    :class="{ 'bg-surface2': $store.bulk.isSelectAllMode('contact') || $store.bulk.selections.contact.has({{ $contact->id }}) }">
                     @if(in_array(auth()->user()?->role, ['admin','manager']))
                     <td @click.stop>
                         <span class="ckb"
-                              :class="{ 'on': $store.bulk.selections.contact.has({{ $contact->id }}) }"
-                              @click.stop="$store.bulk.toggle('contact', {{ $contact->id }})"
+                              :class="{ 'on': $store.bulk.isSelectAllMode('contact') || $store.bulk.selections.contact.has({{ $contact->id }}) }"
+                              @click.stop="
+                                if ($store.bulk.isSelectAllMode('contact')) {
+                                    $store.bulk.clear('contact');
+                                } else {
+                                    $store.bulk.toggle('contact', {{ $contact->id }});
+                                }
+                              "
                               style="cursor:pointer;"></span>
                     </td>
                     @endif
@@ -94,7 +132,7 @@
 </div>
 
 @if(in_array(auth()->user()?->role, ['admin','manager']))
-<x-bulk-bar entity="contact" delete-action="/contacts/bulk-destroy" />
+<x-bulk-bar entity="contact" delete-action="/contacts/bulk-destroy" :total-count="$contacts->total()" />
 @endif
 
 </x-app-shell>

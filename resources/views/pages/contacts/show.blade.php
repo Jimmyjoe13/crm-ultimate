@@ -76,6 +76,18 @@
                         <a href="{{ '/companies/' . $company->id }}" class="text-[13px] text-accent hover:underline">{{ $company->name }}</a>
                     </div>
                     @endif
+                    @if($contact->lead_status)
+                    <div class="field">
+                        <label>Statut lead</label>
+                        <span class="chip">{{ $contact->lead_status }}</span>
+                    </div>
+                    @endif
+                    @if($contact->owner)
+                    <div class="field">
+                        <label>Propriétaire</label>
+                        <div class="text-[13px]">{{ $contact->owner->name }}</div>
+                    </div>
+                    @endif
                 </div>
             </div>
 
