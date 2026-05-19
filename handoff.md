@@ -1,4 +1,4 @@
-# Handoff — CRM Ultimate v1.8
+# Handoff — CRM Ultimate v2.0
 
 ## 1. Objectif
 
@@ -8,6 +8,7 @@ réintégration des fonctionnalités IA dans l'UI, toggle de tâches, timeline d
 corbeille/restauration et validation typée des champs personnalisés.
 
 **Done :** 178 tests Feature verts, assets buildés, commits propres sur `master`.
+**v2.0 :** Déploiement production stabilisé — Nginx+PHP-FPM, HTTPS assets, import CSV 50MB.
 
 ---
 
@@ -55,6 +56,7 @@ corbeille/restauration et validation typée des champs personnalisés.
 - Intégré dans : deals/show (3 cards sidebar), contacts/show (1 card), companies/show (1 card),
   dashboard (widget Suggestions du jour)
 - `Api\AiController` refactorisé → délègue à `AiInsightService`
+- **Clé OpenRouter configurée en prod** (`OPENROUTER_API_KEY` dans `.env` VPS), modèle : `anthropic/claude-haiku-4-5`
 
 **v1.6 — UX**
 - Toggle tâches done/open : `ActivityController::toggleDone` + fetch Alpine dans `activities/index`
@@ -77,7 +79,7 @@ corbeille/restauration et validation typée des champs personnalisés.
 - `TrashController` avec `index`, `restoreContact`, `restoreCompany`, `restoreDeal`
 
 ### Dernière action effectuée
-v1.8 livré — Tri de colonnes (3 index) + Corbeille + CustomValueValidator — suite complète 178/178.
+v2.0 — Stabilisation déploiement production (voir section 5). Suite complète 178/178 tests.
 
 ---
 
@@ -181,7 +183,7 @@ v1.8 livré — Tri de colonnes (3 index) + Corbeille + CustomValueValidator —
 
 ---
 
-## 5. État du déploiement production (v1.9)
+## 5. État du déploiement production (v2.0)
 
 ### Infrastructure déployée — VPS 51.38.99.226 (Ubuntu 22.04)
 
@@ -189,57 +191,103 @@ v1.8 livré — Tri de colonnes (3 index) + Corbeille + CustomValueValidator —
 
 #### Architecture VPS
 - Caddy Docker **partagé** sur le réseau `web` (`/home/jimmy/docker/docker-compose.yml`)
-- Caddyfile : `/opt/caddy/config/Caddyfile` (entrée CRM ajoutée)
 - Repo CRM déployé dans : `/home/jimmy/crm-ultimate/`
 - Compose prod : `docker compose -f /home/jimmy/crm-ultimate/docker-compose.prod.yml`
 
 #### Conteneurs prod (tous `restart: unless-stopped`)
 | Conteneur | Image | Rôle |
 |---|---|---|
-| `crm-app` | `crm-ultimate-app` | Laravel + php artisan serve :8080 |
-| `crm-queue` | `crm-ultimate-queue` | Worker queue Redis |
+| `crm-app` | `crm-ultimate-app` | **Nginx:8080 + PHP-FPM:9000** via supervisord |
+| `crm-queue` | `crm-ultimate-queue` | Worker queue Redis (`php artisan queue:work`) |
 | `crm-postgres` | `postgres:17-alpine` | Base de données (volume `pgdata`) |
 | `crm-redis` | `redis:7-alpine` | Cache + sessions + queue |
 
-#### Fichiers d'infrastructure créés (commités sur master)
-- `docker/php/Dockerfile.prod` — multi-stage : node-builder + php-builder (--no-scripts) + runtime
-- `docker-compose.prod.yml` — réseau `web` externe + réseau `internal` privé
-- `docker/caddy/Caddyfile` — template (le vrai Caddyfile est dans `/opt/caddy/config/`)
-- `.env.production.example` — template sans secrets
-- `deploy.sh` — script de redéploiement (APP_DIR auto-détecté)
-- `.dockerignore` — exclut node_modules, vendor, .env, .git
+#### Stack serveur dans `crm-app`
+- **supervisord** (PID 1) gère Nginx et PHP-FPM dans le même conteneur
+- **Nginx** sert les assets statiques (`/build/` — cache 1 an) + fastcgi_pass vers PHP-FPM
+- **PHP-FPM** traite les requêtes PHP (user `www-data`)
+- Limite upload : `client_max_body_size 50m` (cohérent avec `upload_max_filesize = 50M` PHP)
+
+#### Fichiers d'infrastructure (tous commités sur master)
+| Fichier | Rôle |
+|---|---|
+| `docker/php/Dockerfile.prod` | Multi-stage : node-builder + php-builder + runtime (fpm-alpine + nginx + supervisor) |
+| `docker/nginx/default.conf` | Config Nginx Laravel (static assets + fastcgi) |
+| `docker/supervisord.conf` | Supervisord : php-fpm + nginx |
+| `docker-compose.prod.yml` | Réseau `web` externe + réseau `internal` privé |
+| `docker/caddy/Caddyfile` | Template Caddyfile (vrai fichier dans `/opt/caddy/config/`) |
+| `deploy.sh` | Script de redéploiement SFTP+Docker |
+| `config/app.php` | `asset_url` ajouté |
+| `bootstrap/app.php` | `trustProxies(at: '*')` pour HTTPS derrière Caddy |
 
 #### Variables `.env` sur le VPS (`/home/jimmy/crm-ultimate/.env`)
-Toutes générées aléatoirement au déploiement. **À compléter** :
 ```
-OPENROUTER_API_KEY=    ← à ajouter pour activer les features IA
+APP_URL=https://crm.nana-intelligence.fr
+ASSET_URL=https://crm.nana-intelligence.fr
+TRUSTED_PROXIES=*
+OPENROUTER_API_KEY=sk-or-v1-...   ← configuré ✓
+OPENROUTER_MODEL=anthropic/claude-haiku-4-5
 ```
-Après ajout : `docker compose -f docker-compose.prod.yml restart app`
 
-#### Bug connu : `route:cache` et closure dans `routes/api.php`
-La route `Route::get('/', fn() => ...)` en ligne 23 de `api.php` est une closure.
-Laravel ne peut pas cacher les closures. Fix propre = déplacer ce endpoint dans un contrôleur.
-En attendant, `config:cache` et `view:cache` fonctionnent, seul `route:cache` est bloqué.
-**Impact : nul sur le fonctionnement, léger sur la perf (routes non cachées = ~1-2ms par requête).**
+#### Compte admin de production
+```
+Email    : admin@example.com
+Password : password   ← à changer après première connexion
+```
 
-#### Prochains déploiements (procédure)
-Le repo est **privé** sur GitHub, le VPS ne peut pas faire `git pull` directement.
-Workflow actuel : git archive local → SFTP upload → rebuild.
+#### Procédure de redéploiement (repo privé GitHub → SFTP)
+Le VPS n'a pas accès direct au repo GitHub. Workflow :
+1. `git push origin master` en local
+2. Upload SFTP des fichiers modifiés vers `/home/jimmy/crm-ultimate/`
+3. Sur le VPS : `docker compose -f /home/jimmy/crm-ultimate/docker-compose.prod.yml build && up -d`
 
-Pour automatiser, ajouter une clé SSH deploy :
+Pour automatiser avec deploy keys SSH :
 ```bash
 # Sur le VPS :
 ssh-keygen -t ed25519 -C "crm-deploy" -f ~/.ssh/crm_deploy -N ""
 cat ~/.ssh/crm_deploy.pub
-# → copier la clé publique dans GitHub > Settings > Deploy Keys
+# → copier dans GitHub > Settings > Deploy Keys
 ```
-Puis dans `deploy.sh`, remplacer `git pull` par `GIT_SSH_COMMAND="ssh -i ~/.ssh/crm_deploy" git pull origin master`.
+
+#### Bug connu : `route:cache` et closure dans `routes/api.php`
+La route `Route::get('/', fn() => ...)` en ligne 23 de `api.php` est une closure.
+Laravel ne peut pas cacher les closures. Fix propre = déplacer ce endpoint dans un contrôleur.
+**Impact : nul sur le fonctionnement, léger sur la perf (routes non cachées = ~1-2ms par requête).**
 
 ---
 
-## 6. Backlog feature en attente
+## 6. Prochaine session — Amélioration UX mapping import CSV
+
+### Problème identifié
+L'écran de mapping lors de l'import CSV est trop basique et peu intuitif :
+- Le mapping colonne CSV → champ CRM manque de clarté visuelle
+- Pas de prévisualisation des données pendant le mapping
+- Pas de détection automatique des colonnes
+- Pas de gestion des erreurs de mapping avant soumission
+- Pas de support des custom fields dans le mapping
+
+### Fichiers clés à analyser en début de session
+| Fichier | Rôle |
+|---|---|
+| `app/Http/Controllers/Web/ImportController.php` | Logique import CSV |
+| `resources/views/pages/imports/` | Vues mapping actuelles |
+| `routes/web.php` | Routes `/imports/*` |
+| `database/migrations/*import*` | Structure table imports si elle existe |
+
+### Pistes d'amélioration à explorer
+- **Détection automatique** des colonnes CSV → champs CRM (matching par nom)
+- **Prévisualisation** des 3-5 premières lignes du CSV pendant le mapping
+- **Indicateurs visuels** : colonne mappée ✓ / non mappée / ignorée
+- **Support custom fields** dans les options de mapping
+- **Validation côté client** avant soumission (champs requis mappés ?)
+- **Gestion des doublons** : skip / update / créer quand même
+
+---
+
+## 7. Backlog feature en attente
 
 - **Export CSV** contacts/companies : `fputcsv` natif, inclure `custom_values` labellés
 - **Palette ⌘K** : `<x-command-palette>` Alpine, endpoint `/search` déjà existant
 - **Backup BDD** : script cron `pg_dump` quotidien → `/opt/backups/crm/` avec rotation 7 jours
 - **Closure route:cache** : déplacer `Route::get('/', fn()=>...)` dans `Api\InfoController`
+- **Mot de passe admin** : changer `password` par défaut en production
