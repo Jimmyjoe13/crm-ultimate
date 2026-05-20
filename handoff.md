@@ -1,15 +1,16 @@
-# Handoff — CRM Ultimate v2.0
+# Handoff — CRM Ultimate
 
 ## 1. Objectif
 
 Transformer le CRM Ultimate (Laravel 13 + Blade + Alpine.js + PostgreSQL) en un outil complet :
 suppression/sélection multiple des entités, propriétés personnalisées dynamiques sur les fiches,
 réintégration des fonctionnalités IA dans l'UI, toggle de tâches, timeline d'activités,
-corbeille/restauration et validation typée des champs personnalisés.
+corbeille/restauration, validation typée des champs personnalisés, import CSV avec mapping avancé,
+et intégration d'outils tiers (Emelia emailing).
 
-**Done :** 192 tests Feature verts, assets buildés, commits propres sur `master`.
 **v2.0 :** Déploiement production stabilisé — Nginx+PHP-FPM, HTTPS assets, import CSV 50MB.
-**v2.1 :** Refonte UX import CSV — custom fields, stratégie doublons, validation requis, indicateurs visuels.
+**v2.1 :** Bug fix custom fields import + refonte UX import (stratégie doublons, validation requis, sélection globale contacts).
+**v2.2 :** Interface mapping style HubSpot — cartes enrichies, combobox searchable, panneau sticky, création propriété inline.
 
 ---
 
@@ -27,60 +28,93 @@ corbeille/restauration et validation typée des champs personnalisés.
 - Companies : idem
 - Deals : edit / destroy (store existait déjà via modal)
 
-**Bulk delete**
-- `Alpine.store('bulk')` global avec `Set` séparé par entité (contact / company / deal)
-- `<x-bulk-bar entity delete-action>` : barre flottante bottom-fixed, apparaît quand ≥ 1 sélection
-- Checkboxes header (select-all) + row sur les 3 index, visibles admin/manager uniquement
-- Routes `POST /*/bulk-destroy` sous `middleware('role:admin,manager')`
-- Validation `ids: required, array, min:1`
+**Bulk delete + sélection globale (v2.1)**
+- `Alpine.store('bulk')` global avec `Set` + `selectAllMode` par entité (contact / company / deal)
+- `<x-bulk-bar entity delete-action :total-count>` : barre flottante bottom-fixed
+- Bouton "Tout sélectionner (N)" dans la toolbar contacts : sélectionne TOUS les contacts de la base (pas juste la page courante), indépendamment de la pagination
+- Bannière de confirmation dans le tbody quand le mode sélection globale est actif
+- `bulkDestroy` : gère `select_all=1` → suppression douce de TOUS les contacts sans passer les IDs
+- Checkboxes header + row sur les 3 index, visibles admin/manager uniquement
 
 **Custom fields**
-- `CustomFieldRenderer::forEntity($type)` cache 60 s + `displayValue($field, $raw)`
-- Cache invalidé à chaque store / update / destroy d'un champ
+- `CustomFieldRenderer::forEntity($type)` cache Redis 60 s + `displayValue($field, $raw)`
+- **Cache invalidé via model events** (`saved`/`deleted` sur `CustomField`) → `Cache::forget("custom_fields.{$entity_type}")` — bug critique résolu en v2.2
 - Composants Blade : `<x-form-field>`, `<x-custom-fields-form>`, `<x-custom-fields-show>`
 - `/settings/fields` : edit inline Alpine + delete par ligne
 - Intégré dans tous les create/edit + affichage labellé dans les show
 
-**`CustomValueValidator` (v1.7)**
-- `CustomValueValidator::validationRules(string $entityType)` : génère les règles Laravel per-field
-  (`numeric`, `date`, `in:0,1`, `Rule::in($options)`, `string|max:1000`) avec `required`/`nullable`
-- `CustomValueValidator::cast(string $entityType, array $values)` : caste les valeurs au bon type PHP
-  (`float`, `Y-m-d`, `bool`, `trim string`), `null` pour vide, clés inconnues silencieusement rejetées
-- Câblé dans `ContactController`, `CompanyController`, `DealController` (store + update)
+**`CustomValueValidator`**
+- `validationRules(string $entityType)` : règles Laravel per-field
+- `cast(string $entityType, array $values)` : cast `float`, `Y-m-d`, `bool`, `trim string`
+- Câblé dans Contact/Company/DealController (store + update)
+
+**Import CSV (v2.1 + v2.2)**
+- Wizard 3 étapes : upload → mapping → suivi progression
+- **Bug fix (v2.2)** : `CustomValueValidator::cast()` utilisait le cache Redis pour résoudre les champs custom. Si un champ était créé après la population du cache, il était silencieusement ignoré → `custom_values` jamais écrit. Résolu par invalidation automatique du cache dans `CustomField::boot()`
+- `ProcessCsvImport` (ShouldQueue) : partition `$combined` → core fields via `$fillable` + custom fields via `CustomValueValidator::cast()`
+- Stratégie doublons : `skip` (par défaut) / `update` (merge `custom_values`) / `create`
+- `duplicate_strategy` stocké dans `import_jobs` (migration `2026_05_20_000001`)
+- Validation côté serveur des champs requis (422 avec `missing[]`) + côté client (bouton désactivé + tooltip)
+- Polling statut job toutes les 1500 ms, barre de progression, erreurs par ligne
+- Statut `completed` / `completed_with_errors` / `failed` — bug `'done'` vs `'completed'` résolu en v2.1
+
+**Interface mapping HubSpot (v2.2)**
+- **Layout 2 colonnes** : cartes empilées à gauche (flex-1), panneau sticky à droite (w-72)
+- **Une carte par colonne CSV** avec :
+  - Icône type inféré (email/phone/date/number/url/text/boolean/select) — SVG inline par type
+  - Jusqu'à 4 pills d'échantillons CSV + taux de remplissage si < 80%
+  - Badge état : `auto` (vert) / `modifié` (bleu) / `requis !` (rouge) / `ignoré` (gris)
+  - Bouton `×` par carte pour basculer "Ne pas importer" (opacité réduite + badge)
+- **Combobox searchable** par carte :
+  - Dropdown avec champ recherche filtrant label + clé
+  - Options groupées : **Champs standard** / **Société liée** / **Propriétés personnalisées**
+  - Badge `requis` (rouge) et `✦` (accent) sur chaque option, icône type, check sur la sélection active
+  - Dropdown non contraint en hauteur (fix overflow) — liste scrollable max-height:210px indépendante
+- **Panneau sticky droit** :
+  - Barre de progression (colonnes mappées / total)
+  - Checklist champs requis avec ✓ (vert) ou ⚠ (rouge) par champ
+  - Stratégie doublons (3 radios avec descriptions)
+  - Bouton "Lancer l'import →" désactivé si requis non mappés
+- **Création propriété custom inline** :
+  - Bouton "+ Créer une propriété personnalisée" en bas de chaque dropdown
+  - Modal : nom pré-rempli avec le nom de la colonne CSV, type, **sélecteur d'entité (Contact / Société / Deal)**
+  - Lors d'un import contact, propose Contact et Société comme cibles
+  - POST `/imports/quick-field` → crée le `CustomField` en base + invalide le cache + retourne le champ pour auto-sélection dans le dropdown
+  - Si créé pour la même entité que l'import → ajouté aux `availableFields` + mappé automatiquement
+  - Si créé pour une autre entité (ex: Société pendant import Contact) → créé en base mais non ajouté au dropdown courant
+
+**Preview enrichi (`/imports/preview`)**
+- Retourne `columns[]` : `{header, samples[], fill_rate, inferred_type}` — samples basés sur 10 premières lignes, dédupliqués, max 5 valeurs non-vides
+- `available_fields[]` : `{key, label, type, group, field_type, required}` — `group` = `standard` | `company` | `custom`, `field_type` = type natif du champ
+- `inferred_type` détecté par regex sur échantillons (seuil 60%) : email, phone, url, date, number, text
+
+**Fiche contact (v2.1)**
+- `lead_status` et `owner.name` affichés dans la card "Informations"
+- `ContactController::show()` eager-load la relation `owner`
+- Custom fields visibles via `<x-custom-fields-show>` (inclut automatiquement les champs importés)
 
 **IA Web**
-- `AiInsightService` (logique partagée Web ↔ API) : summarizeDeal, nextActionDeal, scoreDeal,
-  summarizeContact, summarizeCompany, dailySuggestions
-- Cache 24 h par entité ; `?fresh=1` bypass cache (admin/manager seulement)
-- `Web\AiController` : 4 endpoints `POST /web/ai/*` derrière `web.auth + throttle:20,1`
-- `<x-ai-insight-card endpoint title>` Alpine : spinner → rendu adaptatif (texte / JSON score/next-action / suggestions)
-- Intégré dans : deals/show (3 cards sidebar), contacts/show (1 card), companies/show (1 card),
-  dashboard (widget Suggestions du jour)
-- `Api\AiController` refactorisé → délègue à `AiInsightService`
-- **Clé OpenRouter configurée en prod** (`OPENROUTER_API_KEY` dans `.env` VPS), modèle : `anthropic/claude-haiku-4-5`
+- `AiInsightService` (logique partagée Web ↔ API) — summarizeDeal, nextActionDeal, scoreDeal, summarizeContact, summarizeCompany, dailySuggestions
+- Cache 24 h par entité ; `?fresh=1` bypass cache (admin/manager)
+- `<x-ai-insight-card endpoint title>` Alpine intégré dans deals/show, contacts/show, companies/show, dashboard
 
-**v1.6 — UX**
-- Toggle tâches done/open : `ActivityController::toggleDone` + fetch Alpine dans `activities/index`
-- `ActivityController::store` : crée activité morphée (contact / company / deal)
-- `<x-activity-timeline showComposer>` : composer form + listing chrono avec toggle tâche inline
+**UX v1.6**
+- Toggle tâches done/open : `ActivityController::toggleDone`
+- `<x-activity-timeline showComposer>` : composer + listing chrono avec toggle tâche inline
 - Onglets Informations / Activité sur fiches contact et company
 
-**Tri de colonnes (v1.8)**
-- Composant `<x-sort-th column label :sort :dir>` : lien cliquable avec ▲/▼, `request()->fullUrlWithQuery()` pour préserver `?search=`
-- Whitelist stricte par entité — colonne inconnue → fallback silencieux sur le défaut
-- Contacts : tri `last_name` (défaut), `email`, `created_at`
-- Companies : tri `name` (défaut), `industry`, `city`, `created_at`
-- Deals : tri `close_date` (défaut), `name`, `amount` — le bandeau "Sort" reflète l'état courant
+**Tri de colonnes**
+- `<x-sort-th column label :sort :dir>` avec ▲/▼ et URL preserving
+- Contacts : `last_name` (défaut), `email`, `created_at`
+- Companies : `name`, `industry`, `city`, `created_at`
+- Deals : `close_date`, `name`, `amount`
 
-**Corbeille (v1.7)**
-- `GET /trash` : liste les soft-deleted contacts / companies / deals (onglets Alpine)
-- `POST /contacts/{id}/restore`, `/companies/{id}/restore`, `/deals/{id}/restore` : restauration
-- Toutes les routes sous `middleware('role:admin,manager')`
-- Icône Corbeille dans la rail nav (visible admin/manager uniquement)
-- `TrashController` avec `index`, `restoreContact`, `restoreCompany`, `restoreDeal`
+**Corbeille**
+- `GET /trash` : soft-deleted contacts / companies / deals (onglets Alpine)
+- Restauration `POST /*/restore` — admin/manager uniquement
 
 ### Dernière action effectuée
-v2.1 — Refonte UX import CSV + bug custom fields. Suite complète 192/192 tests.
+v2.2 — Interface mapping HubSpot, fix overflow dropdown, sélecteur entité modal, fix cache custom fields.
 
 ---
 
@@ -90,138 +124,133 @@ v2.1 — Refonte UX import CSV + bug custom fields. Suite complète 192/192 test
 | Fichier | Rôle |
 |---|---|
 | `app/Http/Controllers/Web/AuthController.php` | Login — log password supprimé |
-| `app/Http/Controllers/Web/ContactController.php` | CRUD + bulkDestroy + CustomValueValidator |
+| `app/Http/Controllers/Web/ContactController.php` | CRUD + bulkDestroy (select_all) + CustomValueValidator + owner eager-load |
 | `app/Http/Controllers/Web/CompanyController.php` | CRUD + bulkDestroy + CustomValueValidator |
 | `app/Http/Controllers/Web/DealController.php` | Edit + destroy + bulkDestroy + CustomValueValidator |
+| `app/Http/Controllers/Web/ImportController.php` | Wizard CSV : preview enrichi (columns/inferred_type/groups), store, status, quickField |
 | `app/Http/Controllers/Web/TrashController.php` | index + restore × 3 entités |
-| (ContactController / CompanyController / DealController) | index() — tri dynamique whitelisté |
 | `app/Http/Controllers/Web/ActivityController.php` | index + toggleDone + store |
 | `app/Http/Controllers/Web/AiController.php` | 4 endpoints IA Web |
 | `app/Http/Controllers/Web/Settings/CustomFieldController.php` | CRUD + cache invalidation |
 | `app/Http/Controllers/Api/AiController.php` | Refactorisé → délègue à AiInsightService |
 
-### Services / Support
+### Jobs / Services / Support
 | Fichier | Rôle |
 |---|---|
+| `app/Jobs/ProcessCsvImport.php` | Import CSV : partition core/custom, stratégie doublons, merge custom_values |
+| `app/Models/ImportJob.php` | Modèle import — fillable `duplicate_strategy` |
+| `app/Models/CustomField.php` | Model events `saved`/`deleted` → Cache::forget (fix bug v2.2) |
 | `app/Services/AiInsightService.php` | Logique IA partagée Web ↔ API |
-| `app/Services/LlmService.php` | Client HTTP OpenRouter (inchangé) |
-| `app/Support/CustomFieldRenderer.php` | Cache + formatage custom fields |
+| `app/Services/LlmService.php` | Client HTTP OpenRouter |
+| `app/Support/CustomFieldRenderer.php` | Cache Redis 60s + formatage |
 | `app/Support/CustomValueValidator.php` | Validation + cast per-type des custom_values |
-
-### Middleware
-| Fichier | Rôle |
-|---|---|
-| `app/Http/Middleware/RequireRole.php` | Dual-mode JSON/Blade |
 
 ### Routes
 | Fichier | Rôle |
 |---|---|
-| `routes/web.php` | Toutes les routes Web (+ /trash + /*/restore) |
+| `routes/web.php` | Toutes les routes Web + `POST /imports/quick-field` |
+
+### Migrations
+| Fichier | Rôle |
+|---|---|
+| `database/migrations/2026_05_20_000001_add_duplicate_strategy_to_import_jobs.php` | Colonne `duplicate_strategy VARCHAR(16) DEFAULT 'skip'` sur `import_jobs` |
 
 ### Vues — composants
 | Fichier | Rôle |
 |---|---|
-| `resources/views/components/layouts/app.blade.php` | Toast container injecté |
-| `resources/views/components/app-shell.blade.php` | Rail nav + icône Corbeille admin/manager |
-| `resources/views/components/bulk-bar.blade.php` | Barre bulk delete |
+| `resources/views/components/bulk-bar.blade.php` | Barre bulk delete avec mode sélection globale |
+| `resources/views/components/import-stepper.blade.php` | Stepper 3 étapes (lit `step` depuis Alpine parent) |
 | `resources/views/components/form-field.blade.php` | Input générique typé |
 | `resources/views/components/custom-fields-form.blade.php` | Section custom fields dans forms |
 | `resources/views/components/custom-fields-show.blade.php` | Affichage labellé custom fields |
 | `resources/views/components/ai-insight-card.blade.php` | Card IA Alpine fetch |
 | `resources/views/components/activity-timeline.blade.php` | Timeline + composer |
-| `resources/views/components/sort-th.blade.php` | En-tête triable avec ▲/▼ et URL preserving |
+| `resources/views/components/sort-th.blade.php` | En-tête triable ▲/▼ |
 
 ### Vues — pages
 | Fichier | Rôle |
 |---|---|
-| `resources/views/pages/contacts/{index,show,create,edit}.blade.php` | CRUD + bulk + custom fields + IA + timeline |
+| `resources/views/pages/contacts/index.blade.php` | Bulk + sélection globale + toolbar "Tout sélectionner (N)" |
+| `resources/views/pages/contacts/show.blade.php` | lead_status + owner dans card Informations |
+| `resources/views/pages/imports/create.blade.php` | Wizard complet HubSpot-style (2600 lignes JS/Blade) |
+| `resources/views/pages/contacts/{create,edit}.blade.php` | CRUD + custom fields |
 | `resources/views/pages/companies/{index,show,create,edit}.blade.php` | idem |
-| `resources/views/pages/deals/{index,show,edit}.blade.php` | idem (sans create — modal existante) |
-| `resources/views/pages/activities/index.blade.php` | Toggle tâches |
+| `resources/views/pages/deals/{index,show,edit}.blade.php` | idem |
 | `resources/views/pages/settings/fields.blade.php` | Edit/delete inline custom fields |
-| `resources/views/pages/dashboard.blade.php` | Widget suggestions IA |
-| `resources/views/pages/trash/index.blade.php` | Corbeille — 3 onglets + bouton Restaurer |
 
 ### JS / Assets
 | Fichier | Rôle |
 |---|---|
-| `resources/js/app.js` | Alpine.store('bulk') ajouté |
-| `public/build/` | Assets compilés (vite build) |
+| `resources/js/app.js` | `Alpine.store('bulk')` avec `selectAllMode` + `enableSelectAll` + `isSelectAllMode` |
+| `public/build/` | Assets compilés — **toujours reconstruire via `docker compose build`** |
 
 ### Tests
 | Fichier | Rôle |
 |---|---|
-| `tests/Feature/RoleAccessTest.php` | 403 settings pour viewer |
-| `tests/Feature/WebContactControllerTest.php` | CRUD contact Web |
-| `tests/Feature/WebCompanyControllerTest.php` | CRUD company Web |
-| `tests/Feature/WebDealControllerTest.php` | Edit + destroy + bulk deal |
 | `tests/Feature/BulkActionsTest.php` | Bulk delete × 3 entités + 403 viewer |
-| `tests/Feature/CustomFieldsWebTest.php` | Créer field → form → submit → persist → re-affichage |
-| `tests/Feature/CustomValueValidatorTest.php` | cast par type, clés inconnues, validation, intégration DB |
-| `tests/Feature/AiWebTest.php` | 8 endpoints IA Web, mock LlmService |
-| `tests/Feature/ActivityToggleTest.php` | Toggle done (owner / admin / 403 autre) |
-| `tests/Feature/ContactTimelineTest.php` | Onglet activité + store + affichage |
-| `tests/Feature/TrashRestoreTest.php` | Vue corbeille + restore × 3 entités + 403 viewer |
-| `tests/Feature/SortableIndexTest.php` | Tri asc/desc × 3 entités, fallback colonne invalide |
+| `tests/Feature/WebContactControllerTest.php` | CRUD contact Web |
+| `tests/Feature/ImportCustomFieldsTest.php` | custom_values écrits à l'import + cast types |
+| `tests/Feature/ImportRequiredFieldsTest.php` | Validation requis preview + store 422 |
+| `tests/Feature/ImportDuplicateStrategyTest.php` | skip/update/create + merge custom_values |
+| `tests/Feature/WebImportControllerTest.php` | Preview + store + duplicate_strategy |
 
 ---
 
 ## 4. Ce qui a échoué
 
 ### CSRF dans les tests AJAX Web
-**Tentative :** `postJson('/url')` → 419 car pas de token CSRF.
-**Tentative :** `withHeaders(['X-CSRF-TOKEN' => 'test'])` chaîné après `withCookies` → 302 (cookie JWT perdu dans la chaîne).
-**Tentative :** `$this->call('POST', $url, ['_token' => 'test'], [], [], ['CONTENT_TYPE' => 'application/json'])` → 419 car le corps JSON n'est pas parsé comme form data.
-**Ce qui fonctionne :** `->post($url, ['_token' => 'test'])` avec `withSession(['_token' => 'test'])` dans `withAuth()`. Le `_token` dans le corps form-encoded = CSRF passe.
+**Ce qui fonctionne :** `->post($url, ['_token' => 'test'])` avec `withSession(['_token' => 'test'])` dans `withAuth()`.
 
 ### `assertSee()` avec apostrophes dans les vues
-**Tentative :** `assertSee("Modifier l'entreprise")` → fail car Blade encode `'` en `&#039;`.
-**Solution :** `assertSeeText("Modifier l'entreprise")` (compare le texte décodé).
+**Solution :** `assertSeeText("Modifier l'entreprise")` (compare le texte décodé, pas le HTML encodé).
 
 ### `assertSame` sur custom_values numériques post-DB
-**Tentative :** `assertSame(7500.0, $contact->custom_values['budget'])` → fail car JSON round-trip transforme `7500.0` en `int(7500)`.
-**Solution :** `assertEquals(7500.0, ...)` pour les assertions post-DB (utilise `==` donc `7500.0 == 7500` = true). `assertSame` reste correct pour tester `cast()` directement (sans DB).
+**Solution :** `assertEquals(7500.0, ...)` — JSON round-trip transforme `7500.0` en `int(7500)`, `==` passe.
+
+### Bug cache custom fields à l'import (résolu v2.2)
+**Symptôme :** Custom fields mappés à l'import silencieusement ignorés en production, tests verts.
+**Cause :** `CustomValueValidator::cast()` appelle `CustomFieldRenderer::forEntity()` qui lit un cache Redis TTL 60s. Quand un `CustomField` était créé après la population du cache, `cast()` ne le voyait pas et droppait silencieusement la valeur. `ProcessCsvImport` lisait les clés directement en DB (correct) mais `cast()` lisait le cache (stale).
+**Pourquoi les tests passaient :** `Cache::flush()` dans le setUp des tests garantissait un cache frais.
+**Fix :** Model events `saved`/`deleted` sur `CustomField` → `Cache::forget("custom_fields.{$entity_type}")`.
 
 ---
 
-## 5. État du déploiement production (v2.0)
+## 5. État du déploiement production
 
-### Infrastructure déployée — VPS 51.38.99.226 (Ubuntu 22.04)
+### Infrastructure — VPS 51.38.99.226 (Ubuntu 22.04)
+**URL : https://crm.nana-intelligence.fr** (HTTPS Let's Encrypt via Caddy)
 
-**URL de production : https://crm.nana-intelligence.fr** (HTTPS Let's Encrypt via Caddy)
-
-#### Architecture VPS
-- Caddy Docker **partagé** sur le réseau `web` (`/home/jimmy/docker/docker-compose.yml`)
-- Repo CRM déployé dans : `/home/jimmy/crm-ultimate/`
+#### Architecture
+- Caddy Docker partagé sur réseau `web` (`/home/jimmy/docker/docker-compose.yml`)
+- Repo CRM : `/home/jimmy/crm-ultimate/`
 - Compose prod : `docker compose -f /home/jimmy/crm-ultimate/docker-compose.prod.yml`
 
-#### Conteneurs prod (tous `restart: unless-stopped`)
+#### Conteneurs prod
 | Conteneur | Image | Rôle |
 |---|---|---|
-| `crm-app` | `crm-ultimate-app` | **Nginx:8080 + PHP-FPM:9000** via supervisord |
-| `crm-queue` | `crm-ultimate-queue` | Worker queue Redis (`php artisan queue:work`) |
+| `crm-app` | `crm-ultimate-app` | Nginx:8080 + PHP-FPM:9000 via supervisord |
+| `crm-queue` | `crm-ultimate-queue` | Worker queue Redis |
 | `crm-postgres` | `postgres:17-alpine` | Base de données (volume `pgdata`) |
 | `crm-redis` | `redis:7-alpine` | Cache + sessions + queue |
 
-#### Stack serveur dans `crm-app`
-- **supervisord** (PID 1) gère Nginx et PHP-FPM dans le même conteneur
-- **Nginx** sert les assets statiques (`/build/` — cache 1 an) + fastcgi_pass vers PHP-FPM
-- **PHP-FPM** traite les requêtes PHP (user `www-data`)
-- Limite upload : `client_max_body_size 50m` (cohérent avec `upload_max_filesize = 50M` PHP)
+#### Procédure de redéploiement — IMPORTANT
+Le code PHP et les vues Blade sont **embarqués dans les images Docker** au moment du `build`.
+**Un simple SCP + `view:clear` ne met PAS à jour le code en production.**
 
-#### Fichiers d'infrastructure (tous commités sur master)
-| Fichier | Rôle |
-|---|---|
-| `docker/php/Dockerfile.prod` | Multi-stage : node-builder + php-builder + runtime (fpm-alpine + nginx + supervisor) |
-| `docker/nginx/default.conf` | Config Nginx Laravel (static assets + fastcgi) |
-| `docker/supervisord.conf` | Supervisord : php-fpm + nginx |
-| `docker-compose.prod.yml` | Réseau `web` externe + réseau `internal` privé |
-| `docker/caddy/Caddyfile` | Template Caddyfile (vrai fichier dans `/opt/caddy/config/`) |
-| `deploy.sh` | Script de redéploiement SFTP+Docker |
-| `config/app.php` | `asset_url` ajouté |
-| `bootstrap/app.php` | `trustProxies(at: '*')` pour HTTPS derrière Caddy |
+```bash
+# Workflow complet à chaque déploiement :
+# 1. Copier les fichiers modifiés sur le VPS (SCP ou via la session Claude Code)
+# 2. Rebuilder les images
+cd ~/crm-ultimate
+docker compose -f docker-compose.prod.yml build app queue
+docker compose -f docker-compose.prod.yml up -d app queue
+docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
+docker compose -f docker-compose.prod.yml exec -T app php artisan config:clear
+docker compose -f docker-compose.prod.yml exec -T app php artisan view:clear
+docker compose -f docker-compose.prod.yml exec -T app php artisan cache:clear
+```
 
-#### Variables `.env` sur le VPS (`/home/jimmy/crm-ultimate/.env`)
+#### Variables `.env` VPS
 ```
 APP_URL=https://crm.nana-intelligence.fr
 ASSET_URL=https://crm.nana-intelligence.fr
@@ -233,55 +262,67 @@ OPENROUTER_MODEL=anthropic/claude-haiku-4-5
 #### Compte admin de production
 ```
 Email    : admin@example.com
-Password : password   ← à changer après première connexion
-```
-
-#### Procédure de redéploiement (repo privé GitHub → SFTP)
-Le VPS n'a pas accès direct au repo GitHub. Workflow :
-1. `git push origin master` en local
-2. Upload SFTP des fichiers modifiés vers `/home/jimmy/crm-ultimate/`
-3. Sur le VPS : `docker compose -f /home/jimmy/crm-ultimate/docker-compose.prod.yml build && up -d`
-
-Pour automatiser avec deploy keys SSH :
-```bash
-# Sur le VPS :
-ssh-keygen -t ed25519 -C "crm-deploy" -f ~/.ssh/crm_deploy -N ""
-cat ~/.ssh/crm_deploy.pub
-# → copier dans GitHub > Settings > Deploy Keys
+Password : password   ← à changer
 ```
 
 #### Bug connu : `route:cache` et closure dans `routes/api.php`
-La route `Route::get('/', fn() => ...)` en ligne 23 de `api.php` est une closure.
-Laravel ne peut pas cacher les closures. Fix propre = déplacer ce endpoint dans un contrôleur.
-**Impact : nul sur le fonctionnement, léger sur la perf (routes non cachées = ~1-2ms par requête).**
+`Route::get('/', fn() => ...)` est une closure → Laravel refuse de cacher les routes.
+Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête).
 
 ---
 
-## 6. Prochaine session — Amélioration UX mapping import CSV
+## 6. Prochaine session — Intégration API Emelia
 
-### Problème identifié
-L'écran de mapping lors de l'import CSV est trop basique et peu intuitif :
-- Le mapping colonne CSV → champ CRM manque de clarté visuelle
-- Pas de prévisualisation des données pendant le mapping
-- Pas de détection automatique des colonnes
-- Pas de gestion des erreurs de mapping avant soumission
-- Pas de support des custom fields dans le mapping
+### Objectif
+Connecter le CRM Ultimate à **Emelia** (outil d'emailing cold outreach) pour :
+1. **Synchroniser les contacts** du CRM vers les campagnes Emelia
+2. **Retranscrire les activités** Emelia dans la timeline du contact CRM (emails envoyés, ouvertures, clics, réponses, désabonnements)
 
-### Fichiers clés à analyser en début de session
-| Fichier | Rôle |
+### Contexte Emelia
+- Emelia expose une **API REST** (docs : https://developer.emelia.io)
+- Authentification par **API Key** (header `Authorization: Bearer <key>`)
+- Principales ressources : `campaigns`, `contacts` (dans une campagne), `activities`/`events`
+- Les contacts Emelia sont liés à une campagne, pas à un carnet d'adresses global
+
+### Fonctionnalités à implémenter
+
+#### A. Synchronisation CRM → Emelia
+- Pouvoir **ajouter un contact CRM à une campagne Emelia** depuis la fiche contact (`/contacts/{id}`)
+- Bouton "Ajouter à une campagne Emelia" → modal : liste des campagnes actives + sélection
+- Mapping des champs CRM → payload Emelia (`email`, `firstName`, `lastName`, `companyName`, custom vars)
+- Résultat stocké dans `contact.emelia_contact_id` (nouvelle colonne à migrer) pour éviter les doublons
+
+#### B. Webhook Emelia → CRM (activités)
+- Emelia supporte les **webhooks** (événements : `email_sent`, `email_opened`, `email_clicked`, `email_replied`, `email_bounced`, `contact_unsubscribed`)
+- Créer un endpoint `POST /webhooks/emelia` (sans auth CSRF — middleware `api`)
+- Vérification HMAC signature ou secret partagé
+- Pour chaque événement : créer une `Activity` morphée sur le contact correspondant (via `emelia_contact_id` → retrouver le `Contact`)
+- Type d'activité à ajouter : `email_sent`, `email_opened`, etc.
+
+#### C. Affichage dans la timeline
+- La `<x-activity-timeline>` affiche déjà les activités — les événements Emelia apparaîtront automatiquement si stockés en `Activity`
+- Icônes spécifiques à ajouter dans `activity-timeline.blade.php` pour les types Emelia
+- Optionnel : indicateur "Dans campagne Emelia X" sur la fiche contact si `emelia_contact_id` non null
+
+### Fichiers à créer / modifier
+| Fichier | Action |
 |---|---|
-| `app/Http/Controllers/Web/ImportController.php` | Logique import CSV |
-| `resources/views/pages/imports/` | Vues mapping actuelles |
-| `routes/web.php` | Routes `/imports/*` |
-| `database/migrations/*import*` | Structure table imports si elle existe |
+| `database/migrations/*_add_emelia_fields_to_contacts.php` | `emelia_contact_id VARCHAR(255) NULL` sur `contacts` |
+| `app/Services/EmeliaService.php` | Client API Emelia (campaigns list, add contact, get events) |
+| `app/Http/Controllers/Web/EmeliaController.php` | `campaigns()` (JSON), `addContact()` |
+| `app/Http/Controllers/Webhook/EmeliaWebhookController.php` | `handle()` — reçoit les événements, crée Activity |
+| `routes/web.php` | `POST /contacts/{contact}/emelia` (ajouter à campagne) + `GET /emelia/campaigns` |
+| `routes/api.php` | `POST /webhooks/emelia` (sans CSRF) |
+| `resources/views/pages/contacts/show.blade.php` | Bouton + modal "Ajouter à une campagne Emelia" |
+| `resources/views/components/activity-timeline.blade.php` | Icônes types Emelia |
+| `.env` (VPS) | `EMELIA_API_KEY=...` |
 
-### Pistes d'amélioration à explorer
-- **Détection automatique** des colonnes CSV → champs CRM (matching par nom)
-- **Prévisualisation** des 3-5 premières lignes du CSV pendant le mapping
-- **Indicateurs visuels** : colonne mappée ✓ / non mappée / ignorée
-- **Support custom fields** dans les options de mapping
-- **Validation côté client** avant soumission (champs requis mappés ?)
-- **Gestion des doublons** : skip / update / créer quand même
+### Points d'attention
+- **API Key Emelia** : à récupérer dans les settings Emelia et à configurer dans `.env` VPS
+- **Webhook secret** : générer un secret aléatoire, le configurer dans Emelia ET dans `.env` (`EMELIA_WEBHOOK_SECRET`)
+- **Idempotence** : un même événement Emelia peut arriver plusieurs fois (retries) → vérifier `emelia_event_id` avant d'insérer l'Activity
+- **Contact non trouvé** : si le webhook arrive pour un email non présent en CRM → logger sans créer d'Activity (ne pas planter)
+- **Rate limit Emelia** : respecter les limites API (vérifier dans la doc Emelia)
 
 ---
 
@@ -292,3 +333,4 @@ L'écran de mapping lors de l'import CSV est trop basique et peu intuitif :
 - **Backup BDD** : script cron `pg_dump` quotidien → `/opt/backups/crm/` avec rotation 7 jours
 - **Closure route:cache** : déplacer `Route::get('/', fn()=>...)` dans `Api\InfoController`
 - **Mot de passe admin** : changer `password` par défaut en production
+- **Sélection globale companies/deals** : même pattern que contacts (toolbar "Tout sélectionner")
