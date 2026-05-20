@@ -76,10 +76,10 @@ Route::middleware('web.auth')->group(function () {
 
     // ─── Emelia ───────────────────────────────────────────────────────────────
     Route::get('/emelia/campaigns', [EmeliaController::class, 'campaigns'])->name('emelia.campaigns');
-    Route::post('/contacts/{contact}/emelia', [EmeliaController::class, 'addContact'])->name('contacts.emelia.add');
 
     // ─── Admin + Manager uniquement ──────────────────────────────────────────
     Route::middleware('role:admin,manager')->group(function () {
+        Route::post('/contacts/{contact}/emelia', [EmeliaController::class, 'addContact'])->name('contacts.emelia.add');
         Route::delete('/contacts/{contact}',  [ContactController::class, 'destroy']);
         Route::post('/contacts/bulk-destroy', [ContactController::class, 'bulkDestroy']);
         Route::delete('/companies/{company}', [CompanyController::class, 'destroy']);

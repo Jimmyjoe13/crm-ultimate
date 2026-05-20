@@ -11,6 +11,7 @@ et intégration d'outils tiers (Emelia emailing).
 **v2.0 :** Déploiement production stabilisé — Nginx+PHP-FPM, HTTPS assets, import CSV 50MB.
 **v2.1 :** Bug fix custom fields import + refonte UX import (stratégie doublons, validation requis, sélection globale contacts).
 **v2.2 :** Interface mapping style HubSpot — cartes enrichies, combobox searchable, panneau sticky, création propriété inline.
+**v2.3 :** Intégration Emelia — sync CRM→campagne, webhook events→timeline, contact léger auto sur orphelin.
 
 ---
 
@@ -113,8 +114,17 @@ et intégration d'outils tiers (Emelia emailing).
 - `GET /trash` : soft-deleted contacts / companies / deals (onglets Alpine)
 - Restauration `POST /*/restore` — admin/manager uniquement
 
+**Intégration Emelia (v2.3)**
+- `EmeliaService` : `listCampaigns()` + `addContactToCampaign()` (pattern identique à `LlmService`)
+- `EmeliaController` (Web) : `GET /emelia/campaigns` (JSON) + `POST /contacts/{contact}/emelia` (admin/manager)
+- `EmeliaWebhookController` : `POST /api/webhooks/emelia` — HMAC SHA256, idempotence via `external_id`, contact léger auto sur orphelin
+- 6 nouveaux types Activity : `email_sent/opened/clicked/replied/bounced/unsubscribed` — constantes + icônes timeline
+- Migrations : `emelia_contact_id` sur `contacts` + colonnes `source`/`external_id`/`metadata` sur `activities`
+- Modal Alpine sur fiche contact : fetch campagnes + POST add + badge si contact déjà dans Emelia
+- 19 nouveaux tests (webhook + service + controller) — **211 tests verts** au total
+
 ### Dernière action effectuée
-v2.2 — Interface mapping HubSpot, fix overflow dropdown, sélecteur entité modal, fix cache custom fields.
+v2.3 — Intégration Emelia complète : EmeliaService, webhook HMAC, modal contact, timeline enrichie.
 
 ---
 
@@ -271,58 +281,22 @@ Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête)
 
 ---
 
-## 6. Prochaine session — Intégration API Emelia
+## 6. Prochaine session — Backlog
 
-### Objectif
-Connecter le CRM Ultimate à **Emelia** (outil d'emailing cold outreach) pour :
-1. **Synchroniser les contacts** du CRM vers les campagnes Emelia
-2. **Retranscrire les activités** Emelia dans la timeline du contact CRM (emails envoyés, ouvertures, clics, réponses, désabonnements)
+### Fonctionnalités Emelia livrées (v2.3) ✓
+- Bouton + modal Alpine "Ajouter à campagne Emelia" sur la fiche contact
+- Webhook `POST /api/webhooks/emelia` avec HMAC + idempotence + contact léger auto
+- Timeline enrichie : 6 types email Emelia avec icônes distinctes
 
-### Contexte Emelia
-- Emelia expose une **API REST** (docs : https://developer.emelia.io)
-- Authentification par **API Key** (header `Authorization: Bearer <key>`)
-- Principales ressources : `campaigns`, `contacts` (dans une campagne), `activities`/`events`
-- Les contacts Emelia sont liés à une campagne, pas à un carnet d'adresses global
-
-### Fonctionnalités à implémenter
-
-#### A. Synchronisation CRM → Emelia
-- Pouvoir **ajouter un contact CRM à une campagne Emelia** depuis la fiche contact (`/contacts/{id}`)
-- Bouton "Ajouter à une campagne Emelia" → modal : liste des campagnes actives + sélection
-- Mapping des champs CRM → payload Emelia (`email`, `firstName`, `lastName`, `companyName`, custom vars)
-- Résultat stocké dans `contact.emelia_contact_id` (nouvelle colonne à migrer) pour éviter les doublons
-
-#### B. Webhook Emelia → CRM (activités)
-- Emelia supporte les **webhooks** (événements : `email_sent`, `email_opened`, `email_clicked`, `email_replied`, `email_bounced`, `contact_unsubscribed`)
-- Créer un endpoint `POST /webhooks/emelia` (sans auth CSRF — middleware `api`)
-- Vérification HMAC signature ou secret partagé
-- Pour chaque événement : créer une `Activity` morphée sur le contact correspondant (via `emelia_contact_id` → retrouver le `Contact`)
-- Type d'activité à ajouter : `email_sent`, `email_opened`, etc.
-
-#### C. Affichage dans la timeline
-- La `<x-activity-timeline>` affiche déjà les activités — les événements Emelia apparaîtront automatiquement si stockés en `Activity`
-- Icônes spécifiques à ajouter dans `activity-timeline.blade.php` pour les types Emelia
-- Optionnel : indicateur "Dans campagne Emelia X" sur la fiche contact si `emelia_contact_id` non null
-
-### Fichiers à créer / modifier
-| Fichier | Action |
-|---|---|
-| `database/migrations/*_add_emelia_fields_to_contacts.php` | `emelia_contact_id VARCHAR(255) NULL` sur `contacts` |
-| `app/Services/EmeliaService.php` | Client API Emelia (campaigns list, add contact, get events) |
-| `app/Http/Controllers/Web/EmeliaController.php` | `campaigns()` (JSON), `addContact()` |
-| `app/Http/Controllers/Webhook/EmeliaWebhookController.php` | `handle()` — reçoit les événements, crée Activity |
-| `routes/web.php` | `POST /contacts/{contact}/emelia` (ajouter à campagne) + `GET /emelia/campaigns` |
-| `routes/api.php` | `POST /webhooks/emelia` (sans CSRF) |
-| `resources/views/pages/contacts/show.blade.php` | Bouton + modal "Ajouter à une campagne Emelia" |
-| `resources/views/components/activity-timeline.blade.php` | Icônes types Emelia |
-| `.env` (VPS) | `EMELIA_API_KEY=...` |
-
-### Points d'attention
-- **API Key Emelia** : à récupérer dans les settings Emelia et à configurer dans `.env` VPS
-- **Webhook secret** : générer un secret aléatoire, le configurer dans Emelia ET dans `.env` (`EMELIA_WEBHOOK_SECRET`)
-- **Idempotence** : un même événement Emelia peut arriver plusieurs fois (retries) → vérifier `emelia_event_id` avant d'insérer l'Activity
-- **Contact non trouvé** : si le webhook arrive pour un email non présent en CRM → logger sans créer d'Activity (ne pas planter)
-- **Rate limit Emelia** : respecter les limites API (vérifier dans la doc Emelia)
+### À déployer en prod
+1. Ajouter dans `.env` VPS :
+   ```
+   EMELIA_API_KEY=<clé depuis app.emelia.io/settings>
+   EMELIA_WEBHOOK_SECRET=$(openssl rand -hex 32)
+   ```
+2. `docker compose -f docker-compose.prod.yml build app queue && up -d`
+3. `php artisan migrate --force`
+4. Configurer le webhook Emelia → `https://crm.nana-intelligence.fr/api/webhooks/emelia`
 
 ---
 

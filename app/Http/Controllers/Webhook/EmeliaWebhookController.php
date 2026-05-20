@@ -48,9 +48,10 @@ class EmeliaWebhookController extends Controller
             }
 
             $contact = Contact::create([
-                'email'               => $email,
-                'lifecycle_stage'     => 'lead',
-                'emelia_contact_id'   => $request->input('contact_id'),
+                'first_name'        => '',
+                'email'             => $email,
+                'lifecycle_stage'   => 'lead',
+                'emelia_contact_id' => $request->input('contact_id'),
             ]);
         } elseif ($request->input('contact_id') && ! $contact->emelia_contact_id) {
             $contact->update(['emelia_contact_id' => $request->input('contact_id')]);

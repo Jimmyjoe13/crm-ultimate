@@ -44,8 +44,7 @@ class EmeliaService
     {
         return Http::withToken($this->config['key'])
             ->withHeaders(['Accept' => 'application/json'])
-            ->timeout($this->config['timeout'] ?? 15)
-            ->retry(2, 200);
+            ->timeout($this->config['timeout'] ?? 15);
     }
 
     private function url(string $path): string
