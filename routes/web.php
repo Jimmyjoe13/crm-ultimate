@@ -4,6 +4,7 @@ use App\Http\Controllers\Web\AiController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\DealController;
+use App\Http\Controllers\Web\EmeliaController;
 use App\Http\Controllers\Web\PipelineController;
 use App\Http\Controllers\Web\ContactController;
 use App\Http\Controllers\Web\CompanyController;
@@ -72,6 +73,10 @@ Route::middleware('web.auth')->group(function () {
     Route::put('/segments/{segment}',        [SegmentController::class, 'update']);
     Route::delete('/segments/{segment}',     [SegmentController::class, 'destroy']);
     Route::get('/segments/{segment}/export', [SegmentController::class, 'export'])->name('segments.export');
+
+    // ─── Emelia ───────────────────────────────────────────────────────────────
+    Route::get('/emelia/campaigns', [EmeliaController::class, 'campaigns'])->name('emelia.campaigns');
+    Route::post('/contacts/{contact}/emelia', [EmeliaController::class, 'addContact'])->name('contacts.emelia.add');
 
     // ─── Admin + Manager uniquement ──────────────────────────────────────────
     Route::middleware('role:admin,manager')->group(function () {

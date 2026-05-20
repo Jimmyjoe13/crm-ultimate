@@ -88,19 +88,79 @@
 
     {{-- Contenu JSON score --}}
     <template x-if="content && content.score !== undefined">
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2.5">
             <div class="flex items-center gap-2">
                 <span class="num text-2xl font-bold" x-text="content.score"></span>
                 <span class="text-[11px] text-tertiary">/100</span>
-                <span class="chip ml-auto" style="font-size:10px;" x-text="content.trend"></span>
+                <span class="chip ml-auto" style="font-size:10px;"
+                      :class="content.trend === 'warming' ? 'ok' : (content.trend === 'cooling' ? 'err' : '')"
+                      x-text="content.trend === 'warming' ? 'Hausse ↗' : (content.trend === 'cooling' ? 'Baisse ↘' : 'Stable →')"></span>
             </div>
-            <div class="pbar accent" style="height:4px;"><div :style="'width:' + content.score + '%'"></div></div>
+            <div class="pbar" :class="content.score >= 70 ? 'ok' : (content.score >= 40 ? 'accent' : 'err')" style="height:4px;">
+                <div :style="'width:' + content.score + '%'"></div>
+            </div>
+            
+            {{-- Synthèse --}}
             <template x-if="content.reasons && content.reasons.length">
-                <ul class="flex flex-col gap-0.5 mt-1">
+                <ul class="flex flex-col gap-0.5 mt-0.5">
                     <template x-for="r in content.reasons">
                         <li class="text-[11.5px] text-secondary flex gap-1"><span>·</span><span x-text="r"></span></li>
                     </template>
                 </ul>
+            </template>
+
+            {{-- Green Flags --}}
+            <template x-if="content.green_flags && content.green_flags.length">
+                <div class="mt-1.5 pt-2 border-t border-default">
+                    <div class="mono-label text-[9.5px] text-ok font-semibold mb-1 flex items-center gap-1">
+                        <span class="chip-dot" style="background: var(--ok); width:5px; height:5px;"></span>
+                        Points forts
+                    </div>
+                    <ul class="flex flex-col gap-1">
+                        <template x-for="gf in content.green_flags">
+                            <li class="text-[11.5px] text-secondary flex items-start gap-1">
+                                <span class="text-ok">✓</span>
+                                <span x-text="gf"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+
+            {{-- Red Flags --}}
+            <template x-if="content.red_flags && content.red_flags.length">
+                <div class="mt-1.5 pt-2 border-t border-default">
+                    <div class="mono-label text-[9.5px] text-err font-semibold mb-1 flex items-center gap-1">
+                        <span class="chip-dot" style="background: var(--err); width:5px; height:5px;"></span>
+                        Risques
+                    </div>
+                    <ul class="flex flex-col gap-1">
+                        <template x-for="rf in content.red_flags">
+                            <li class="text-[11.5px] text-secondary flex items-start gap-1">
+                                <span class="text-err">⚠</span>
+                                <span x-text="rf"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+
+            {{-- Recommendations --}}
+            <template x-if="content.recommendations && content.recommendations.length">
+                <div class="mt-1.5 pt-2 border-t border-default">
+                    <div class="mono-label text-[9.5px] text-accent font-semibold mb-1 flex items-center gap-1">
+                        <span class="chip-dot" style="background: var(--accent); width:5px; height:5px;"></span>
+                        Actions conseillées
+                    </div>
+                    <ul class="flex flex-col gap-1">
+                        <template x-for="rec in content.recommendations">
+                            <li class="text-[11.5px] text-secondary flex items-start gap-1">
+                                <span class="text-accent">✦</span>
+                                <span x-text="rec"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
             </template>
         </div>
     </template>

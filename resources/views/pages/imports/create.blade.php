@@ -156,7 +156,7 @@
                                 {{-- Dropdown --}}
                                 <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                                      class="absolute z-50 mt-1 w-full rounded-xl border shadow-pop"
-                                     style="background:var(--surface);border-color:var(--border);max-height:320px;overflow:hidden;display:flex;flex-direction:column;">
+                                     style="background:var(--surface);border-color:var(--border);display:flex;flex-direction:column;">
 
                                     {{-- Search input --}}
                                     <div class="px-3 pt-3 pb-2 border-b" style="border-color:var(--borderS)">
@@ -174,7 +174,7 @@
                                     </div>
 
                                     {{-- Options list --}}
-                                    <div class="overflow-y-auto" style="max-height:248px;" :id="'dd_' + col.header">
+                                    <div class="overflow-y-auto" style="max-height:210px;" :id="'dd_' + col.header">
                                         {{-- None option --}}
                                         <div @click="mapping[col.header] = null; open = false; search = ''"
                                              class="flex items-center gap-2 px-3 py-2 cursor-pointer text-[12px] text-tertiary"
@@ -190,15 +190,15 @@
                                                 <template x-for="f in grp.fields" :key="f.key">
                                                     <div @click="mapping[col.header] = f.key; open = false; search = ''"
                                                          :id="'opt_' + col.header + '_' + f.key"
-                                                         class="flex items-center gap-2 px-3 py-2 cursor-pointer text-[12.5px]"
+                                                         class="flex items-center gap-2 px-3 py-2 cursor-pointer text-[12.5px] min-w-0"
                                                          :class="mapping[col.header] === f.key ? 'font-semibold' : 'hover:bg-[var(--surface2)]'">
                                                         <span x-html="typeIcon(f.field_type)" class="flex-shrink-0" style="width:13px;height:13px;color:var(--text3)"></span>
-                                                        <span class="flex-1 truncate" x-text="f.label"></span>
+                                                        <span class="truncate" style="flex:1;min-width:0" x-text="f.label"></span>
                                                         <template x-if="f.required">
-                                                            <span class="chip text-[9.5px] px-1.5" style="background:var(--err-soft);color:var(--err)">requis</span>
+                                                            <span class="chip text-[9.5px] px-1.5 flex-shrink-0" style="background:var(--err-soft);color:var(--err)">requis</span>
                                                         </template>
                                                         <template x-if="f.type === 'custom' && !f.required">
-                                                            <span class="chip text-[9.5px] px-1.5" style="background:var(--accent-soft);color:var(--accent)">custom</span>
+                                                            <span class="chip text-[9.5px] px-1.5 flex-shrink-0" style="background:var(--accent-soft);color:var(--accent)">✦</span>
                                                         </template>
                                                         <template x-if="mapping[col.header] === f.key">
                                                             <svg style="width:13px;height:13px;color:var(--accent);flex-shrink:0" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -399,6 +399,20 @@
             <label>Nom de la propriété *</label>
             <input type="text" x-model="$store.quickField.label" placeholder="ex: LinkedIn URL" class="field" @keydown.enter="$store.quickField.submit()">
         </div>
+        <div class="field mb-3">
+            <label>Propriété de</label>
+            <select x-model="$store.quickField.entityType" class="select-arrow">
+                <template x-if="$store.quickField.availableEntities.includes('contact')">
+                    <option value="contact">Contact</option>
+                </template>
+                <template x-if="$store.quickField.availableEntities.includes('company')">
+                    <option value="company">Société</option>
+                </template>
+                <template x-if="$store.quickField.availableEntities.includes('deal')">
+                    <option value="deal">Deal</option>
+                </template>
+            </select>
+        </div>
         <div class="field mb-4">
             <label>Type de champ</label>
             <select x-model="$store.quickField.fieldType" class="select-arrow">
@@ -429,6 +443,8 @@ document.addEventListener('alpine:init', () => {
         open: false,
         label: '',
         fieldType: 'text',
+        entityType: 'contact',
+        availableEntities: ['contact'],
         saving: false,
         error: null,
         _resolve: null,
@@ -439,6 +455,10 @@ document.addEventListener('alpine:init', () => {
             this.error = null;
             this.saving = false;
             this._resolve = resolve;
+            // Propose contact + company when importing contacts, otherwise just the current entity
+            const current = window._csvImporterEntityType ?? 'contact';
+            this.availableEntities = current === 'contact' ? ['contact', 'company'] : [current];
+            this.entityType = current;
             this.open = true;
         },
         close() {
@@ -454,12 +474,12 @@ document.addEventListener('alpine:init', () => {
                 const r = await fetch('/imports/quick-field', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf, 'X-Requested-With': 'XMLHttpRequest' },
-                    body: JSON.stringify({ entity_type: window._csvImporterEntityType, label: this.label, field_type: this.fieldType }),
+                    body: JSON.stringify({ entity_type: this.entityType, label: this.label, field_type: this.fieldType }),
                 });
                 const data = await r.json();
                 if (!r.ok) { this.error = data.message ?? 'Erreur'; return; }
                 this.open = false;
-                if (this._resolve) this._resolve(data);
+                if (this._resolve) this._resolve({ ...data, _createdEntityType: this.entityType });
             } catch { this.error = 'Erreur réseau.'; }
             finally { this.saving = false; }
         },
@@ -590,9 +610,14 @@ function csvImporter(initEntityType) {
         async openQuickField(header) {
             const field = await new Promise(resolve => Alpine.store('quickField').show(resolve, header));
             if (!field) return;
-            this.availableFields.push(field);
-            this.mapping[header] = field.key;
-            window.toast('Propriété "' + field.label + '" créée.', 'success');
+            const createdFor = field._createdEntityType;
+            // Only auto-map and add to dropdown if the field is for the current import entity
+            if (createdFor === this.entityType) {
+                this.availableFields.push(field);
+                this.mapping[header] = field.key;
+            }
+            const entityLabel = createdFor === 'company' ? 'Société' : (createdFor === 'deal' ? 'Deal' : 'Contact');
+            window.toast('Propriété "' + field.label + '" créée pour ' + entityLabel + '.', 'success');
         },
 
         // ── File handling ──

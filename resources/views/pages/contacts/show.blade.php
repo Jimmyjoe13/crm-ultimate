@@ -21,6 +21,12 @@
     @endif
     <div class="flex items-center gap-2 ml-auto">
         <a href="{{ '/contacts/' . $contact->id . '/edit' }}" class="btn ghost">Modifier</a>
+        <button type="button"
+                class="btn ghost"
+                style="color:var(--accent);"
+                @click="$dispatch('open-emelia-modal')">
+            📧 Emelia
+        </button>
         @if(in_array(auth()->user()?->role, ['admin','manager']))
         <form method="POST" action="{{ '/contacts/' . $contact->id }}"
               onsubmit="return confirm('Supprimer ce contact ? Cette action est irréversible.')">
@@ -143,6 +149,102 @@
         </div>
 
         <x-ai-insight-card endpoint="/web/ai/contact/{{ $contact->id }}/summarize" title="Brief IA" />
+
+        @if($contact->emelia_contact_id)
+        <div class="card p-4 flex items-center gap-2 text-sm">
+            <span>📧</span>
+            <span class="text-secondary">Dans une campagne Emelia</span>
+        </div>
+        @endif
+    </div>
+</div>
+
+{{-- Modal Emelia --}}
+<div x-data="{
+    open: false,
+    campaigns: [],
+    loading: false,
+    error: '',
+    selectedId: '',
+    submitting: false,
+    init() {
+        this.$el.addEventListener('open-emelia-modal', () => {
+            this.open = true;
+            if (!this.campaigns.length) this.fetchCampaigns();
+        });
+    },
+    fetchCampaigns() {
+        this.loading = true;
+        this.error = '';
+        fetch('/emelia/campaigns', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                this.campaigns = Array.isArray(data) ? data : (data.data ?? []);
+                this.loading = false;
+            })
+            .catch(() => {
+                this.error = 'Impossible de charger les campagnes.';
+                this.loading = false;
+            });
+    },
+    submit() {
+        if (!this.selectedId) return;
+        this.submitting = true;
+        fetch('/contacts/{{ $contact->id }}/emelia', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ campaign_id: this.selectedId }),
+        }).then(r => {
+            if (r.redirected) { window.location.href = r.url; return; }
+            return r.json();
+        }).then(() => {
+            window.location.reload();
+        }).catch(() => {
+            this.error = 'Une erreur est survenue.';
+            this.submitting = false;
+        });
+    }
+}"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center"
+     style="background: rgba(0,0,0,.45);"
+     @keydown.escape.window="open = false">
+    <div class="card p-6 w-full max-w-md" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold">Ajouter à une campagne Emelia</h2>
+            <button @click="open = false" class="btn ghost icon">
+                <svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div x-show="loading" class="py-6 text-center text-secondary text-sm">Chargement…</div>
+        <div x-show="error && !loading" class="py-3 text-center text-sm" style="color:var(--err)" x-text="error"></div>
+
+        <div x-show="!loading && !error">
+            <div x-show="!campaigns.length" class="py-4 text-center text-secondary text-sm">Aucune campagne active trouvée.</div>
+            <div x-show="campaigns.length" class="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
+                <template x-for="c in campaigns" :key="c.id ?? c._id">
+                    <label class="flex items-center gap-3 p-2.5 rounded cursor-pointer hover:bg-surface-alt"
+                           :class="{ 'ring-1 ring-accent': selectedId === (c.id ?? c._id) }">
+                        <input type="radio" name="emelia_campaign" :value="c.id ?? c._id" x-model="selectedId" class="accent-accent">
+                        <span class="text-sm" x-text="c.name ?? c.title ?? c.id ?? c._id"></span>
+                    </label>
+                </template>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button @click="open = false" class="btn ghost" :disabled="submitting">Annuler</button>
+                <button @click="submit()" class="btn primary" :disabled="!selectedId || submitting">
+                    <span x-show="!submitting">Ajouter →</span>
+                    <span x-show="submitting">Envoi…</span>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 

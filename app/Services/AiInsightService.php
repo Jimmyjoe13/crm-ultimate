@@ -154,11 +154,16 @@ class AiInsightService
         $user = match ($promptType) {
             'summarize'   => $context."\n\nGénère un brief synthétique de 4 à 6 lignes pour aider le commercial à reprendre ce dossier.",
             'next-action' => $context."\n\nSuggère la prochaine action commerciale concrète. Réponds UNIQUEMENT en JSON valide : {\"action\": \"...\", \"rationale\": \"...\", \"priority\": \"high\"}",
-            'score'       => $context."\n\nScore ce deal sur 100. Réponds UNIQUEMENT en JSON valide : {\"score\": 75, \"trend\": \"warming\", \"reasons\": [\"raison 1\"]}",
+            'score'       => $context."\n\nÉvalue la santé de ce deal. Donne un score sur 100, une tendance ('warming', 'cooling', 'stable'), des raisons clés, des points forts (green_flags), des risques ou points de vigilance (red_flags) et des recommandations d'action concrètes pour le commercial. Réponds UNIQUEMENT en JSON valide : {\"score\": 75, \"trend\": \"warming\", \"reasons\": [\"raison 1\"], \"green_flags\": [\"point fort 1\"], \"red_flags\": [\"point de vigilance 1\"], \"recommendations\": [\"recommandation 1\"]}",
             default       => $context,
         };
 
-        $options = $promptType !== 'summarize' ? ['max_tokens' => 300] : [];
+        $options = match ($promptType) {
+            'summarize'   => [],
+            'next-action' => ['max_tokens' => 300],
+            'score'       => ['max_tokens' => 600],
+            default       => [],
+        };
         $raw = $this->llm->complete($system, $user, $options);
 
         if (in_array($promptType, ['next-action', 'score'])) {

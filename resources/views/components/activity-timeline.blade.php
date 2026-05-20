@@ -39,8 +39,27 @@
 
     @forelse($activities as $activity)
     @php
-        $dot   = match($activity->type) { 'email' => 'info', 'call' => 'accent', default => '' };
-        $emoji = match($activity->type) { 'email' => '📧', 'call' => '📞', 'note' => '📝', 'task' => '✓', default => '➕' };
+        $dot = match($activity->type) {
+            'email'                               => 'info',
+            'call'                                => 'accent',
+            'email_sent', 'email_opened',
+            'email_clicked', 'email_replied'      => 'info',
+            'email_bounced', 'email_unsubscribed' => 'err',
+            default                               => '',
+        };
+        $emoji = match($activity->type) {
+            'email'               => '📧',
+            'call'                => '📞',
+            'note'                => '📝',
+            'task'                => '✓',
+            'email_sent'          => '📤',
+            'email_opened'        => '👁',
+            'email_clicked'       => '🔗',
+            'email_replied'       => '↩️',
+            'email_bounced'       => '⚠️',
+            'email_unsubscribed'  => '🚫',
+            default               => '➕',
+        };
         $isTask = $activity->type === 'task';
     @endphp
     <div class="tl-item"

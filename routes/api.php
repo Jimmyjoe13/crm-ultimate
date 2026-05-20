@@ -17,7 +17,12 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\SegmentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Webhook\EmeliaWebhookController;
 use Illuminate\Support\Facades\Route;
+
+// ─── Webhooks (sans JWT, sans CSRF) ──────────────────────────────────────────
+Route::post('/webhooks/emelia', [EmeliaWebhookController::class, 'handle'])
+    ->name('webhooks.emelia');
 
 Route::prefix('v1')->name('api.')->group(function (): void {
     Route::get('/', fn () => response()->json([

@@ -82,7 +82,17 @@ class AiWebTest extends TestCase
 
     public function test_deal_score_returns_json(): void
     {
-        $this->mockAi();
+        $this->mock(LlmService::class, function ($mock) {
+            $mock->shouldReceive('complete')->andReturn(json_encode([
+                'score' => 85,
+                'trend' => 'warming',
+                'reasons' => ['Bonne activité'],
+                'green_flags' => ['Contact engagé'],
+                'red_flags' => ['Pas de décideur'],
+                'recommendations' => ['Trouver le décideur']
+            ]));
+        });
+
         $user = $this->makeUser();
         $pipeline = Pipeline::create(['name' => 'Test3', 'is_default' => false]);
         $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
@@ -91,7 +101,19 @@ class AiWebTest extends TestCase
         $response = $this->withAuth($user)->aiPost('/web/ai/deal/' . $deal->id . '/score');
 
         $response->assertStatus(200);
-        $response->assertJsonStructure(['data', 'cached']);
+        $response->assertJsonStructure([
+            'data' => [
+                'score',
+                'trend',
+                'reasons',
+                'green_flags',
+                'red_flags',
+                'recommendations',
+            ],
+            'cached'
+        ]);
+        $response->assertJsonPath('data.score', 85);
+        $response->assertJsonPath('data.trend', 'warming');
     }
 
     public function test_contact_summarize_returns_json(): void

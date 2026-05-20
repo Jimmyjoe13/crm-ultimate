@@ -19,10 +19,25 @@ class Activity extends Model
 
     public const TYPE_EMAIL = 'email';
 
+    public const TYPE_EMAIL_SENT = 'email_sent';
+
+    public const TYPE_EMAIL_OPENED = 'email_opened';
+
+    public const TYPE_EMAIL_CLICKED = 'email_clicked';
+
+    public const TYPE_EMAIL_REPLIED = 'email_replied';
+
+    public const TYPE_EMAIL_BOUNCED = 'email_bounced';
+
+    public const TYPE_EMAIL_UNSUBSCRIBED = 'email_unsubscribed';
+
     protected $fillable = [
         'type',
+        'source',
+        'external_id',
         'title',
         'body',
+        'metadata',
         'status',
         'due_at',
         'completed_at',
@@ -36,6 +51,7 @@ class Activity extends Model
         return [
             'due_at' => 'datetime',
             'completed_at' => 'datetime',
+            'metadata' => 'array',
         ];
     }
 
