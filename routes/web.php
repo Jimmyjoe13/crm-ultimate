@@ -86,6 +86,7 @@ Route::middleware('web.auth')->group(function () {
         Route::post('/imports/preview',            [ImportController::class, 'preview']);
         Route::post('/imports',                    [ImportController::class, 'store']);
         Route::get('/imports/{id}/status',         [ImportController::class, 'status']);
+        Route::post('/imports/quick-field',        [ImportController::class, 'quickField']);
 
         Route::get('/settings/stages',           [StageController::class, 'index'])->name('stages.index');
         Route::post('/settings/stages',          [StageController::class, 'store']);

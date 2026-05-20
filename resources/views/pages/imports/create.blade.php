@@ -1,6 +1,6 @@
 <x-app-shell active="{{ $entityType === 'company' ? 'companies' : 'contacts' }}" breadcrumb="{{ $entityType === 'company' ? 'Entreprises' : 'Contacts' }} / Importer CSV">
 
-<div x-data="csvImporter('{{ $entityType }}')" class="px-7 pt-6 pb-12 max-w-3xl">
+<div x-data="csvImporter('{{ $entityType }}')" class="px-7 pt-6 pb-12">
 
     {{-- Header --}}
     <div class="flex items-center gap-3 mb-6">
@@ -17,7 +17,7 @@
     <x-import-stepper />
 
     {{-- ───── STEP 1: Upload ───── --}}
-    <div x-show="step === 1" class="card p-6">
+    <div x-show="step === 1" class="card p-6 max-w-xl">
         <div class="mono-label mb-4">Sélectionner le fichier CSV</div>
 
         <div class="field mb-4">
@@ -70,142 +70,275 @@
         </div>
     </div>
 
-    {{-- ───── STEP 2: Mapping ───── --}}
-    <div x-show="step === 2" class="flex flex-col gap-4">
+    {{-- ───── STEP 2: Mapping HubSpot-style ───── --}}
+    <div x-show="step === 2" class="flex gap-5 items-start">
 
-        {{-- Aperçu --}}
-        <div class="card p-5">
-            <div class="mono-label mb-1">Aperçu du fichier</div>
-            <div class="text-[11.5px] text-tertiary font-mono mb-3">
-                <span x-text="headers.length"></span> colonnes détectées ·
-                <span x-text="sampleRows.length"></span> lignes d'exemple
+        {{-- LEFT: Mapping cards --}}
+        <div class="flex flex-col gap-3 flex-1 min-w-0">
+
+            {{-- Info bar --}}
+            <div class="flex items-center justify-between">
+                <p class="text-[12.5px] text-secondary">
+                    Associez chaque colonne CSV à un champ CRM.
+                    <span class="font-mono"><span x-text="mappedCount()"></span> / <span x-text="columns.length"></span> colonnes mappées</span>
+                </p>
+                <span x-show="missingRequired().length > 0"
+                      class="chip err text-[11px]"
+                      x-text="'Requis manquants : ' + missingRequired().map(f => fieldLabel(f)).join(', ')"></span>
             </div>
-            <div class="overflow-x-auto rounded border border-default">
-                <table class="t text-[11.5px]">
-                    <thead>
-                        <tr>
-                            <template x-for="h in headers" :key="h">
-                                <th x-text="h" class="font-mono text-[11px]"></th>
-                            </template>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="(row, ri) in sampleRows" :key="ri">
-                            <tr>
-                                <template x-for="(cell, ci) in row" :key="ci">
-                                    <td x-text="cell || '—'" class="text-tertiary max-w-[120px] truncate"></td>
+
+            {{-- One card per CSV column --}}
+            <template x-for="col in columns" :key="col.header">
+                <div class="card p-4 transition-colors"
+                     :class="{
+                        'border border-[var(--ok)]'   : mappingState(col.header) === 'auto',
+                        'border border-[var(--info)]' : mappingState(col.header) === 'manual',
+                        'border border-[var(--err)]'  : mappingState(col.header) === 'missing-required',
+                        'opacity-60'                  : dontImport[col.header]
+                     }">
+                    <div class="flex items-start gap-3">
+
+                        {{-- Type icon --}}
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                             style="background:var(--surface2)">
+                            <span x-html="typeIcon(col.inferred_type)" class="text-tertiary" style="width:15px;height:15px;display:flex;"></span>
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            {{-- Header + badges --}}
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="font-medium text-[13px]" x-text="col.header"></span>
+                                <template x-if="mappingState(col.header) === 'auto'">
+                                    <span class="chip text-[10px] px-1.5" style="background:var(--ok-soft);color:var(--ok)">auto</span>
                                 </template>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
+                                <template x-if="mappingState(col.header) === 'manual'">
+                                    <span class="chip text-[10px] px-1.5" style="background:var(--info-soft);color:var(--info)">modifié</span>
+                                </template>
+                                <template x-if="mappingState(col.header) === 'missing-required'">
+                                    <span class="chip err text-[10px] px-1.5">requis !</span>
+                                </template>
+                                <template x-if="dontImport[col.header]">
+                                    <span class="chip text-[10px] px-1.5">ignoré</span>
+                                </template>
+                            </div>
+
+                            {{-- Sample values --}}
+                            <div class="flex flex-wrap gap-1 mb-3" x-show="col.samples.length > 0">
+                                <template x-for="(s, si) in col.samples.slice(0,4)" :key="si">
+                                    <span class="font-mono text-[11px] px-2 py-0.5 rounded" style="background:var(--surface2);color:var(--text2)" x-text="s"></span>
+                                </template>
+                                <template x-if="col.fill_rate < 80">
+                                    <span class="text-[10.5px] text-tertiary font-mono" x-text="col.fill_rate + '% rempli'"></span>
+                                </template>
+                            </div>
+
+                            {{-- Combobox --}}
+                            <div x-show="!dontImport[col.header]" class="relative" x-data="{ open: false, search: '' }" @keydown.escape="open=false" @click.outside="open=false">
+                                <div class="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer border"
+                                     :style="open ? 'border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)' : 'border-color:var(--border)'"
+                                     style="background:var(--surface);"
+                                     @click="open=!open; if(open) $nextTick(() => $refs['search_' + col.header]?.focus())">
+                                    <template x-if="mapping[col.header]">
+                                        <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                                            <span x-html="typeIcon(fieldType(mapping[col.header]))" class="flex-shrink-0" style="width:13px;height:13px;color:var(--accent)"></span>
+                                            <span class="text-[12.5px] font-medium truncate" x-text="fieldLabel(mapping[col.header])"></span>
+                                            <template x-if="fieldGroup(mapping[col.header]) === 'custom'">
+                                                <span class="chip text-[9.5px] px-1.5 flex-shrink-0" style="background:var(--accent-soft);color:var(--accent)">custom</span>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="!mapping[col.header]">
+                                        <span class="text-[12.5px] text-tertiary flex-1">— Ne pas importer —</span>
+                                    </template>
+                                    <svg class="flex-shrink-0 transition-transform" :class="open?'rotate-180':''" style="width:14px;height:14px;color:var(--text3)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                                </div>
+
+                                {{-- Dropdown --}}
+                                <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                     class="absolute z-50 mt-1 w-full rounded-xl border shadow-pop"
+                                     style="background:var(--surface);border-color:var(--border);max-height:320px;overflow:hidden;display:flex;flex-direction:column;">
+
+                                    {{-- Search input --}}
+                                    <div class="px-3 pt-3 pb-2 border-b" style="border-color:var(--borderS)">
+                                        <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg" style="background:var(--surface2)">
+                                            <svg style="width:13px;height:13px;color:var(--text3);flex-shrink:0" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                            <input :x-ref="'search_' + col.header"
+                                                   x-model="search"
+                                                   @click.stop
+                                                   @keydown.arrow-down.prevent="focusNext(col.header, 1)"
+                                                   @keydown.arrow-up.prevent="focusNext(col.header, -1)"
+                                                   @keydown.enter.prevent="selectFocused(col.header)"
+                                                   placeholder="Rechercher un champ…"
+                                                   class="text-[12px] bg-transparent outline-none flex-1" style="color:var(--text)">
+                                        </div>
+                                    </div>
+
+                                    {{-- Options list --}}
+                                    <div class="overflow-y-auto" style="max-height:248px;" :id="'dd_' + col.header">
+                                        {{-- None option --}}
+                                        <div @click="mapping[col.header] = null; open = false; search = ''"
+                                             class="flex items-center gap-2 px-3 py-2 cursor-pointer text-[12px] text-tertiary"
+                                             :class="!mapping[col.header] ? 'font-semibold' : 'hover:bg-[var(--surface2)]'">
+                                            <svg style="width:13px;height:13px;opacity:.4" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                                            Ne pas importer
+                                        </div>
+
+                                        {{-- Grouped fields --}}
+                                        <template x-for="grp in filteredGroups(search)" :key="grp.label">
+                                            <div>
+                                                <div class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide" style="color:var(--text3);background:var(--surface2)" x-text="grp.label"></div>
+                                                <template x-for="f in grp.fields" :key="f.key">
+                                                    <div @click="mapping[col.header] = f.key; open = false; search = ''"
+                                                         :id="'opt_' + col.header + '_' + f.key"
+                                                         class="flex items-center gap-2 px-3 py-2 cursor-pointer text-[12.5px]"
+                                                         :class="mapping[col.header] === f.key ? 'font-semibold' : 'hover:bg-[var(--surface2)]'">
+                                                        <span x-html="typeIcon(f.field_type)" class="flex-shrink-0" style="width:13px;height:13px;color:var(--text3)"></span>
+                                                        <span class="flex-1 truncate" x-text="f.label"></span>
+                                                        <template x-if="f.required">
+                                                            <span class="chip text-[9.5px] px-1.5" style="background:var(--err-soft);color:var(--err)">requis</span>
+                                                        </template>
+                                                        <template x-if="f.type === 'custom' && !f.required">
+                                                            <span class="chip text-[9.5px] px-1.5" style="background:var(--accent-soft);color:var(--accent)">custom</span>
+                                                        </template>
+                                                        <template x-if="mapping[col.header] === f.key">
+                                                            <svg style="width:13px;height:13px;color:var(--accent);flex-shrink:0" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        {{-- No results --}}
+                                        <template x-if="filteredGroups(search).every(g => g.fields.length === 0) && search">
+                                            <div class="px-3 py-4 text-center text-[12px] text-tertiary">Aucun champ trouvé</div>
+                                        </template>
+                                    </div>
+
+                                    {{-- Create custom field --}}
+                                    <div class="border-t px-3 py-2.5" style="border-color:var(--borderS)">
+                                        <button type="button" @click.stop="openQuickField(col.header)"
+                                                class="flex items-center gap-2 text-[12px] w-full rounded-lg px-2 py-1.5 hover:bg-[var(--surface2)] transition-colors"
+                                                style="color:var(--accent)">
+                                            <svg style="width:13px;height:13px" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                                            Créer une propriété personnalisée
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Don't import message --}}
+                            <div x-show="dontImport[col.header]" class="text-[12px] text-tertiary italic py-1">Cette colonne ne sera pas importée.</div>
+                        </div>
+
+                        {{-- Don't import toggle --}}
+                        <button type="button"
+                                @click="toggleDontImport(col.header)"
+                                class="flex-shrink-0 mt-0.5 rounded-lg p-1.5 transition-colors"
+                                :style="dontImport[col.header] ? 'color:var(--err);background:var(--err-soft)' : 'color:var(--text3)'"
+                                :title="dontImport[col.header] ? 'Réactiver' : 'Ne pas importer'"
+                                style="hover:background:var(--surface2)">
+                            <svg style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+            {{-- Back button --}}
+            <div class="pt-2">
+                <button @click="step = 1" class="btn">← Retour</button>
             </div>
         </div>
 
-        {{-- Mapping --}}
-        <div class="card p-5">
-            <div class="flex items-baseline justify-between mb-1">
-                <div class="mono-label">Mapping des colonnes</div>
-                <div class="text-[11px] font-mono text-tertiary">
-                    <span x-text="mappedCount()"></span> / <span x-text="headers.length"></span> mappées
+        {{-- RIGHT: Sticky panel --}}
+        <div class="w-72 flex-shrink-0" style="position:sticky;top:80px">
+
+            {{-- Progress card --}}
+            <div class="card p-4 mb-3">
+                <div class="mono-label mb-3">Progression</div>
+                <div class="flex items-end justify-between mb-1.5">
+                    <span class="text-[12px] text-secondary">Colonnes mappées</span>
+                    <span class="font-mono text-[13px] font-semibold"><span x-text="mappedCount()"></span> / <span x-text="columns.length"></span></span>
+                </div>
+                <div class="rounded-full h-1.5 mb-4" style="background:var(--surface2)">
+                    <div class="h-1.5 rounded-full transition-all duration-300"
+                         style="background:var(--accent)"
+                         :style="'width:' + (columns.length ? Math.round(mappedCount() / columns.length * 100) : 0) + '%'"></div>
+                </div>
+
+                {{-- Required fields checklist --}}
+                <div class="mono-label mb-2">Champs requis</div>
+                <div class="flex flex-col gap-1.5">
+                    <template x-for="rf in requiredFields" :key="rf">
+                        <div class="flex items-center gap-2 text-[12.5px]">
+                            <template x-if="isRequiredMapped(rf)">
+                                <svg style="width:14px;height:14px;color:var(--ok);flex-shrink:0" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                            </template>
+                            <template x-if="!isRequiredMapped(rf)">
+                                <svg style="width:14px;height:14px;color:var(--err);flex-shrink:0" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                            </template>
+                            <span :class="isRequiredMapped(rf) ? 'text-secondary' : 'font-medium'" :style="isRequiredMapped(rf) ? '' : 'color:var(--err)'" x-text="fieldLabel(rf)"></span>
+                        </div>
+                    </template>
+                    <template x-if="requiredFields.length === 0">
+                        <div class="text-[11.5px] text-tertiary">Aucun champ obligatoire</div>
+                    </template>
                 </div>
             </div>
-            <div class="text-[12px] text-secondary mb-4">
-                Associez chaque colonne CSV à un champ CRM.
-                <span class="font-medium" style="color:var(--err)" x-show="missingRequired().length > 0"
-                      x-text="'Champs requis manquants : ' + missingRequired().map(f => fieldLabel(f)).join(', ')"></span>
-            </div>
 
-            <div class="flex flex-col divide-y divide-[var(--border)]">
-                <template x-for="header in headers" :key="header">
-                    <div class="flex items-center gap-3 py-2.5">
-                        {{-- Colonne CSV --}}
-                        <div class="w-32 flex-shrink-0">
-                            <div class="font-mono text-[12px] truncate" x-text="header"></div>
-                            <div class="text-[10.5px] text-tertiary">CSV</div>
+            {{-- Duplicate strategy card --}}
+            <div class="card p-4 mb-3">
+                <div class="mono-label mb-3">Doublons</div>
+                <div class="flex flex-col gap-2.5">
+                    <label class="flex items-start gap-2.5 cursor-pointer">
+                        <input type="radio" x-model="duplicateStrategy" value="skip" class="mt-0.5 flex-shrink-0">
+                        <div>
+                            <div class="text-[12.5px] font-medium">Ignorer</div>
+                            <div class="text-[11px] text-tertiary">Conserve la fiche existante</div>
                         </div>
-                        {{-- Flèche --}}
-                        <svg class="ic flex-shrink-0" style="width:14px;height:14px;color:var(--text3);" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                        {{-- Select champ CRM --}}
-                        <select class="select-arrow text-[12px] flex-1"
-                                :value="mapping[header] ?? ''"
-                                @change="mapping[header] = $event.target.value || null">
-                            <option value="">— Ignorer —</option>
-                            <template x-for="f in availableFields" :key="f.key">
-                                <option :value="f.key"
-                                        :selected="mapping[header] === f.key"
-                                        x-text="f.label + (f.type === 'custom' ? ' ✦' : '') + (f.required ? ' *' : '')"></option>
-                            </template>
-                        </select>
-                        {{-- Badge état --}}
-                        <div class="w-24 flex-shrink-0 text-right">
-                            <template x-if="mappingState(header) === 'auto'">
-                                <span class="chip text-[10.5px] px-2" style="background:var(--ok-soft);color:var(--ok)">auto</span>
-                            </template>
-                            <template x-if="mappingState(header) === 'manual'">
-                                <span class="chip text-[10.5px] px-2" style="background:var(--info-soft);color:var(--info)">manuel</span>
-                            </template>
-                            <template x-if="mappingState(header) === 'ignored'">
-                                <span class="chip text-[10.5px] px-2">ignoré</span>
-                            </template>
-                            <template x-if="mappingState(header) === 'missing-required'">
-                                <span class="chip err text-[10.5px] px-2">requis !</span>
-                            </template>
+                    </label>
+                    <label class="flex items-start gap-2.5 cursor-pointer">
+                        <input type="radio" x-model="duplicateStrategy" value="update" class="mt-0.5 flex-shrink-0">
+                        <div>
+                            <div class="text-[12.5px] font-medium">Mettre à jour</div>
+                            <div class="text-[11px] text-tertiary">Écrase les champs existants</div>
                         </div>
-                    </div>
-                </template>
+                    </label>
+                    <label class="flex items-start gap-2.5 cursor-pointer">
+                        <input type="radio" x-model="duplicateStrategy" value="create" class="mt-0.5 flex-shrink-0">
+                        <div>
+                            <div class="text-[12.5px] font-medium">Créer quand même</div>
+                            <div class="text-[11px] text-tertiary">Insère même si doublon</div>
+                        </div>
+                    </label>
+                </div>
             </div>
 
-            <div class="text-[11px] text-tertiary font-mono mt-3">✦ champ personnalisé · * obligatoire</div>
-        </div>
-
-        {{-- Stratégie doublons --}}
-        <div class="card p-5">
-            <div class="mono-label mb-3">Si la ligne existe déjà</div>
-            <div class="flex flex-col gap-2.5 text-[13px]">
-                <label class="flex items-start gap-2 cursor-pointer">
-                    <input type="radio" x-model="duplicateStrategy" value="skip" class="mt-0.5">
-                    <div>
-                        <div class="font-medium">Ignorer <span class="chip text-[10.5px] ml-1">défaut</span></div>
-                        <div class="text-[11.5px] text-tertiary">La ligne existante n'est pas modifiée</div>
-                    </div>
-                </label>
-                <label class="flex items-start gap-2 cursor-pointer">
-                    <input type="radio" x-model="duplicateStrategy" value="update" class="mt-0.5">
-                    <div>
-                        <div class="font-medium">Mettre à jour</div>
-                        <div class="text-[11.5px] text-tertiary">Les champs de la ligne CSV écrasent les valeurs existantes</div>
-                    </div>
-                </label>
-                <label class="flex items-start gap-2 cursor-pointer">
-                    <input type="radio" x-model="duplicateStrategy" value="create" class="mt-0.5">
-                    <div>
-                        <div class="font-medium">Créer quand même</div>
-                        <div class="text-[11.5px] text-tertiary">Insère une nouvelle ligne même si un doublon existe</div>
-                    </div>
-                </label>
-            </div>
-        </div>
-
-        <div class="flex justify-between gap-2">
-            <button @click="step = 1" class="btn">← Retour</button>
+            {{-- Launch button --}}
             <button @click="launchImport()"
                     :disabled="!canSubmit() || importing"
-                    :title="missingRequired().length ? 'Champs requis non mappés : ' + missingRequired().map(f => fieldLabel(f)).join(', ') : ''"
-                    class="btn primary">
+                    class="btn primary w-full"
+                    :title="missingRequired().length ? 'Requis non mappés : ' + missingRequired().map(f => fieldLabel(f)).join(', ') : ''">
                 <span x-show="!importing">Lancer l'import →</span>
                 <span x-show="importing">Lancement…</span>
             </button>
+
+            <p class="text-[11px] text-tertiary text-center mt-2 font-mono">
+                Les colonnes ignorées ne seront pas importées
+            </p>
         </div>
     </div>
 
     {{-- ───── STEP 3: Progress / Done ───── --}}
-    <div x-show="step === 3" class="card p-8 text-center">
+    <div x-show="step === 3" class="card p-8 text-center max-w-xl">
         <template x-if="jobStatus === 'pending' || jobStatus === 'processing'">
             <div>
                 <div class="text-4xl mb-3">⏳</div>
                 <div class="font-semibold mb-1">Import en cours…</div>
                 <div class="text-sm text-secondary font-mono" x-text="jobProgress"></div>
+                <div class="mt-4 rounded-full h-1.5" style="background:var(--surface2)">
+                    <div class="h-1.5 rounded-full transition-all duration-500 pbar accent"
+                         :style="'width:' + importPercent + '%'"></div>
+                </div>
             </div>
         </template>
         <template x-if="jobStatus === 'completed' || jobStatus === 'completed_with_errors'">
@@ -235,7 +368,6 @@
             <div>
                 <div class="text-4xl mb-3">❌</div>
                 <div class="font-semibold mb-2">Échec de l'import</div>
-                <div class="text-[12px] text-secondary font-mono">Voir les erreurs ci-dessous</div>
                 <template x-if="jobErrors.length > 0">
                     <div class="text-left mt-4 text-[11.5px] font-mono text-[var(--err)] bg-[var(--surface2)] rounded p-3 max-h-32 overflow-auto">
                         <template x-for="(e, ei) in jobErrors.slice(0,10)" :key="ei">
@@ -250,8 +382,92 @@
 
 </div>
 
+{{-- Modal "Créer une propriété" --}}
+<div x-data x-show="$store.quickField.open"
+     x-transition:enter="transition ease-out duration-150"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);display:none">
+    <div class="card p-6 w-96" @click.stop x-transition:enter="transition ease-out duration-150" x-transition:enter-start="scale-95 opacity-0" x-transition:enter-end="scale-100 opacity-100">
+        <div class="flex items-center justify-between mb-4">
+            <div class="font-semibold text-[14px]">Nouvelle propriété personnalisée</div>
+            <button @click="$store.quickField.close()" class="btn ghost icon sm">
+                <svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="field mb-3">
+            <label>Nom de la propriété *</label>
+            <input type="text" x-model="$store.quickField.label" placeholder="ex: LinkedIn URL" class="field" @keydown.enter="$store.quickField.submit()">
+        </div>
+        <div class="field mb-4">
+            <label>Type de champ</label>
+            <select x-model="$store.quickField.fieldType" class="select-arrow">
+                <option value="text">Texte</option>
+                <option value="number">Nombre</option>
+                <option value="date">Date</option>
+                <option value="boolean">Oui / Non</option>
+                <option value="select">Liste de choix</option>
+            </select>
+        </div>
+        <template x-if="$store.quickField.error">
+            <div class="chip err px-3 py-2 rounded-lg mb-3 text-sm" x-text="$store.quickField.error"></div>
+        </template>
+        <div class="flex justify-end gap-2">
+            <button @click="$store.quickField.close()" class="btn">Annuler</button>
+            <button @click="$store.quickField.submit()" :disabled="$store.quickField.saving" class="btn primary">
+                <span x-show="!$store.quickField.saving">Créer</span>
+                <span x-show="$store.quickField.saving">Création…</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+// ── Alpine store for the quick-create field modal ──
+document.addEventListener('alpine:init', () => {
+    Alpine.store('quickField', {
+        open: false,
+        label: '',
+        fieldType: 'text',
+        saving: false,
+        error: null,
+        _resolve: null,
+
+        show(resolve, defaultLabel = '') {
+            this.label = defaultLabel;
+            this.fieldType = 'text';
+            this.error = null;
+            this.saving = false;
+            this._resolve = resolve;
+            this.open = true;
+        },
+        close() {
+            this.open = false;
+            if (this._resolve) this._resolve(null);
+        },
+        async submit() {
+            if (!this.label.trim()) { this.error = 'Le nom est requis.'; return; }
+            this.saving = true;
+            this.error = null;
+            try {
+                const xsrf = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
+                const r = await fetch('/imports/quick-field', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf, 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ entity_type: window._csvImporterEntityType, label: this.label, field_type: this.fieldType }),
+                });
+                const data = await r.json();
+                if (!r.ok) { this.error = data.message ?? 'Erreur'; return; }
+                this.open = false;
+                if (this._resolve) this._resolve(data);
+            } catch { this.error = 'Erreur réseau.'; }
+            finally { this.saving = false; }
+        },
+    });
+});
+
 function csvImporter(initEntityType) {
+    window._csvImporterEntityType = initEntityType;
     return {
         step: 1,
         entityType: initEntityType,
@@ -262,49 +478,57 @@ function csvImporter(initEntityType) {
 
         // Step 2 data
         previewToken: null,
-        headers: [],
-        sampleRows: [],
-        availableFields: [],
+        columns: [],          // [{header, samples, fill_rate, inferred_type}]
+        availableFields: [],  // [{key, label, type, group, field_type, required}]
         requiredFields: [],
-        mapping: {},
-        autoMapping: {},   // snapshot of server auto_mapping for state detection
+        mapping: {},          // {csvHeader: fieldKey|null}
+        autoMapping: {},
+        dontImport: {},       // {csvHeader: bool}
         duplicateStrategy: 'skip',
         importing: false,
+        _focusedOption: null, // for keyboard nav
 
         // Step 3 data
         jobId: null,
         jobStatus: null,
         jobProgress: '',
         jobErrors: [],
+        importPercent: 0,
         pollTimer: null,
 
-        // ── State helpers ──
+        // ── Computed helpers ──
+
+        get headers() { return this.columns.map(c => c.header); },
 
         mappingState(header) {
+            if (this.dontImport[header]) return 'ignored';
             const val = this.mapping[header];
             if (!val) {
-                // Is this header required?
-                const autoVal = this.autoMapping[header];
-                if (autoVal && this.requiredFields.includes(autoVal)) return 'missing-required';
-                // Check if the column was originally auto-mapped to a required field
+                if (this.requiredFields.includes(this.autoMapping[header])) return 'missing-required';
                 return 'ignored';
             }
-            if (this.requiredFields.includes(val) && !val) return 'missing-required';
+            if (this.requiredFields.includes(val)) {
+                // it's mapped to a required field — good or missing?
+            }
             if (this.autoMapping[header] === val) return 'auto';
             return 'manual';
         },
 
         missingRequired() {
-            const mapped = Object.values(this.mapping).filter(Boolean);
+            const mapped = Object.entries(this.mapping)
+                .filter(([h, v]) => v && !this.dontImport[h])
+                .map(([, v]) => v);
             return this.requiredFields.filter(f => !mapped.includes(f));
         },
 
-        canSubmit() {
-            return this.missingRequired().length === 0 && !this.importing;
+        isRequiredMapped(rf) {
+            return Object.entries(this.mapping).some(([h, v]) => v === rf && !this.dontImport[h]);
         },
 
+        canSubmit() { return this.missingRequired().length === 0 && !this.importing; },
+
         mappedCount() {
-            return Object.values(this.mapping).filter(Boolean).length;
+            return Object.entries(this.mapping).filter(([h, v]) => v && !this.dontImport[h]).length;
         },
 
         fieldLabel(key) {
@@ -312,18 +536,69 @@ function csvImporter(initEntityType) {
             return f ? f.label : key;
         },
 
+        fieldType(key) {
+            const f = this.availableFields.find(f => f.key === key);
+            return f ? f.field_type : 'text';
+        },
+
+        fieldGroup(key) {
+            const f = this.availableFields.find(f => f.key === key);
+            return f ? f.group : 'standard';
+        },
+
+        filteredGroups(search) {
+            const s = (search || '').toLowerCase();
+            const groups = [
+                { label: 'Champs standard', key: 'standard' },
+                { label: 'Société liée', key: 'company' },
+                { label: 'Propriétés personnalisées', key: 'custom' },
+            ];
+            return groups.map(g => ({
+                label: g.label,
+                fields: this.availableFields.filter(f =>
+                    f.group === g.key &&
+                    (!s || f.label.toLowerCase().includes(s) || f.key.toLowerCase().includes(s))
+                ),
+            }));
+        },
+
+        typeIcon(type) {
+            const icons = {
+                email:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:100%;height:100%"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
+                phone:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:100%;height:100%"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l1.02-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+                date:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:100%;height:100%"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+                number:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:100%;height:100%"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
+                url:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:100%;height:100%"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+                boolean: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:100%;height:100%"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="3"/></svg>',
+                select:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:100%;height:100%"><path d="M3 6h18M3 12h18M3 18h9"/></svg>',
+                text:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:100%;height:100%"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+            };
+            return icons[type] || icons.text;
+        },
+
+        toggleDontImport(header) {
+            this.dontImport[header] = !this.dontImport[header];
+        },
+
+        focusNext(header, dir) {
+            // Keyboard nav placeholder — actual implementation via DOM traversal
+        },
+        selectFocused(header) {
+            // Keyboard nav placeholder
+        },
+
+        async openQuickField(header) {
+            const field = await new Promise(resolve => Alpine.store('quickField').show(resolve, header));
+            if (!field) return;
+            this.availableFields.push(field);
+            this.mapping[header] = field.key;
+            window.toast('Propriété "' + field.label + '" créée.', 'success');
+        },
+
         // ── File handling ──
 
-        handleDrop(e) {
-            this.dragging = false;
-            const f = e.dataTransfer.files[0];
-            if (f) this.file = f;
-        },
-
-        handleFile(e) {
-            this.file = e.target.files[0] || null;
-        },
-
+        handleDrop(e) { this.dragging = false; const f = e.dataTransfer.files[0]; if (f) this.file = f; },
+        handleFile(e) { this.file = e.target.files[0] || null; },
         formatSize(bytes) {
             if (bytes < 1024) return bytes + ' o';
             if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko';
@@ -336,11 +611,9 @@ function csvImporter(initEntityType) {
             if (!this.file) return;
             this.uploading = true;
             this.uploadError = null;
-
             const fd = new FormData();
             fd.append('entity_type', this.entityType);
             fd.append('file', this.file);
-
             try {
                 const xsrf = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
                 const r = await fetch('/imports/preview', {
@@ -348,25 +621,19 @@ function csvImporter(initEntityType) {
                     headers: { 'X-XSRF-TOKEN': xsrf, 'X-Requested-With': 'XMLHttpRequest' },
                     body: fd,
                 });
-                if (!r.ok) {
-                    const e = await r.json();
-                    this.uploadError = e.message ?? 'Erreur lors de l\'analyse.';
-                    return;
-                }
+                if (!r.ok) { const e = await r.json(); this.uploadError = e.message ?? 'Erreur lors de l\'analyse.'; return; }
                 const data = await r.json();
                 this.previewToken    = data.preview_token;
-                this.headers         = data.headers;
-                this.sampleRows      = data.sample_rows;
+                this.columns         = data.columns ?? data.headers.map(h => ({ header: h, samples: [], fill_rate: 0, inferred_type: 'text' }));
                 this.availableFields = data.available_fields;
                 this.requiredFields  = data.required_fields ?? [];
                 this.autoMapping     = { ...data.auto_mapping };
                 this.mapping         = { ...data.auto_mapping };
+                this.dontImport      = {};
+                window._csvImporterEntityType = this.entityType;
                 this.step = 2;
-            } catch (e) {
-                this.uploadError = 'Erreur réseau.';
-            } finally {
-                this.uploading = false;
-            }
+            } catch { this.uploadError = 'Erreur réseau.'; }
+            finally { this.uploading = false; }
         },
 
         // ── Step 2 → 3 ──
@@ -378,40 +645,31 @@ function csvImporter(initEntityType) {
                 return;
             }
             this.importing = true;
+            // Strip dontImport columns from mapping
+            const cleanMapping = {};
+            for (const [h, v] of Object.entries(this.mapping)) {
+                if (!this.dontImport[h] && v) cleanMapping[h] = v;
+            }
             try {
                 const xsrf = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
                 const r = await fetch('/imports', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-XSRF-TOKEN': xsrf,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: JSON.stringify({
-                        entity_type:        this.entityType,
-                        preview_token:      this.previewToken,
-                        mapping:            this.mapping,
-                        duplicate_strategy: this.duplicateStrategy,
-                    }),
+                    headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf, 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ entity_type: this.entityType, preview_token: this.previewToken, mapping: cleanMapping, duplicate_strategy: this.duplicateStrategy }),
                 });
                 const data = await r.json();
                 if (!r.ok) {
-                    if (data.missing) {
-                        window.toast('Champs requis : ' + data.missing.map(f => this.fieldLabel(f)).join(', '), 'error');
-                    } else {
-                        window.toast(data.message ?? 'Erreur lors du lancement.', 'error');
-                    }
+                    if (data.missing) window.toast('Champs requis : ' + data.missing.map(f => this.fieldLabel(f)).join(', '), 'error');
+                    else window.toast(data.message ?? 'Erreur lors du lancement.', 'error');
                     return;
                 }
                 this.jobId = data.id;
                 this.jobStatus = 'pending';
+                this.importPercent = 0;
                 this.step = 3;
                 this.pollStatus();
-            } catch(e) {
-                window.toast('Erreur réseau.', 'error');
-            } finally {
-                this.importing = false;
-            }
+            } catch { window.toast('Erreur réseau.', 'error'); }
+            finally { this.importing = false; }
         },
 
         // ── Polling ──
@@ -419,32 +677,25 @@ function csvImporter(initEntityType) {
         async pollStatus() {
             if (!this.jobId) return;
             try {
-                const r = await fetch('/imports/' + this.jobId + '/status', {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
+                const r = await fetch('/imports/' + this.jobId + '/status', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 const d = await r.json();
                 const prevStatus = this.jobStatus;
                 this.jobErrors = d.errors ?? [];
-
                 if (d.total_rows > 0) {
+                    this.importPercent = Math.round((d.processed_rows ?? 0) / d.total_rows * 100);
                     this.jobProgress = (d.processed_rows ?? 0) + ' / ' + d.total_rows + ' lignes'
                         + (d.duplicates_skipped > 0 ? ' · ' + d.duplicates_skipped + ' doublons ignorés' : '')
                         + (d.failed_rows > 0 ? ' · ' + d.failed_rows + ' erreur(s)' : '');
                 } else {
                     this.jobProgress = 'En attente…';
                 }
-
                 this.jobStatus = d.status;
-
                 if ((d.status === 'completed' || d.status === 'completed_with_errors') && prevStatus !== d.status) {
                     window.toast('Import terminé ! ' + this.jobProgress, d.status === 'completed' ? 'success' : 'warning');
                 } else if (d.status === 'failed' && prevStatus !== 'failed') {
                     window.toast('Échec de l\'import.', 'error');
                 }
-            } catch(e) {
-                // ignore transient errors
-            }
-
+            } catch { /* ignore transient */ }
             if (this.jobStatus === 'pending' || this.jobStatus === 'processing') {
                 this.pollTimer = setTimeout(() => this.pollStatus(), 1500);
             }
@@ -452,20 +703,12 @@ function csvImporter(initEntityType) {
 
         resetWizard() {
             clearTimeout(this.pollTimer);
-            this.step = 1;
-            this.file = null;
-            this.previewToken = null;
-            this.headers = [];
-            this.sampleRows = [];
-            this.availableFields = [];
-            this.requiredFields = [];
-            this.autoMapping = {};
-            this.mapping = {};
-            this.duplicateStrategy = 'skip';
-            this.jobId = null;
-            this.jobStatus = null;
-            this.jobProgress = '';
-            this.jobErrors = [];
+            Object.assign(this, {
+                step: 1, file: null, previewToken: null, columns: [], availableFields: [],
+                requiredFields: [], autoMapping: {}, mapping: {}, dontImport: {},
+                duplicateStrategy: 'skip', jobId: null, jobStatus: null,
+                jobProgress: '', jobErrors: [], importPercent: 0,
+            });
         },
     };
 }

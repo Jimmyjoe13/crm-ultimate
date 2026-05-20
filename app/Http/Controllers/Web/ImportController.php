@@ -14,6 +14,13 @@ use Illuminate\Validation\Rule;
 
 class ImportController extends Controller
 {
+    private const CORE_FIELD_TYPES = [
+        'email' => 'email', 'phone' => 'phone', 'website' => 'url',
+        '__company_website' => 'url', '__company_domain' => 'url',
+        'close_date' => 'date', 'amount' => 'number',
+        'owner_id' => 'number', 'pipeline_id' => 'number', 'pipeline_stage_id' => 'number',
+    ];
+
     private const CORE_FIELD_LABELS = [
         'contact' => [
             'first_name'        => 'Prénom',
@@ -107,18 +114,33 @@ class ImportController extends Controller
             $rawHeaders[0] = preg_replace('/^\xEF\xBB\xBF/', '', $rawHeaders[0]);
         }
         $sampleRows = [];
-        for ($i = 0; $i < 5 && ($row = fgetcsv($handle)) !== false; $i++) {
+        for ($i = 0; $i < 10 && ($row = fgetcsv($handle)) !== false; $i++) {
             $sampleRows[] = $row;
         }
         fclose($handle);
 
+        // Per-column metadata: up to 5 non-empty samples + fill rate + inferred type
+        $columns = [];
+        foreach ($rawHeaders as $idx => $header) {
+            $vals = array_filter(array_map(fn($r) => $r[$idx] ?? null, $sampleRows), fn($v) => $v !== null && $v !== '');
+            $samples = array_values(array_slice(array_unique($vals), 0, 5));
+            $fillRate = count($sampleRows) > 0 ? (int) round(count($vals) / count($sampleRows) * 100) : 0;
+            $columns[] = [
+                'header'        => $header,
+                'samples'       => $samples,
+                'fill_rate'     => $fillRate,
+                'inferred_type' => $this->inferColumnType($samples),
+            ];
+        }
+
         return response()->json([
             'preview_token'   => $path,
             'headers'         => $rawHeaders,
+            'columns'         => $columns,
             'auto_mapping'    => $this->buildAutoMapping($rawHeaders, $data['entity_type']),
             'available_fields'=> $this->buildAvailableFields($data['entity_type']),
             'required_fields' => self::REQUIRED_FIELDS[$data['entity_type']],
-            'sample_rows'     => $sampleRows,
+            'sample_rows'     => array_slice($sampleRows, 0, 5),
         ]);
     }
 
@@ -160,6 +182,41 @@ class ImportController extends Controller
         ProcessCsvImport::dispatch($job->id, $newPath);
 
         return response()->json(['id' => $job->id, 'status' => 'pending'], 202);
+    }
+
+    public function quickField(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'entity_type' => ['required', 'in:contact,company,deal'],
+            'label'       => ['required', 'string', 'max:100'],
+            'field_type'  => ['required', 'in:text,number,date,boolean,select'],
+        ]);
+
+        $key = Str::slug($data['label'], '_');
+        // Ensure uniqueness
+        $base = $key;
+        $i = 2;
+        while (CustomField::query()->where('entity_type', $data['entity_type'])->where('key', $key)->exists()) {
+            $key = $base . '_' . $i++;
+        }
+
+        $cf = CustomField::query()->create([
+            'entity_type' => $data['entity_type'],
+            'key'         => $key,
+            'label'       => $data['label'],
+            'field_type'  => $data['field_type'],
+            'is_required' => false,
+            'position'    => 999,
+        ]);
+
+        return response()->json([
+            'key'        => $cf->key,
+            'label'      => $cf->label,
+            'type'       => 'custom',
+            'group'      => 'custom',
+            'field_type' => $cf->field_type,
+            'required'   => false,
+        ], 201);
     }
 
     public function status(int $id): JsonResponse
@@ -241,21 +298,44 @@ class ImportController extends Controller
         $required = self::REQUIRED_FIELDS[$entityType];
         $fields = [];
         foreach (self::CORE_FIELD_LABELS[$entityType] ?? [] as $key => $label) {
+            $group = str_starts_with($key, '__company_') ? 'company' : 'standard';
             $fields[] = [
-                'key'      => $key,
-                'label'    => $label,
-                'type'     => 'core',
-                'required' => in_array($key, $required, true),
+                'key'        => $key,
+                'label'      => $label,
+                'type'       => 'core',
+                'group'      => $group,
+                'field_type' => self::CORE_FIELD_TYPES[$key] ?? 'text',
+                'required'   => in_array($key, $required, true),
             ];
         }
-        foreach (CustomField::query()->where('entity_type', $entityType)->orderBy('position')->get(['key', 'label', 'is_required']) as $cf) {
+        foreach (CustomField::query()->where('entity_type', $entityType)->orderBy('position')->get() as $cf) {
             $fields[] = [
-                'key'      => $cf->key,
-                'label'    => $cf->label,
-                'type'     => 'custom',
-                'required' => (bool) $cf->is_required,
+                'key'        => $cf->key,
+                'label'      => $cf->label,
+                'type'       => 'custom',
+                'group'      => 'custom',
+                'field_type' => $cf->field_type,
+                'required'   => (bool) $cf->is_required,
             ];
         }
         return $fields;
+    }
+
+    private function inferColumnType(array $samples): string
+    {
+        if (empty($samples)) return 'text';
+        $emailRx  = '/^[^\s@]+@[^\s@]+\.[^\s@]+$/';
+        $phoneRx  = '/^[\+\d\s\(\)\-\.]{7,20}$/';
+        $dateRx   = '/^\d{1,4}[\-\/\.]\d{1,2}[\-\/\.]\d{2,4}$/';
+        $numRx    = '/^-?\d+([.,]\d+)?$/';
+        $urlRx    = '/^https?:\/\//i';
+        foreach ([
+            'email' => $emailRx, 'phone' => $phoneRx, 'url' => $urlRx,
+            'date' => $dateRx,   'number' => $numRx,
+        ] as $type => $rx) {
+            $matches = count(array_filter($samples, fn($s) => preg_match($rx, trim($s))));
+            if ($matches >= max(1, ceil(count($samples) * 0.6))) return $type;
+        }
+        return 'text';
     }
 }
