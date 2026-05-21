@@ -34,6 +34,10 @@ Route::middleware('web.auth')->group(function () {
     Route::put('/deals/{deal}',       [DealController::class, 'update']);
     Route::post('/deals/{deal}/won',  [DealController::class, 'markWon'])->name('deals.won');
     Route::post('/deals/{deal}/lost', [DealController::class, 'markLost'])->name('deals.lost');
+    Route::post('/deals/{deal}/contacts', [DealController::class, 'attachContact'])->name('deals.contacts.attach');
+    Route::delete('/deals/{deal}/contacts/{contact}', [DealController::class, 'detachContact'])->name('deals.contacts.detach');
+    Route::post('/deals/{deal}/companies', [DealController::class, 'attachCompany'])->name('deals.companies.attach');
+    Route::delete('/deals/{deal}/companies/{company}', [DealController::class, 'detachCompany'])->name('deals.companies.detach');
 
     Route::get('/pipeline',  [PipelineController::class, 'index'])->name('pipeline.index');
 
@@ -76,6 +80,7 @@ Route::middleware('web.auth')->group(function () {
 
     // ─── Emelia ───────────────────────────────────────────────────────────────
     Route::get('/emelia/campaigns', [EmeliaController::class, 'campaigns'])->name('emelia.campaigns');
+    Route::get('/contacts/{contact}/emelia/status', [EmeliaController::class, 'status'])->name('contacts.emelia.status');
 
     // ─── Admin + Manager uniquement ──────────────────────────────────────────
     Route::middleware('role:admin,manager')->group(function () {

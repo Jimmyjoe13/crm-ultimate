@@ -29,15 +29,40 @@ class EmeliaService
         return $response->json() ?? [];
     }
 
+    public function findCampaign(string $id): ?array
+    {
+        $all = $this->listCampaigns();
+        $campaigns = $all['campaigns'] ?? $all;
+
+        foreach ($campaigns as $c) {
+            if (($c['_id'] ?? $c['id'] ?? '') === $id) {
+                return $c;
+            }
+        }
+
+        return null;
+    }
+
     public function addContactToCampaign(string $campaignId, array $payload): array
     {
-        $response = $this->http()->post($this->url("/campaigns/{$campaignId}/contacts"), $payload);
+        $response = $this->http()
+            ->timeout(30)
+            ->retry(2, 1000)
+            ->post($this->url('/graphql'), [
+                'query' => 'mutation AddContact($id: ID!, $contact: JSON!) { addContactToCampaignHook(id: $id, contact: $contact) }',
+                'variables' => ['id' => $campaignId, 'contact' => $payload],
+            ]);
 
         if ($response->failed()) {
             throw new RuntimeException('Emelia addContact failed: '.$response->body());
         }
 
-        return $response->json() ?? [];
+        $json = $response->json();
+        if (! empty($json['errors'])) {
+            throw new RuntimeException('Emelia addContact failed: '.$json['errors'][0]['message']);
+        }
+
+        return ['id' => $json['data']['addContactToCampaignHook'] ?? null];
     }
 
     private function http()

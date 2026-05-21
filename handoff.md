@@ -11,7 +11,8 @@ et intégration d'outils tiers (Emelia emailing).
 **v2.0 :** Déploiement production stabilisé — Nginx+PHP-FPM, HTTPS assets, import CSV 50MB.
 **v2.1 :** Bug fix custom fields import + refonte UX import (stratégie doublons, validation requis, sélection globale contacts).
 **v2.2 :** Interface mapping style HubSpot — cartes enrichies, combobox searchable, panneau sticky, création propriété inline.
-**v2.3 :** Intégration Emelia — sync CRM→campagne, webhook events→timeline, contact léger auto sur orphelin.
+**v2.3 :** Intégration Emelia — sync CRM→campagne via GraphQL, webhook events→timeline, contact léger auto sur orphelin, sync manuelle 1062 contacts.
+**v2.4 (prochaine) :** Auto-synchronisation Emelia — détecter quels contacts CRM sont dans quelles campagnes sans intervention manuelle.
 
 ---
 
@@ -115,16 +116,26 @@ et intégration d'outils tiers (Emelia emailing).
 - Restauration `POST /*/restore` — admin/manager uniquement
 
 **Intégration Emelia (v2.3)**
-- `EmeliaService` : `listCampaigns()` + `addContactToCampaign()` (pattern identique à `LlmService`)
-- `EmeliaController` (Web) : `GET /emelia/campaigns` (JSON) + `POST /contacts/{contact}/emelia` (admin/manager)
-- `EmeliaWebhookController` : `POST /api/webhooks/emelia` — HMAC SHA256, idempotence via `external_id`, contact léger auto sur orphelin
-- 6 nouveaux types Activity : `email_sent/opened/clicked/replied/bounced/unsubscribed` — constantes + icônes timeline
-- Migrations : `emelia_contact_id` sur `contacts` + colonnes `source`/`external_id`/`metadata` sur `activities`
-- Modal Alpine sur fiche contact : fetch campagnes + POST add + badge si contact déjà dans Emelia
-- 19 nouveaux tests (webhook + service + controller) — **211 tests verts** au total
+- `EmeliaService` : `listCampaigns()` + `findCampaign()` + `addContactToCampaign()` via **GraphQL** (pas REST — voir §4)
+- `EmeliaController` (Web) : `GET /emelia/campaigns` + `POST /contacts/{contact}/emelia` + `GET /contacts/{contact}/emelia/status`
+- `EmeliaWebhookController` : `POST /api/webhooks/emelia` — HMAC SHA256 optionnel, idempotence `external_id`, contact léger auto sur orphelin
+- 6 types Activity : `email_sent/opened/clicked/replied/bounced/unsubscribed` — events UPPERCASE (`SENT`, `OPENED`, `FIRST_OPEN`…)
+- Migrations : `emelia_contact_id` + `emelia_campaign_id` + `emelia_campaign_name` sur `contacts` + `source`/`external_id`/`metadata` sur `activities`
+- Modal Alpine fiche contact : fetch campagnes + POST add + badge + panel stats (sent/opened/clicked…)
+- Artisan `emelia:sync-campaign {campaign_id} {--dry-run} {--only-linked}` — sync en masse CRM→Emelia
+- **Sync prod exécutée (2026-05-21) :** campagne `69eb1cca5033df0a8663a88e` ("acquisition-agence-marketing") — 1062 contacts CRM traités : 1052 déjà dans la campagne Emelia (skip + champs CRM mis à jour), 10 nouvellement ajoutés, 0 erreurs
+- 19 tests (webhook + service + controller) — **211 tests verts** au total
+
+### Découverte API Emelia importante
+- `POST /campaigns/{id}/contacts` **n'existe pas** dans l'API REST Emelia → répond "Cannot POST" (404 Express)
+- La bonne méthode : **GraphQL mutation** `addContactToCampaignHook(id: ID!, contact: JSON!) → ID!`
+- La mutation retourne l'`_id` Emelia du contact créé
+- La mutation n'est **pas idempotente** — retourne `"This contact is already included in this campaign"` si déjà présent
+- `GET /campaigns` (REST) fonctionne correctement pour lister les campagnes
+- Introspection GraphQL désactivée en prod (`__schema` bloqué) — mais les erreurs de validation révèlent les champs
 
 ### Dernière action effectuée
-v2.3 — Intégration Emelia complète : EmeliaService, webhook HMAC, modal contact, timeline enrichie.
+v2.3 — Sync manuelle 1062 contacts CRM → campagne Emelia "acquisition-agence-marketing" via `emelia:sync-campaign`.
 
 ---
 
@@ -223,6 +234,22 @@ v2.3 — Intégration Emelia complète : EmeliaService, webhook HMAC, modal cont
 **Pourquoi les tests passaient :** `Cache::flush()` dans le setUp des tests garantissait un cache frais.
 **Fix :** Model events `saved`/`deleted` sur `CustomField` → `Cache::forget("custom_fields.{$entity_type}")`.
 
+### API Emelia REST `POST /campaigns/{id}/contacts` inexistante (résolu v2.3)
+**Symptôme :** 100% des contacts échouaient avec `"Cannot POST /campaigns/..."` (Express 404).
+**Cause :** Cet endpoint REST n'existe pas dans l'API Emelia. Documenté nulle part.
+**Fix :** Utiliser la mutation GraphQL `addContactToCampaignHook(id: ID!, contact: JSON!)` sur `/graphql`.
+**La mutation n'est pas idempotente** — si le contact est déjà dans la campagne : `RuntimeException("This contact is already included...")`. Géré dans `EmeliaSyncCampaign` : `str_contains($e->getMessage(), 'already included')` → skip + update champs CRM sans compter comme erreur.
+
+### `subject_type` polymorphique doit être un FQCN (résolu v2.3)
+**Symptôme :** 500 sur le dashboard après les premiers webhooks Emelia.
+**Cause :** `Activity::create(['subject_type' => 'contact', ...])` stocke une string. Laravel's `morphTo()` tente d'instancier `Class "contact"` → fatal error. Toutes les requêtes qui eager-load `Activity::with(['subject'])` (dont `DashboardController`) plantaient.
+**Fix :** `'subject_type' => Contact::class` (= `'App\Models\Contact'`). Corriger les enregistrements corrompus en base : `UPDATE activities SET subject_type = 'App\Models\Contact' WHERE source = 'emelia' AND subject_type = 'contact'`.
+
+### Events Emelia sont en UPPERCASE sans préfixe (résolu v2.3)
+**Symptôme :** Webhooks reçus mais aucune Activity créée (retour 422).
+**Cause :** Le code matchait `'email_sent'`, `'email_opened'`… mais Emelia envoie `SENT`, `OPENED`, `FIRST_OPEN`.
+**Fix :** `match(strtoupper($request->input('event', '')))` avec les deux formes dans les cases.
+
 ---
 
 ## 5. État du déploiement production
@@ -281,22 +308,75 @@ Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête)
 
 ---
 
-## 6. Prochaine session — Backlog
+## 6. Prochaine session — v2.4 : Auto-synchronisation Emelia
 
-### Fonctionnalités Emelia livrées (v2.3) ✓
-- Bouton + modal Alpine "Ajouter à campagne Emelia" sur la fiche contact
-- Webhook `POST /api/webhooks/emelia` avec HMAC + idempotence + contact léger auto
-- Timeline enrichie : 6 types email Emelia avec icônes distinctes
+### Objectif
+Détecter automatiquement quels contacts CRM sont présents dans quelles campagnes Emelia, **sans intervention manuelle**. Aujourd'hui la sync est lancée à la main via artisan. Demain elle doit se déclencher périodiquement.
 
-### À déployer en prod
-1. Ajouter dans `.env` VPS :
-   ```
-   EMELIA_API_KEY=<clé depuis app.emelia.io/settings>
-   EMELIA_WEBHOOK_SECRET=$(openssl rand -hex 32)
-   ```
-2. `docker compose -f docker-compose.prod.yml build app queue && up -d`
-3. `php artisan migrate --force`
-4. Configurer le webhook Emelia → `https://crm.nana-intelligence.fr/api/webhooks/emelia`
+### Ce qui existe déjà (v2.3) ✓
+- Commande `php artisan emelia:sync-campaign {campaign_id} {--dry-run}` — sync fiable en prod
+- GraphQL `addContactToCampaignHook(id, contact)` → fonctionne + idempotence gérée côté CRM
+- Webhook `POST /api/webhooks/emelia` — reçoit les events mais **non configuré dans l'UI Emelia** (pas d'API pour ça)
+- Champs `emelia_campaign_id`, `emelia_campaign_name`, `emelia_contact_id` sur `contacts`
+
+### Ce qu'il faut implémenter
+
+#### Option A — Scheduled command (recommandée)
+Créer un `Kernel.php` schedule ou utiliser `bootstrap/app.php` (Laravel 11) pour planifier la sync :
+```php
+// bootstrap/app.php (pattern Laravel 11)
+$schedule->command('emelia:sync-campaign 69eb1cca5033df0a8663a88e --only-linked')
+         ->daily()
+         ->withoutOverlapping();
+```
+- `--only-linked` : ne retraite que les contacts déjà liés (économie d'API)
+- La commande est idempotente : passer un contact déjà dans la campagne = skip silencieux
+
+**Nouveau flag utile à créer : `--campaigns=all`** (sync toutes les campagnes actives automatiquement) :
+```bash
+php artisan emelia:sync-all-campaigns   # nouveau artisan qui liste via GET /campaigns
+                                        # puis appelle sync-campaign pour chacune
+```
+
+#### Option B — Job Queue déclenché par webhook
+À chaque webhook Emelia reçu, déclencher un job `SyncEmeliaCampaignJob` qui met à jour les champs du contact. Avantage : temps réel. Inconvénient : dépend du webhook Emelia configuré.
+
+**Blocker** : Le webhook Emelia ne peut pas être configuré via API (pas d'endpoint de création). Il faut le faire à la main dans l'UI Emelia → `https://app.emelia.io` → Settings → Webhooks :
+```
+URL     : https://crm.nana-intelligence.fr/api/webhooks/emelia
+Events  : tous (SENT, OPENED, CLICKED, REPLIED, BOUNCED, UNSUBSCRIBED)
+Secret  : (laisser vide ou utiliser la valeur de EMELIA_WEBHOOK_SECRET dans .env)
+```
+
+#### Option C — Hybrid (recommandée pour v2.4)
+1. Scheduled daily sync pour les campagnes connues (via les IDs stockés dans `.env` ou une table config)
+2. Webhook pour les events temps réel (si configuré dans Emelia UI)
+3. Un bouton "Synchroniser maintenant" dans les Settings du CRM → déclenche le job
+
+### Limite API Emelia confirmée
+- **Impossible de lister les contacts D'UNE campagne** via l'API Emelia (REST ou GraphQL) — `GET /campaigns/{id}/contacts` = 404, GraphQL `campaign.contacts` = champ invalide
+- La seule façon de savoir si un contact est dans une campagne = tenter de l'y ajouter (idempotent côté CRM)
+- Alternative : `GET /contact_lists` pour lister les listes de contacts, mais les listes n'exposent pas non plus leurs contacts
+
+### Fichiers à créer/modifier pour v2.4
+| Fichier | Action |
+|---|---|
+| `app/Console/Commands/EmeliaSyncAllCampaigns.php` | Nouveau — liste les campagnes Emelia puis sync chacune |
+| `bootstrap/app.php` | Ajouter `$schedule->command('emelia:sync-all-campaigns')->daily()` |
+| `app/Jobs/SyncEmeliaCampaignJob.php` | Optionnel — version async de la sync |
+| `resources/views/pages/settings/*.blade.php` | Bouton "Sync Emelia maintenant" |
+
+### Variables `.env` prod actuelles (Emelia)
+```
+EMELIA_API_KEY=5jwwzTUNnb0IrdDEJtMVe1D0h8nsOgECa07X73IJsLozKq6U   ← configuré ✓
+EMELIA_WEBHOOK_SECRET=bc36d8f114a744e03e578c1b4f9380fbe416de780da2a8c4cebb271ee7a5d08e   ← configuré ✓
+EMELIA_BASE_URL=https://api.emelia.io   ← configuré ✓
+```
+
+### Campagnes Emelia connues
+| Campaign ID | Nom | Contacts Emelia |
+|---|---|---|
+| `69eb1cca5033df0a8663a88e` | acquisition-agence-marketing | ~1062 (syncs 2026-05-21) |
 
 ---
 
@@ -308,3 +388,4 @@ Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête)
 - **Closure route:cache** : déplacer `Route::get('/', fn()=>...)` dans `Api\InfoController`
 - **Mot de passe admin** : changer `password` par défaut en production
 - **Sélection globale companies/deals** : même pattern que contacts (toolbar "Tout sélectionner")
+- **Webhook Emelia** : configurer manuellement dans UI Emelia → `https://crm.nana-intelligence.fr/api/webhooks/emelia`

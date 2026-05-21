@@ -7,23 +7,19 @@ use App\Models\Activity;
 use App\Models\Contact;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 
 class EmeliaWebhookController extends Controller
 {
     public function handle(Request $request)
     {
-        // 1. Vérification signature HMAC
-        $secret = config('services.emelia.webhook_secret');
+        // 1. Vérification signature HMAC (optionnelle : Emelia n'envoie le header que si configuré)
+        $secret    = config('services.emelia.webhook_secret');
+        $signature = $request->header('X-Emelia-Signature');
 
-        if (empty($secret)) {
-            throw new RuntimeException('EMELIA_WEBHOOK_SECRET not configured.');
+        if ($signature !== null && ! empty($secret)) {
+            $expected = hash_hmac('sha256', $request->getContent(), $secret);
+            abort_unless(hash_equals($expected, $signature), 401, 'Invalid signature.');
         }
-
-        $expected = hash_hmac('sha256', $request->getContent(), $secret);
-        $received = $request->header('X-Emelia-Signature', '');
-
-        abort_unless(hash_equals($expected, $received), 401, 'Invalid signature.');
 
         // 2. Idempotence — ignorer les doublons
         $eventId = $request->input('event_id');
@@ -57,15 +53,15 @@ class EmeliaWebhookController extends Controller
             $contact->update(['emelia_contact_id' => $request->input('contact_id')]);
         }
 
-        // 5. Mapping événement → type Activity
-        $type = match ($request->input('event')) {
-            'email_sent'           => Activity::TYPE_EMAIL_SENT,
-            'email_opened'         => Activity::TYPE_EMAIL_OPENED,
-            'email_clicked'        => Activity::TYPE_EMAIL_CLICKED,
-            'email_replied'        => Activity::TYPE_EMAIL_REPLIED,
-            'email_bounced'        => Activity::TYPE_EMAIL_BOUNCED,
-            'contact_unsubscribed' => Activity::TYPE_EMAIL_UNSUBSCRIBED,
-            default                => null,
+        // 5. Mapping événement → type Activity (Emelia envoie des noms UPPERCASE sans préfixe)
+        $type = match (strtoupper($request->input('event', ''))) {
+            'SENT', 'EMAIL_SENT'                                    => Activity::TYPE_EMAIL_SENT,
+            'OPENED', 'FIRST_OPEN', 'EMAIL_OPENED'                  => Activity::TYPE_EMAIL_OPENED,
+            'CLICKED', 'EMAIL_CLICKED'                              => Activity::TYPE_EMAIL_CLICKED,
+            'REPLIED', 'EMAIL_REPLIED'                              => Activity::TYPE_EMAIL_REPLIED,
+            'BOUNCED', 'EMAIL_BOUNCED'                              => Activity::TYPE_EMAIL_BOUNCED,
+            'UNSUBSCRIBED', 'CONTACT_UNSUBSCRIBED', 'EMAIL_UNSUBSCRIBED' => Activity::TYPE_EMAIL_UNSUBSCRIBED,
+            default                                                 => null,
         };
 
         if ($type === null) {
@@ -79,7 +75,7 @@ class EmeliaWebhookController extends Controller
             'type'         => $type,
             'source'       => 'emelia',
             'external_id'  => $eventId,
-            'subject_type' => 'contact',
+            'subject_type' => Contact::class,
             'subject_id'   => $contact->id,
             'title'        => $request->input('subject', ucfirst(str_replace('_', ' ', $type))),
             'body'         => $request->input('preview', ''),

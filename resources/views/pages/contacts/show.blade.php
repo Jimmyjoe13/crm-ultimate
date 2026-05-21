@@ -5,9 +5,14 @@
     $color    = \App\Helpers\Avatar::color($fullName ?: $contact->email);
     $initials = \App\Helpers\Avatar::initials($fullName ?: $contact->email);
     $company  = $contact->companies->first();
+
+    $defaultDealName = '[Titre à remplir] - ' . ($fullName ?: $contact->email);
+    if ($company) {
+        $defaultDealName .= ' de ' . $company->name;
+    }
 @endphp
 
-<div class="px-7 pt-6 pb-3 flex items-center gap-4">
+<div class="px-7 pt-6 pb-3 flex items-center gap-4" x-data>
     <a href="{{ '/contacts' }}" class="btn ghost icon">
         <svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </a>
@@ -20,13 +25,11 @@
     <span class="chip ml-2">{{ $contact->lifecycle_stage }}</span>
     @endif
     <div class="flex items-center gap-2 ml-auto">
-        <a href="{{ '/contacts/' . $contact->id . '/edit' }}" class="btn ghost">Modifier</a>
-        <button type="button"
-                class="btn ghost"
-                style="color:var(--accent);"
-                @click="$dispatch('open-emelia-modal')">
-            📧 Emelia
+        <button type="button" class="btn primary" @click="$dispatch('open-create-deal-modal')">
+            <svg class="ic" style="stroke-width: 2;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Créer un deal
         </button>
+        <a href="{{ '/contacts/' . $contact->id . '/edit' }}" class="btn ghost">Modifier</a>
         @if(in_array(auth()->user()?->role, ['admin','manager']))
         <form method="POST" action="{{ '/contacts/' . $contact->id }}"
               onsubmit="return confirm('Supprimer ce contact ? Cette action est irréversible.')">
@@ -150,40 +153,127 @@
 
         <x-ai-insight-card endpoint="/web/ai/contact/{{ $contact->id }}/summarize" title="Brief IA" />
 
-        @if($contact->emelia_contact_id)
-        <div class="card p-4 flex items-center gap-2 text-sm">
-            <span>📧</span>
-            <span class="text-secondary">Dans une campagne Emelia</span>
+        {{-- Panneau Emelia --}}
+        <div class="card p-4"
+             x-data="{
+                 status: null,
+                 loading: true,
+                 init() {
+                     fetch('/contacts/{{ $contact->id }}/emelia/status', {
+                         credentials: 'same-origin',
+                         headers: { 'Accept': 'application/json' }
+                     })
+                     .then(r => r.json())
+                     .then(d => { this.status = d; this.loading = false; })
+                     .catch(() => { this.loading = false; });
+                 }
+             }">
+            <div class="mono-label mb-3">📧 Emelia</div>
+
+            <div x-show="loading" class="text-xs text-secondary">Chargement…</div>
+
+            {{-- Pas dans Emelia --}}
+            <template x-if="!loading && status && !status.in_emelia">
+                <div>
+                    <p class="text-xs text-secondary mb-3 leading-relaxed">
+                        Ce contact n'est pas encore dans une campagne Emelia.
+                    </p>
+                    @if(in_array(auth()->user()?->role, ['admin','manager']))
+                    <button class="btn ghost w-full text-xs"
+                            @click="$dispatch('open-emelia-modal')">
+                        Ajouter à une campagne →
+                    </button>
+                    @endif
+                </div>
+            </template>
+
+            {{-- Dans Emelia --}}
+            <template x-if="!loading && status && status.in_emelia">
+                <div>
+                    {{-- Campagne --}}
+                    <div class="mb-3">
+                        <div class="text-[10px] text-tertiary font-mono mb-0.5">CAMPAGNE</div>
+                        <div class="text-[13px] font-medium leading-tight" x-text="status.campaign_name || '—'"></div>
+                    </div>
+
+                    {{-- Stats email --}}
+                    <div class="grid grid-cols-3 gap-1 mb-3">
+                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
+                            <div class="text-base font-mono font-semibold" x-text="status.stats.sent"></div>
+                            <div class="text-[9px] text-tertiary mt-0.5">Envois</div>
+                        </div>
+                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
+                            <div class="text-base font-mono font-semibold" x-text="status.stats.opened"></div>
+                            <div class="text-[9px] text-tertiary mt-0.5">Ouvertures</div>
+                        </div>
+                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
+                            <div class="text-base font-mono font-semibold" x-text="status.stats.clicked"></div>
+                            <div class="text-[9px] text-tertiary mt-0.5">Clics</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1 mb-3">
+                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
+                            <div class="text-base font-mono font-semibold" x-text="status.stats.replied"></div>
+                            <div class="text-[9px] text-tertiary mt-0.5">Réponses</div>
+                        </div>
+                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
+                            <div class="text-base font-mono font-semibold" x-text="status.stats.bounced"></div>
+                            <div class="text-[9px] text-tertiary mt-0.5">Bounces</div>
+                        </div>
+                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
+                            <div class="text-base font-mono font-semibold" x-text="status.stats.unsubscribed"></div>
+                            <div class="text-[9px] text-tertiary mt-0.5">Désabonnés</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-[10px] text-tertiary mb-3"
+                         x-show="status.last_activity">
+                        <span>Dernière activité</span>
+                        <span x-text="status.last_activity"></span>
+                    </div>
+
+                    <div x-show="status.total_activities === 0" class="text-[10px] text-tertiary mb-3 leading-relaxed">
+                        Aucune activité reçue. Configurez le webhook Emelia pour synchroniser automatiquement.
+                    </div>
+
+                    <div class="flex gap-1.5">
+                        <button class="btn ghost text-xs flex-1"
+                                @click="$dispatch('open-emelia-modal')">
+                            Changer
+                        </button>
+                        <button class="btn ghost text-xs"
+                                @click="tab = 'activity'"
+                                x-show="status.total_activities > 0">
+                            Voir →
+                        </button>
+                    </div>
+                </div>
+            </template>
         </div>
-        @endif
     </div>
 </div>
 
-{{-- Modal Emelia --}}
+{{-- Modal Emelia (écoute les events window) --}}
 <div x-data="{
     open: false,
     campaigns: [],
     loading: false,
     error: '',
     selectedId: '',
+    selectedName: '',
     submitting: false,
-    init() {
-        this.$el.addEventListener('open-emelia-modal', () => {
-            this.open = true;
-            if (!this.campaigns.length) this.fetchCampaigns();
-        });
-    },
     fetchCampaigns() {
         this.loading = true;
         this.error = '';
         fetch('/emelia/campaigns', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
             .then(r => r.json())
             .then(data => {
-                this.campaigns = Array.isArray(data) ? data : (data.data ?? []);
+                this.campaigns = Array.isArray(data) ? data : [];
                 this.loading = false;
+                if (this.campaigns.length === 0) this.error = 'Aucune campagne trouvée dans Emelia.';
             })
             .catch(() => {
-                this.error = 'Impossible de charger les campagnes.';
+                this.error = 'Impossible de charger les campagnes Emelia.';
                 this.loading = false;
             });
     },
@@ -198,18 +288,20 @@
                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
             },
             credentials: 'same-origin',
-            body: JSON.stringify({ campaign_id: this.selectedId }),
-        }).then(r => {
-            if (r.redirected) { window.location.href = r.url; return; }
-            return r.json();
-        }).then(() => {
+            body: JSON.stringify({ campaign_id: this.selectedId, campaign_name: this.selectedName }),
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.error) { this.error = d.error; this.submitting = false; return; }
             window.location.reload();
-        }).catch(() => {
+        })
+        .catch(() => {
             this.error = 'Une erreur est survenue.';
             this.submitting = false;
         });
     }
 }"
+     @open-emelia-modal.window="open = true; if (!campaigns.length) fetchCampaigns()"
      x-show="open"
      x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center"
@@ -223,28 +315,90 @@
             </button>
         </div>
 
-        <div x-show="loading" class="py-6 text-center text-secondary text-sm">Chargement…</div>
+        <div x-show="loading" class="py-6 text-center text-secondary text-sm">Chargement des campagnes…</div>
         <div x-show="error && !loading" class="py-3 text-center text-sm" style="color:var(--err)" x-text="error"></div>
 
         <div x-show="!loading && !error">
-            <div x-show="!campaigns.length" class="py-4 text-center text-secondary text-sm">Aucune campagne active trouvée.</div>
-            <div x-show="campaigns.length" class="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
-                <template x-for="c in campaigns" :key="c.id ?? c._id">
+            <p class="text-xs text-secondary mb-3">Sélectionnez la campagne Emelia dans laquelle ajouter ce contact.</p>
+            <div class="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
+                <template x-for="c in campaigns" :key="c.id">
                     <label class="flex items-center gap-3 p-2.5 rounded cursor-pointer hover:bg-surface-alt"
-                           :class="{ 'ring-1 ring-accent': selectedId === (c.id ?? c._id) }">
-                        <input type="radio" name="emelia_campaign" :value="c.id ?? c._id" x-model="selectedId" class="accent-accent">
-                        <span class="text-sm" x-text="c.name ?? c.title ?? c.id ?? c._id"></span>
+                           :class="{ 'ring-1 ring-accent': selectedId === c.id }"
+                           @click="selectedId = c.id; selectedName = c.name">
+                        <input type="radio" name="emelia_campaign" :value="c.id" x-model="selectedId" class="accent-accent">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm truncate" x-text="c.name"></div>
+                            <div class="text-[10px] text-tertiary flex gap-2">
+                                <span x-text="c.status"></span>
+                                <span x-show="c.contacts_count > 0">· <span x-text="c.contacts_count"></span> contacts</span>
+                            </div>
+                        </div>
                     </label>
                 </template>
             </div>
             <div class="flex justify-end gap-2">
                 <button @click="open = false" class="btn ghost" :disabled="submitting">Annuler</button>
                 <button @click="submit()" class="btn primary" :disabled="!selectedId || submitting">
-                    <span x-show="!submitting">Ajouter →</span>
+                    <span x-show="!submitting">Ajouter à la campagne →</span>
                     <span x-show="submitting">Envoi…</span>
                 </button>
             </div>
         </div>
+    </div>
+</div>
+
+{{-- Modal de création de Deal (depuis le Contact) --}}
+<div x-data="{ open: false }"
+     @open-create-deal-modal.window="open = true;"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+     style="background: rgba(0,0,0,.45);"
+     @keydown.escape.window="open = false">
+    <div class="card p-6 w-full max-w-md" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold">Nouveau deal</h2>
+            <button @click="open = false" class="btn ghost icon">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <form method="POST" action="/deals" class="flex flex-col gap-4 overflow-y-auto pr-1">
+            @csrf
+            <input type="hidden" name="contact_id" value="{{ $contact->id }}">
+
+            <div class="field">
+                <label>Nom du deal *</label>
+                <input type="text" name="name" value="{{ $defaultDealName }}" required autofocus>
+            </div>
+
+            <div class="field">
+                <label>Montant (€) *</label>
+                <input type="number" name="amount" min="0" step="0.01" value="0.00" required>
+            </div>
+
+            <div class="field">
+                <label>Date de clôture</label>
+                <input type="date" name="close_date">
+            </div>
+
+            <div class="field">
+                <label>Étape *</label>
+                <select name="pipeline_stage_id" class="select-arrow" required>
+                    <option value="" disabled selected>-- Choisir une étape --</option>
+                    @foreach($stages as $stage)
+                        <option value="{{ $stage->id }}">{{ $stage->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <x-custom-fields-form entity-type="deal" :values="[]" />
+
+            <div class="flex justify-end gap-2 mt-2">
+                <button type="button" @click="open = false" class="btn ghost">Annuler</button>
+                <button type="submit" class="btn primary">Créer le deal</button>
+            </div>
+        </form>
     </div>
 </div>
 

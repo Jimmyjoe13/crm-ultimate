@@ -65,7 +65,7 @@ class EmeliaWebhookTest extends TestCase
         $this->assertNotNull($activity);
         $this->assertEquals(Activity::TYPE_EMAIL_OPENED, $activity->type);
         $this->assertEquals('emelia', $activity->source);
-        $this->assertEquals('contact', $activity->subject_type);
+        $this->assertEquals(\App\Models\Contact::class, $activity->subject_type);
         $this->assertEquals($contact->id, $activity->subject_id);
         $this->assertEquals('Hello Alice', $activity->title);
     }
@@ -127,12 +127,17 @@ class EmeliaWebhookTest extends TestCase
     public static function eventProvider(): array
     {
         return [
-            'sent'          => ['email_sent',           Activity::TYPE_EMAIL_SENT],
-            'opened'        => ['email_opened',          Activity::TYPE_EMAIL_OPENED],
-            'clicked'       => ['email_clicked',         Activity::TYPE_EMAIL_CLICKED],
-            'replied'       => ['email_replied',         Activity::TYPE_EMAIL_REPLIED],
-            'bounced'       => ['email_bounced',         Activity::TYPE_EMAIL_BOUNCED],
-            'unsubscribed'  => ['contact_unsubscribed',  Activity::TYPE_EMAIL_UNSUBSCRIBED],
+            // Format réel Emelia (UPPERCASE)
+            'sent'          => ['SENT',          Activity::TYPE_EMAIL_SENT],
+            'opened'        => ['OPENED',         Activity::TYPE_EMAIL_OPENED],
+            'first_open'    => ['FIRST_OPEN',     Activity::TYPE_EMAIL_OPENED],
+            'clicked'       => ['CLICKED',        Activity::TYPE_EMAIL_CLICKED],
+            'replied'       => ['REPLIED',        Activity::TYPE_EMAIL_REPLIED],
+            'bounced'       => ['BOUNCED',        Activity::TYPE_EMAIL_BOUNCED],
+            'unsubscribed'  => ['UNSUBSCRIBED',   Activity::TYPE_EMAIL_UNSUBSCRIBED],
+            // Format legacy minuscule (backward compat + tests internes)
+            'email_sent'    => ['email_sent',     Activity::TYPE_EMAIL_SENT],
+            'email_opened'  => ['email_opened',   Activity::TYPE_EMAIL_OPENED],
         ];
     }
 

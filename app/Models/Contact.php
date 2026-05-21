@@ -22,6 +22,8 @@ class Contact extends Model
         'last_name',
         'email',
         'emelia_contact_id',
+        'emelia_campaign_id',
+        'emelia_campaign_name',
         'phone',
         'job_title',
         'lifecycle_stage',
