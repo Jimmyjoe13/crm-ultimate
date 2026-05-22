@@ -15,6 +15,7 @@ use App\Http\Controllers\Web\SegmentController;
 use App\Http\Controllers\Web\TrashController;
 use App\Http\Controllers\Web\Settings\StageController;
 use App\Http\Controllers\Web\Settings\CustomFieldController;
+use App\Http\Controllers\Web\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Auth (public) ───────────────────────────────────────────────────────────
@@ -107,6 +108,9 @@ Route::middleware('web.auth')->group(function () {
         Route::post('/settings/fields',           [CustomFieldController::class, 'store']);
         Route::patch('/settings/fields/{field}',  [CustomFieldController::class, 'update']);
         Route::delete('/settings/fields/{field}', [CustomFieldController::class, 'destroy']);
+
+        Route::post('/settings/emelia/sync', [EmeliaController::class, 'syncNow'])->name('emelia.sync-now');
+        Route::post('/notifications/emelia-replies/seen', [NotificationController::class, 'markEmeliaRepliesSeen'])->name('notifications.emelia-replies.seen');
 
         Route::get('/trash', [TrashController::class, 'index'])->name('trash.index');
         Route::post('/contacts/{id}/restore',  [TrashController::class, 'restoreContact'])->name('contacts.restore');

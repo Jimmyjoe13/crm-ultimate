@@ -40,89 +40,150 @@
     </div>
 </div>
 
-<div class="px-7 pb-12 grid grid-cols-3 gap-5" x-data="{ tab: 'info' }">
-    {{-- Infos + Activité --}}
-    <div class="col-span-2 flex flex-col gap-4">
-        {{-- Onglets --}}
-        <div class="flex border-b border-default gap-0 -mb-2">
-            <button @click="tab = 'info'" class="px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors"
-                    :style="tab === 'info' ? 'border-color: var(--accent); color: var(--text);' : 'border-color: transparent; color: var(--text-tertiary);'">
-                Informations
-            </button>
-            <button @click="tab = 'activity'" class="px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors"
-                    :style="tab === 'activity' ? 'border-color: var(--accent); color: var(--text);' : 'border-color: transparent; color: var(--text-tertiary);'">
-                Activité <span class="chip ml-1" style="padding: 0 5px; font-size:10px;">{{ $activities->count() }}</span>
-            </button>
-        </div>
-
-        <div x-show="tab === 'info'" class="flex flex-col gap-4">
-            <div class="card p-5">
-                <div class="card-h mb-4" style="margin: -20px -20px 16px; padding: 10px 14px;">
-                    <span class="title">Informations</span>
+<div class="px-7 pb-12 grid grid-cols-12 gap-6">
+    {{-- Colonne Gauche : Propriétés & Informations --}}
+    <div class="col-span-12 lg:col-span-3 flex flex-col gap-4">
+        <div class="card p-5">
+            <div class="mono-label mb-4 pb-2 border-b border-default flex items-center gap-2">
+                <svg class="ic" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                À propos
+            </div>
+            
+            <div class="flex flex-col gap-4">
+                @if($contact->email)
+                <div>
+                    <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
+                        <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        Email
+                    </div>
+                    <div x-data="{ copied: false }" class="flex items-center gap-1.5 group/copy mt-0.5">
+                        <a href="mailto:{{ $contact->email }}" class="text-[13px] font-mono text-accent hover:underline truncate">{{ $contact->email }}</a>
+                        <button type="button" @click="navigator.clipboard.writeText('{{ $contact->email }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                class="opacity-100 lg:opacity-0 lg:group-hover/copy:opacity-100 transition-opacity p-0.5 text-tertiary hover:text-primary flex-shrink-0"
+                                title="Copier l'email">
+                            <svg class="ic" style="width:11px; height:11px;" viewBox="0 0 24 24">
+                                <path x-show="!copied" d="M8 17.75a3 3 0 0 1-3-3V5.5a3 3 0 0 1 3-3h5.25a3 3 0 0 1 3 3v9.25a3 3 0 0 1-3 3H8z" fill="none" stroke="currentColor"/>
+                                <path x-show="!copied" d="M16 8h2.25a3 3 0 0 1 3 3v9.25a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V17.75" fill="none" stroke="currentColor"/>
+                                <path x-show="copied" d="M20 6L9 17l-5-5" fill="none" stroke="var(--ok)" stroke-width="2.5"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    @if($contact->email)
-                    <div class="field">
-                        <label>Email</label>
-                        <div class="text-[13px] font-mono">{{ $contact->email }}</div>
+                @endif
+
+                @if($contact->phone)
+                <div>
+                    <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
+                        <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        Téléphone
                     </div>
-                    @endif
-                    @if($contact->phone)
-                    <div class="field">
-                        <label>Téléphone</label>
-                        <div class="text-[13px] font-mono">{{ $contact->phone }}</div>
+                    <div x-data="{ copied: false }" class="flex items-center gap-1.5 group/copy mt-0.5">
+                        <a href="tel:{{ preg_replace('/[^0-9+]/', '', $contact->phone) }}" class="text-[13px] font-mono text-primary hover:text-accent hover:underline truncate">{{ $contact->phone }}</a>
+                        <button type="button" @click="navigator.clipboard.writeText('{{ $contact->phone }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                class="opacity-100 lg:opacity-0 lg:group-hover/copy:opacity-100 transition-opacity p-0.5 text-tertiary hover:text-primary flex-shrink-0"
+                                title="Copier le téléphone">
+                            <svg class="ic" style="width:11px; height:11px;" viewBox="0 0 24 24">
+                                <path x-show="!copied" d="M8 17.75a3 3 0 0 1-3-3V5.5a3 3 0 0 1 3-3h5.25a3 3 0 0 1 3 3v9.25a3 3 0 0 1-3 3H8z" fill="none" stroke="currentColor"/>
+                                <path x-show="!copied" d="M16 8h2.25a3 3 0 0 1 3 3v9.25a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V17.75" fill="none" stroke="currentColor"/>
+                                <path x-show="copied" d="M20 6L9 17l-5-5" fill="none" stroke="var(--ok)" stroke-width="2.5"/>
+                            </svg>
+                        </button>
                     </div>
-                    @endif
-                    @if($contact->job_title)
-                    <div class="field">
-                        <label>Poste</label>
-                        <div class="text-[13px]">{{ $contact->job_title }}</div>
+                </div>
+                @endif
+
+                @if($contact->job_title)
+                <div>
+                    <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
+                        <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        Poste
                     </div>
-                    @endif
-                    @if($company)
-                    <div class="field">
-                        <label>Entreprise</label>
-                        <a href="{{ '/companies/' . $company->id }}" class="text-[13px] text-accent hover:underline">{{ $company->name }}</a>
+                    <div class="text-[13px] text-primary font-medium mt-0.5">{{ $contact->job_title }}</div>
+                </div>
+                @endif
+
+                @if($company)
+                <div>
+                    <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
+                        <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9v2M9 13v2M9 17v2M15 9v2M15 13v2M15 17v2"/></svg>
+                        Entreprise
                     </div>
-                    @endif
-                    @if($contact->lead_status)
-                    <div class="field">
-                        <label>Statut lead</label>
+                    <div class="mt-0.5">
+                        <a href="{{ '/companies/' . $company->id }}" class="text-[13px] text-accent hover:underline font-medium">{{ $company->name }}</a>
+                    </div>
+                </div>
+                @endif
+
+                @if($contact->lead_status)
+                <div>
+                    <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
+                        <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                        Statut Lead
+                    </div>
+                    <div class="mt-0.5">
                         <span class="chip">{{ $contact->lead_status }}</span>
                     </div>
-                    @endif
-                    @if($contact->owner)
-                    <div class="field">
-                        <label>Propriétaire</label>
-                        <div class="text-[13px]">{{ $contact->owner->name }}</div>
+                </div>
+                @endif
+
+                @if($contact->owner)
+                <div>
+                    <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
+                        <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Propriétaire
                     </div>
-                    @endif
+                    <div class="text-[13px] text-primary font-medium mt-0.5">{{ $contact->owner->name }}</div>
+                </div>
+                @endif
+
+                <div>
+                    <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
+                        <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Créé le
+                    </div>
+                    <div class="text-[13px] text-primary mt-0.5 font-mono">{{ $contact->created_at->format('d/m/Y') }}</div>
                 </div>
             </div>
 
-            @if($contact->deals->count())
-            <div class="card overflow-hidden">
-                <div class="card-h">
-                    <span class="title">Deals associés</span>
-                    <span class="meta">{{ $contact->deals->count() }}</span>
+            <x-custom-fields-show :entity="$contact" entity-type="contact" layout="stacked" />
+        </div>
+    </div>
+
+    {{-- Colonne Centrale : Activité Composer & Timeline --}}
+    <div class="col-span-12 lg:col-span-6 flex flex-col gap-4" id="activityFeed"
+         x-data="{
+             activeTab: 'all',
+             init() {
+                 this.$el.addEventListener('switch-activity-tab', e => {
+                     this.activeTab = e.detail;
+                 });
+             }
+         }">
+        @php
+            $emeliaCnt = $activities->where('source', 'emelia')->count();
+        @endphp
+        <div class="flex items-center justify-between mb-1">
+            <h2 class="text-lg font-semibold" style="margin:0;">Fil d'activité</h2>
+            <div class="flex items-center gap-2">
+                <div class="flex gap-1">
+                    <button @click="activeTab='all'"
+                            :class="activeTab==='all' ? 'chip font-mono text-[11px]' : 'btn ghost sm'"
+                            style="font-size:11px;padding:2px 8px;">
+                        Tout ({{ $activities->count() }})
+                    </button>
+                    @if($emeliaCnt > 0)
+                    <button @click="activeTab='emelia'"
+                            :class="activeTab==='emelia' ? 'chip font-mono text-[11px]' : 'btn ghost sm'"
+                            style="font-size:11px;padding:2px 8px;">
+                        Emelia ({{ $emeliaCnt }})
+                    </button>
+                    @endif
                 </div>
-                <table class="t">
-                    <thead><tr><th>Deal</th><th>Montant</th><th>Étape</th></tr></thead>
-                    <tbody>
-                        @foreach($contact->deals as $deal)
-                        <tr>
-                            <td class="font-medium">{{ $deal->name }}</td>
-                            <td><span class="num-mono">{{ number_format($deal->amount, 0, ',', "\xc2\xa0") }} €</span></td>
-                            <td><span class="chip">{{ $deal->stage?->name ?? '—' }}</span></td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
             </div>
-            @endif
         </div>
 
-        <div x-show="tab === 'activity'" x-cloak>
+        {{-- Timeline "Tout" --}}
+        <div x-show="activeTab==='all'">
             <x-activity-timeline
                 :activities="$activities"
                 subject-type="contact"
@@ -130,27 +191,59 @@
                 :show-composer="true"
             />
         </div>
+
+        {{-- Timeline filtrée Emelia --}}
+        @if($emeliaCnt > 0)
+        <div x-show="activeTab==='emelia'">
+            <x-activity-timeline
+                :activities="$activities"
+                subject-type="contact"
+                :subject-id="$contact->id"
+                :show-composer="false"
+                filter-source="emelia"
+            />
+        </div>
+        @endif
     </div>
 
-    {{-- Sidebar --}}
-    <div class="flex flex-col gap-3">
-        <div class="card p-4">
-            <div class="mono-label mb-3">Propriétés</div>
-            <div class="flex flex-col gap-3">
-                <div>
-                    <div class="text-[11px] text-tertiary font-mono mb-0.5">Créé le</div>
-                    <div class="text-[13px] num-mono">{{ $contact->created_at->format('d/m/Y') }}</div>
-                </div>
-                @if($contact->lifecycle_stage)
-                <div>
-                    <div class="text-[11px] text-tertiary font-mono mb-0.5">Lifecycle stage</div>
-                    <span class="chip">{{ $contact->lifecycle_stage }}</span>
-                </div>
-                @endif
-                <x-custom-fields-show :entity="$contact" entity-type="contact" />
+    {{-- Colonne Droite : Deals, IA, Emelia --}}
+    <div class="col-span-12 lg:col-span-3 flex flex-col gap-4">
+        {{-- Deals associés --}}
+        <div class="card overflow-hidden">
+            <div class="card-h">
+                <span class="title">Deals associés</span>
+                <span class="meta">{{ $contact->deals->count() }}</span>
             </div>
+            @if($contact->deals->count())
+            <div class="p-3 flex flex-col gap-2.5">
+                @foreach($contact->deals as $deal)
+                @php
+                    $dealColor = \App\Helpers\Avatar::color($deal->name);
+                    $dealInitials = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $deal->name), 0, 1) ?: 'D');
+                @endphp
+                <div class="flex items-center gap-2">
+                    <div class="av {{ $dealColor }} sm" style="border-radius:4px;">{{ $dealInitials }}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-[13px] truncate">{{ $deal->name }}</div>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                            <span class="chip" style="font-size: 9px; padding: 1px 4px;">{{ $deal->stage?->name ?? '—' }}</span>
+                            <span class="text-secondary text-[11px] font-mono">{{ number_format($deal->amount, 0, ',', "\xc2\xa0") }} €</span>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @else
+            <div class="p-4 text-center">
+                <p class="text-xs text-secondary mb-3">Aucun deal associé.</p>
+                <button type="button" class="btn sm w-full justify-center" @click="$dispatch('open-create-deal-modal')">
+                    + Créer un deal
+                </button>
+            </div>
+            @endif
         </div>
 
+        {{-- Brief IA --}}
         <x-ai-insight-card endpoint="/web/ai/contact/{{ $contact->id }}/summarize" title="Brief IA" />
 
         {{-- Panneau Emelia --}}
@@ -166,9 +259,20 @@
                      .then(r => r.json())
                      .then(d => { this.status = d; this.loading = false; })
                      .catch(() => { this.loading = false; });
+                 },
+                 statusLabel(s) {
+                     const m = { SENT: 'Envoyé', OPENED: 'Ouvert', CLICKED: 'Cliqué',
+                                 REPLIED: 'Répondu', BOUNCED: 'Bounce', UNSUBSCRIBED: 'Désabonné' };
+                     return m[s] || s;
+                 },
+                 statusColor(s) {
+                     if (s === 'REPLIED') return 'var(--ok)';
+                     if (s === 'OPENED' || s === 'CLICKED') return 'var(--accent)';
+                     if (s === 'BOUNCED' || s === 'UNSUBSCRIBED') return 'var(--err)';
+                     return 'var(--text-secondary)';
                  }
              }">
-            <div class="mono-label mb-3">📧 Emelia</div>
+            <div class="mono-label mb-3">EMELIA</div>
 
             <div x-show="loading" class="text-xs text-secondary">Chargement…</div>
 
@@ -190,51 +294,88 @@
             {{-- Dans Emelia --}}
             <template x-if="!loading && status && status.in_emelia">
                 <div>
-                    {{-- Campagne --}}
+                    {{-- Campagne + statut live API --}}
                     <div class="mb-3">
                         <div class="text-[10px] text-tertiary font-mono mb-0.5">CAMPAGNE</div>
-                        <div class="text-[13px] font-medium leading-tight" x-text="status.campaign_name || '—'"></div>
+                        <div class="text-[13px] font-medium leading-tight mb-1" x-text="status.campaign_name || '—'"></div>
+                        <template x-if="status.emelia_status">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                      :style="'background:' + statusColor(status.emelia_status)"></span>
+                                <span class="text-[11px] font-medium"
+                                      :style="'color:' + statusColor(status.emelia_status)"
+                                      x-text="statusLabel(status.emelia_status)"></span>
+                            </div>
+                        </template>
                     </div>
 
-                    {{-- Stats email --}}
+                    {{-- Dates clés live (depuis API Emelia, sans webhook) --}}
+                    <div class="flex flex-col gap-1.5 mb-3">
+                        <template x-if="status.last_contacted">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-tertiary">Dernier envoi</span>
+                                <span class="font-medium" x-text="status.last_contacted"></span>
+                            </div>
+                        </template>
+                        <template x-if="status.last_open">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-tertiary">Ouverture</span>
+                                <span class="font-medium" style="color:var(--accent)" x-text="status.last_open"></span>
+                            </div>
+                        </template>
+                        <template x-if="status.last_replied">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-tertiary">Réponse</span>
+                                <span class="font-medium" style="color:var(--ok)" x-text="status.last_replied"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    {{-- Séparateur --}}
+                    <div class="border-t border-default mb-2"></div>
+
+                    {{-- Compteurs webhook --}}
+                    <div class="text-[10px] text-tertiary font-mono mb-1.5 flex items-center gap-1.5">
+                        COMPTEURS
+                        <template x-if="!status.webhook_active">
+                            <span style="font-size:9px; padding:1px 5px; border-radius:4px; background:var(--surface-alt); color:var(--text-tertiary)">webhook OFF</span>
+                        </template>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1 mb-1.5">
+                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
+                            <div class="text-sm font-mono font-semibold" x-text="status.stats.sent"></div>
+                            <div class="text-[9px] text-tertiary">Envois</div>
+                        </div>
+                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
+                            <div class="text-sm font-mono font-semibold" x-text="status.stats.opened"></div>
+                            <div class="text-[9px] text-tertiary">Ouvertures</div>
+                        </div>
+                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
+                            <div class="text-sm font-mono font-semibold" x-text="status.stats.clicked"></div>
+                            <div class="text-[9px] text-tertiary">Clics</div>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-3 gap-1 mb-3">
-                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
-                            <div class="text-base font-mono font-semibold" x-text="status.stats.sent"></div>
-                            <div class="text-[9px] text-tertiary mt-0.5">Envois</div>
+                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
+                            <div class="text-sm font-mono font-semibold" x-text="status.stats.replied"></div>
+                            <div class="text-[9px] text-tertiary">Réponses</div>
                         </div>
-                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
-                            <div class="text-base font-mono font-semibold" x-text="status.stats.opened"></div>
-                            <div class="text-[9px] text-tertiary mt-0.5">Ouvertures</div>
+                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
+                            <div class="text-sm font-mono font-semibold" x-text="status.stats.bounced"></div>
+                            <div class="text-[9px] text-tertiary">Bounces</div>
                         </div>
-                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
-                            <div class="text-base font-mono font-semibold" x-text="status.stats.clicked"></div>
-                            <div class="text-[9px] text-tertiary mt-0.5">Clics</div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1 mb-3">
-                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
-                            <div class="text-base font-mono font-semibold" x-text="status.stats.replied"></div>
-                            <div class="text-[9px] text-tertiary mt-0.5">Réponses</div>
-                        </div>
-                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
-                            <div class="text-base font-mono font-semibold" x-text="status.stats.bounced"></div>
-                            <div class="text-[9px] text-tertiary mt-0.5">Bounces</div>
-                        </div>
-                        <div class="rounded p-2 text-center" style="background:var(--surface-alt);">
-                            <div class="text-base font-mono font-semibold" x-text="status.stats.unsubscribed"></div>
-                            <div class="text-[9px] text-tertiary mt-0.5">Désabonnés</div>
+                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
+                            <div class="text-sm font-mono font-semibold" x-text="status.stats.unsubscribed"></div>
+                            <div class="text-[9px] text-tertiary">Désabonnés</div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between text-[10px] text-tertiary mb-3"
-                         x-show="status.last_activity">
-                        <span>Dernière activité</span>
-                        <span x-text="status.last_activity"></span>
-                    </div>
-
-                    <div x-show="status.total_activities === 0" class="text-[10px] text-tertiary mb-3 leading-relaxed">
-                        Aucune activité reçue. Configurez le webhook Emelia pour synchroniser automatiquement.
-                    </div>
+                    <template x-if="!status.webhook_active">
+                        <p class="text-[10px] text-tertiary mb-3 leading-relaxed">
+                            Pour activer les compteurs : <strong>app.emelia.io › Settings › Webhooks</strong>
+                            → URL&nbsp;: <code style="font-size:9px">crm.nana-intelligence.fr/api/webhooks/emelia</code>
+                        </p>
+                    </template>
 
                     <div class="flex gap-1.5">
                         <button class="btn ghost text-xs flex-1"
@@ -242,7 +383,7 @@
                             Changer
                         </button>
                         <button class="btn ghost text-xs"
-                                @click="tab = 'activity'"
+                                @click="$dispatch('switch-activity-tab', 'emelia'); document.getElementById('activityFeed').scrollIntoView({behavior:'smooth'})"
                                 x-show="status.total_activities > 0">
                             Voir →
                         </button>

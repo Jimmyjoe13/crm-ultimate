@@ -28,6 +28,7 @@
 /test_headers.txt
 /test_redis.php
 /check_hash.php
+/walkthrough.md.resolved
 
 # Playwright
 /playwright-report/

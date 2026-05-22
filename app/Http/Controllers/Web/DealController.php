@@ -42,8 +42,10 @@ class DealController extends Controller
             'amount'            => ['required', 'numeric', 'min:0'],
             'pipeline_stage_id' => ['required', 'exists:pipeline_stages,id'],
             'close_date'        => ['nullable', 'date'],
+            'contact_id'        => ['required', 'exists:contacts,id'],
         ], CustomValueValidator::validationRules('deal')));
 
+        $contact = \App\Models\Contact::findOrFail($data['contact_id']);
         $stage = PipelineStage::findOrFail($data['pipeline_stage_id']);
 
         $deal = Deal::create([
@@ -57,7 +59,23 @@ class DealController extends Controller
             'custom_values'     => CustomValueValidator::cast('deal', $data['custom_values'] ?? []),
         ]);
 
-        return redirect('/deals')
+        // Auto-associate contact
+        $contactPivot = ['role' => 'primary'];
+        $deal->contacts()->attach($contact->id, $contactPivot);
+        \App\Services\AssociationAuditor::recordAttach($deal, 'contacts', $contact->id, \App\Models\Contact::class, $contactPivot);
+
+        // Auto-associate contact's company
+        $company = $contact->companies()->first();
+        if ($company) {
+            $companyPivot = [
+                'role'       => 'customer',
+                'is_primary' => true,
+            ];
+            $deal->companies()->attach($company->id, $companyPivot);
+            \App\Services\AssociationAuditor::recordAttach($deal, 'companies', $company->id, \App\Models\Company::class, $companyPivot);
+        }
+
+        return redirect('/pipeline')
             ->with('flash_toast', ['message' => "Deal « {$deal->name} » créé.", 'type' => 'success']);
     }
 
@@ -84,7 +102,10 @@ class DealController extends Controller
             ->limit(10)
             ->get();
 
-        return view('pages.deals.show', compact('deal', 'stages', 'activities', 'bgDeals'));
+        $allContacts = \App\Models\Contact::orderBy('last_name')->get();
+        $allCompanies = \App\Models\Company::orderBy('name')->get();
+
+        return view('pages.deals.show', compact('deal', 'stages', 'activities', 'bgDeals', 'allContacts', 'allCompanies'));
     }
 
     public function edit(Deal $deal)
@@ -162,5 +183,65 @@ class DealController extends Controller
 
         return redirect('/deals')
             ->with('flash_toast', ['message' => "Deal « {$deal->name} » marqué perdu.", 'type' => 'warning']);
+    }
+
+    public function attachContact(Request $request, Deal $deal)
+    {
+        $data = $request->validate([
+            'contact_id' => ['required', 'exists:contacts,id'],
+            'role'       => ['nullable', 'in:primary,technical,billing,other'],
+        ]);
+
+        $contactId = (int)$data['contact_id'];
+        $pivot = ['role' => $data['role'] ?? 'primary'];
+
+        $deal->contacts()->syncWithoutDetaching([$contactId => $pivot]);
+
+        \App\Services\AssociationAuditor::recordAttach($deal, 'contacts', $contactId, \App\Models\Contact::class, $pivot);
+
+        return redirect('/deals/' . $deal->id)
+            ->with('flash_toast', ['message' => 'Contact associé au deal.', 'type' => 'success']);
+    }
+
+    public function detachContact(Deal $deal, \App\Models\Contact $contact)
+    {
+        $deal->contacts()->detach($contact->id);
+
+        \App\Services\AssociationAuditor::recordDetach($deal, 'contacts', $contact->id, \App\Models\Contact::class);
+
+        return redirect('/deals/' . $deal->id)
+            ->with('flash_toast', ['message' => 'Contact dissocié.', 'type' => 'warning']);
+    }
+
+    public function attachCompany(Request $request, Deal $deal)
+    {
+        $data = $request->validate([
+            'company_id' => ['required', 'exists:companies,id'],
+            'role'       => ['nullable', 'in:customer,partner,reseller'],
+            'is_primary' => ['nullable', 'boolean'],
+        ]);
+
+        $companyId = (int)$data['company_id'];
+        $pivot = [
+            'role'       => $data['role'] ?? 'customer',
+            'is_primary' => filter_var($data['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        ];
+
+        $deal->companies()->syncWithoutDetaching([$companyId => $pivot]);
+
+        \App\Services\AssociationAuditor::recordAttach($deal, 'companies', $companyId, \App\Models\Company::class, $pivot);
+
+        return redirect('/deals/' . $deal->id)
+            ->with('flash_toast', ['message' => 'Entreprise associée au deal.', 'type' => 'success']);
+    }
+
+    public function detachCompany(Deal $deal, \App\Models\Company $company)
+    {
+        $deal->companies()->detach($company->id);
+
+        \App\Services\AssociationAuditor::recordDetach($deal, 'companies', $company->id, \App\Models\Company::class);
+
+        return redirect('/deals/' . $deal->id)
+            ->with('flash_toast', ['message' => 'Entreprise dissociée.', 'type' => 'warning']);
     }
 }

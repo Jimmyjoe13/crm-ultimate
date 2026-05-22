@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncEmeliaCampaignJob;
 use App\Models\Activity;
 use App\Models\Contact;
 use App\Services\EmeliaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 
 class EmeliaController extends Controller
@@ -32,8 +34,9 @@ class EmeliaController extends Controller
         return response()->json($mapped);
     }
 
-    public function status(Contact $contact): JsonResponse
+    public function status(Contact $contact, EmeliaService $emelia): JsonResponse
     {
+        // ─── Compteurs depuis la table activities (webhook) ───────────────
         $activities = Activity::where('source', 'emelia')
             ->where('subject_type', Contact::class)
             ->where('subject_id', $contact->id)
@@ -49,14 +52,56 @@ class EmeliaController extends Controller
             'unsubscribed' => $activities->where('type', Activity::TYPE_EMAIL_UNSUBSCRIBED)->count(),
         ];
 
+        // ─── Données live Emelia (statut + dates) — cache 10 min ─────────
+        $liveData = null;
+        $inEmelia = $contact->emelia_campaign_id !== null || $contact->emelia_contact_id !== null;
+
+        if ($inEmelia && $contact->email) {
+            $cacheKey = "emelia_live_{$contact->id}";
+            $liveData = Cache::remember($cacheKey, 600, function () use ($contact, $emelia) {
+                try {
+                    // Lookup par ID Emelia si disponible (plus rapide)
+                    if ($contact->emelia_contact_id && $contact->emelia_campaign_id) {
+                        $data = $emelia->getContactById(
+                            $contact->emelia_contact_id,
+                            $contact->emelia_campaign_id
+                        );
+                        if ($data) {
+                            return $data;
+                        }
+                    }
+                    // Lookup par email + nom de campagne (fallback)
+                    return $emelia->getContactByEmail($contact->email, $contact->emelia_campaign_name);
+                } catch (\Exception) {
+                    return null;
+                }
+            });
+
+            // Sauvegarder l'ID Emelia si on vient de le trouver
+            if ($liveData && ! empty($liveData['_id']) && ! $contact->emelia_contact_id) {
+                $contact->update(['emelia_contact_id' => $liveData['_id']]);
+            }
+        }
+
+        $msToDate = fn(?string $ms): ?string => $ms
+            ? \Carbon\Carbon::createFromTimestampMs((int) $ms)->diffForHumans()
+            : null;
+
         return response()->json([
-            'in_emelia'      => (bool) $contact->emelia_contact_id,
-            'campaign_id'    => $contact->emelia_campaign_id,
-            'campaign_name'  => $contact->emelia_campaign_name,
-            'contact_id'     => $contact->emelia_contact_id,
-            'stats'          => $stats,
+            'in_emelia'        => $inEmelia,
+            'campaign_id'      => $contact->emelia_campaign_id,
+            'campaign_name'    => $contact->emelia_campaign_name,
+            'contact_id'       => $contact->emelia_contact_id ?? ($liveData['_id'] ?? null),
+            // Statut live depuis l'API Emelia (SENT/OPENED/REPLIED/BOUNCED/UNSUBSCRIBED)
+            'emelia_status'    => $liveData['status'] ?? null,
+            'last_contacted'   => $msToDate($liveData['lastContacted'] ?? null),
+            'last_open'        => $msToDate($liveData['lastOpen'] ?? null),
+            'last_replied'     => $msToDate($liveData['lastReplied'] ?? null),
+            // Compteurs webhook (0 tant que le webhook n'est pas configuré)
+            'stats'            => $stats,
             'total_activities' => $activities->count(),
-            'last_activity'  => $activities->first()?->created_at?->diffForHumans(),
+            'last_activity'    => $activities->first()?->created_at?->diffForHumans(),
+            'webhook_active'   => $activities->count() > 0,
         ]);
     }
 
@@ -94,5 +139,11 @@ class EmeliaController extends Controller
         }
 
         return back()->with('flash_toast', ['type' => 'success', 'message' => 'Contact ajouté à la campagne Emelia.']);
+    }
+
+    public function syncNow(): JsonResponse
+    {
+        SyncEmeliaCampaignJob::dispatch(onlyLinked: false);
+        return response()->json(['message' => 'Synchronisation lancée en arrière-plan.']);
     }
 }

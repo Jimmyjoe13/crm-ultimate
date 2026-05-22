@@ -62,7 +62,9 @@ class ContactController extends Controller
             ->limit(50)
             ->get();
 
-        return view('pages.contacts.show', compact('contact', 'activities'));
+        $stages = \App\Models\PipelineStage::orderBy('position')->get();
+
+        return view('pages.contacts.show', compact('contact', 'activities', 'stages'));
     }
 
     public function edit(Contact $contact)

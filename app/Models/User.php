@@ -23,6 +23,7 @@ class User extends Authenticatable
         'password',
         'role',
         'manager_id',
+        'emelia_replies_last_seen',
     ];
 
     protected $hidden = [
@@ -32,7 +33,8 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'password' => 'hashed',
+            'password'                  => 'hashed',
+            'emelia_replies_last_seen'  => 'datetime',
         ];
     }
 

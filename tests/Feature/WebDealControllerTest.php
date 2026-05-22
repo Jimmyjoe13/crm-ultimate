@@ -155,4 +155,129 @@ class WebDealControllerTest extends TestCase
         $response->assertStatus(403);
         $this->assertDatabaseHas('deals', ['id' => $ctx['deal']->id, 'deleted_at' => null]);
     }
+
+    public function test_admin_can_attach_contact_to_deal(): void
+    {
+        $ctx = $this->createDealWithStages();
+        $contact = \App\Models\Contact::create([
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'john.doe@example.com',
+        ]);
+
+        $response = $this->withAuth($ctx['admin'])->post('/deals/' . $ctx['deal']->id . '/contacts', [
+            'contact_id' => $contact->id,
+            'role' => 'technical',
+            '_token' => 'test',
+        ]);
+
+        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $this->assertDatabaseHas('deal_contact', [
+            'deal_id' => $ctx['deal']->id,
+            'contact_id' => $contact->id,
+            'role' => 'technical',
+        ]);
+    }
+
+    public function test_admin_can_detach_contact_from_deal(): void
+    {
+        $ctx = $this->createDealWithStages();
+        $contact = \App\Models\Contact::create([
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'john.doe@example.com',
+        ]);
+        $ctx['deal']->contacts()->attach($contact->id, ['role' => 'technical']);
+
+        $response = $this->withAuth($ctx['admin'])->delete('/deals/' . $ctx['deal']->id . '/contacts/' . $contact->id, [
+            '_token' => 'test',
+        ]);
+
+        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $this->assertDatabaseMissing('deal_contact', [
+            'deal_id' => $ctx['deal']->id,
+            'contact_id' => $contact->id,
+        ]);
+    }
+
+    public function test_admin_can_attach_company_to_deal(): void
+    {
+        $ctx = $this->createDealWithStages();
+        $company = \App\Models\Company::create([
+            'name' => 'Acme Corp',
+        ]);
+
+        $response = $this->withAuth($ctx['admin'])->post('/deals/' . $ctx['deal']->id . '/companies', [
+            'company_id' => $company->id,
+            'role' => 'partner',
+            'is_primary' => '1',
+            '_token' => 'test',
+        ]);
+
+        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $this->assertDatabaseHas('deal_company', [
+            'deal_id' => $ctx['deal']->id,
+            'company_id' => $company->id,
+            'role' => 'partner',
+            'is_primary' => true,
+        ]);
+    }
+
+    public function test_admin_can_detach_company_from_deal(): void
+    {
+        $ctx = $this->createDealWithStages();
+        $company = \App\Models\Company::create([
+            'name' => 'Acme Corp',
+        ]);
+        $ctx['deal']->companies()->attach($company->id, ['role' => 'partner', 'is_primary' => true]);
+
+        $response = $this->withAuth($ctx['admin'])->delete('/deals/' . $ctx['deal']->id . '/companies/' . $company->id, [
+            '_token' => 'test',
+        ]);
+
+        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $this->assertDatabaseMissing('deal_company', [
+            'deal_id' => $ctx['deal']->id,
+            'company_id' => $company->id,
+        ]);
+    }
+
+    public function test_store_creates_deal_associated_to_contact_and_company(): void
+    {
+        $ctx = $this->createDealWithStages();
+
+        $contact = \App\Models\Contact::create([
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'john.doe@example.com',
+        ]);
+
+        $company = \App\Models\Company::create([
+            'name' => 'Acme Corp',
+        ]);
+
+        $contact->companies()->attach($company->id, ['role' => 'employee']);
+
+        $response = $this->withAuth($ctx['admin'])->post('/deals', [
+            'name' => 'Test Deal from Contact',
+            'amount' => 12500,
+            'pipeline_stage_id' => $ctx['stage']->id,
+            'contact_id' => $contact->id,
+            '_token' => 'test',
+        ]);
+
+        $response->assertRedirect('/pipeline');
+
+        $this->assertDatabaseHas('deals', [
+            'name' => 'Test Deal from Contact',
+            'amount' => 12500,
+            'pipeline_stage_id' => $ctx['stage']->id,
+        ]);
+
+        $deal = Deal::where('name', 'Test Deal from Contact')->first();
+        $this->assertNotNull($deal);
+
+        $this->assertTrue($deal->contacts->contains($contact->id));
+        $this->assertTrue($deal->companies->contains($company->id));
+    }
 }

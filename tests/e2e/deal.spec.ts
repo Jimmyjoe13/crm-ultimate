@@ -12,13 +12,21 @@ test.describe('Deals — flux complet', () => {
         await expect(page.locator('table.t')).toBeVisible();
     });
 
-    test('créer un deal via le modal', async ({ page }) => {
-        await page.goto('/deals');
+    test('créer un deal via le modal depuis un contact', async ({ page }) => {
+        await page.goto('/contacts');
         await page.waitForLoadState('networkidle');
 
+        // Cliquer sur le premier contact dans la table
+        await page.locator('table.t tbody tr:has(span.av)').first().click();
+        await page.waitForURL(/\/contacts\/\d+/, { timeout: 15000 });
+        await page.waitForLoadState('networkidle');
+
+        // Attendre que la page et Alpine.js soient prêts
+        await page.waitForTimeout(1000);
+
         // Ouvrir le modal
-        await page.click('button:has-text("Nouveau deal")');
-        await expect(page.locator('text=Remplir les informations de base')).toBeVisible();
+        await page.click('button:has-text("Créer un deal")');
+        await expect(page.locator('h2:has-text("Nouveau deal")')).toBeVisible();
 
         const dealName = `Deal E2E ${Date.now()}`;
         await page.fill('input[name="name"]', dealName);
@@ -30,9 +38,8 @@ test.describe('Deals — flux complet', () => {
         // Soumettre le formulaire
         await page.locator('button[type="submit"]:has-text("Créer le deal")').click();
 
-        // Le contrôleur redirige vers /deals
-        await page.waitForURL(url => url.pathname === '/deals', { timeout: 15000 });
-        await expect(page.locator('table.t')).toBeVisible();
+        // Le contrôleur redirige vers /pipeline
+        await page.waitForURL(url => url.pathname === '/pipeline', { timeout: 15000 });
         await expect(page.locator('body')).toContainText(dealName);
     });
 
@@ -74,11 +81,8 @@ test.describe('Deals — flux complet', () => {
         await wonBtn.waitFor({ state: 'visible', timeout: 10000 });
 
         if (await wonBtn.isVisible()) {
-            await Promise.all([
-                page.waitForNavigation({ waitUntil: 'load' }),
-                wonBtn.click({ force: true }),
-            ]);
-            await expect(page).toHaveURL(/\/deals/);
+            await wonBtn.click({ force: true });
+            await page.waitForURL(url => url.pathname === '/deals', { timeout: 15000 });
         } else {
             test.skip();
         }

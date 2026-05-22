@@ -38,7 +38,7 @@
          x-transition:leave-start="translate-x-0"
          x-transition:leave-end="translate-x-full"
          class="absolute top-0 right-0 h-full flex flex-col bg-surface overflow-hidden"
-         style="width: {{ $width }}; box-shadow: var(--shadow-pop); border-left: 1px solid var(--border);">
+         style="width: min({{ $width }}, 100vw); max-width: 100vw; box-shadow: var(--shadow-pop); border-left: 1px solid var(--border);">
 
         {{-- Header --}}
         <div class="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style="border-color: var(--border);">

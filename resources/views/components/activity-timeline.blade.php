@@ -3,6 +3,7 @@
     'subjectType'  => '',
     'subjectId'    => null,
     'showComposer' => false,
+    'filterSource' => null,
 ])
 
 <div class="flex flex-col gap-0">
@@ -39,6 +40,8 @@
 
     @forelse($activities as $activity)
     @php
+        if ($filterSource !== null && $activity->source !== $filterSource) continue;
+        $displayTime = $activity->occurred_at ?? $activity->created_at;
         $dot = match($activity->type) {
             'email'                               => 'info',
             'call'                                => 'accent',
@@ -63,13 +66,14 @@
         $isTask = $activity->type === 'task';
     @endphp
     <div class="tl-item"
+         data-source="{{ $activity->source }}"
          @if($isTask)
          x-data="{ done: {{ $activity->status === 'completed' ? 'true' : 'false' }} }"
          :class="{ 'opacity-60': done }"
          @endif>
         <span class="tl-time">
-            {{ $activity->created_at->format('d/m') }}<br>
-            <span style="font-size:9.5px;">{{ $activity->created_at->format('H:i') }}</span>
+            {{ $displayTime->format('d/m') }}<br>
+            <span style="font-size:9.5px;">{{ $displayTime->format('H:i') }}</span>
         </span>
         <div class="tl-axis">
             @if($isTask)
@@ -93,7 +97,14 @@
             @endif
         </div>
         <div class="tl-content">
-            <div class="ti">{{ $emoji }} {{ $activity->title }}</div>
+            <div class="ti">
+                {{ $emoji }} {{ $activity->title }}
+                @if($activity->source === 'emelia' && ($activity->metadata['synthetic'] ?? false))
+                <span style="font-size:9px;padding:1px 4px;border-radius:3px;background:var(--surface-alt);color:var(--text-tertiary);vertical-align:middle;margin-left:4px;">sync</span>
+                @elseif($activity->source === 'emelia')
+                <span style="font-size:9px;padding:1px 4px;border-radius:3px;background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok);vertical-align:middle;margin-left:4px;">live</span>
+                @endif
+            </div>
             @if($activity->body)
             <div class="ts">{{ Str::limit($activity->body, 100) }}</div>
             @endif

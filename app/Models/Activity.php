@@ -41,6 +41,7 @@ class Activity extends Model
         'status',
         'due_at',
         'completed_at',
+        'occurred_at',
         'subject_type',
         'subject_id',
         'owner_id',
@@ -49,9 +50,10 @@ class Activity extends Model
     protected function casts(): array
     {
         return [
-            'due_at' => 'datetime',
+            'due_at'       => 'datetime',
             'completed_at' => 'datetime',
-            'metadata' => 'array',
+            'occurred_at'  => 'datetime',
+            'metadata'     => 'array',
         ];
     }
 

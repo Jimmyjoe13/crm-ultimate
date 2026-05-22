@@ -21,9 +21,23 @@
         <x-rail-icon route="pipeline.index" :active="$active === 'pipeline'" tooltip="Pipeline">
             <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="12"/><rect x="17" y="3" width="4" height="8"/></svg>
         </x-rail-icon>
-        <x-rail-icon href="/contacts" :active="$active === 'contacts'" tooltip="Contacts">
-            <svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        </x-rail-icon>
+        @php
+            $emeliaPending = \App\Models\Activity::where('type', \App\Models\Activity::TYPE_EMAIL_REPLIED)
+                ->where('created_at', '>', auth()->user()?->emelia_replies_last_seen ?? '1970-01-01')
+                ->count();
+        @endphp
+        <div class="relative" x-data="{ badge: {{ $emeliaPending }} }">
+            <a href="/contacts"
+               class="rail-ic {{ $active === 'contacts' ? 'on' : '' }}"
+               @click="if(badge > 0) { fetch('/notifications/emelia-replies/seen', { method:'POST', headers:{'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content}, credentials:'same-origin' }); badge = 0; }">
+                <svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span class="tt">Contacts</span>
+            </a>
+            <template x-if="badge > 0">
+                <span x-text="badge > 9 ? '9+' : badge"
+                      style="position:absolute;top:3px;right:3px;min-width:14px;height:14px;padding:0 3px;border-radius:7px;font-size:8px;font-weight:700;line-height:14px;text-align:center;background:var(--err);color:#fff;pointer-events:none;"></span>
+            </template>
+        </div>
         <x-rail-icon href="/companies" :active="$active === 'companies'" tooltip="Entreprises">
             <svg class="ic" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9v2M9 13v2M9 17v2M15 9v2M15 13v2M15 17v2"/></svg>
         </x-rail-icon>
@@ -118,10 +132,6 @@
                     <a href="#" class="btn">
                         <svg class="ic" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                         Tâches
-                    </a>
-                    <a href="/deals?modal=new" class="btn primary" id="btnNouveauDeal">
-                        <svg class="ic" style="stroke-width: 2;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-                        Nouveau deal
                     </a>
                     @endunless
                 </div>

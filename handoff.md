@@ -12,7 +12,8 @@ et intégration d'outils tiers (Emelia emailing).
 **v2.1 :** Bug fix custom fields import + refonte UX import (stratégie doublons, validation requis, sélection globale contacts).
 **v2.2 :** Interface mapping style HubSpot — cartes enrichies, combobox searchable, panneau sticky, création propriété inline.
 **v2.3 :** Intégration Emelia — sync CRM→campagne via GraphQL, webhook events→timeline, contact léger auto sur orphelin, sync manuelle 1062 contacts.
-**v2.4 (prochaine) :** Auto-synchronisation Emelia — détecter quels contacts CRM sont dans quelles campagnes sans intervention manuelle.
+**v2.4 :** Bug fix `in_emelia` (vérifiait `emelia_contact_id` null au lieu de `emelia_campaign_id`) + auto-sync quotidienne toutes campagnes + bouton "Sync maintenant" dans Settings + job queue `SyncEmeliaCampaignJob`.
+**v2.5 :** Sync events Emelia → activités fiche contact — `EmeliaEventDispatcher` partagé (webhook + polling), `occurred_at` sur activities, polling `emelia:sync-contact-events`, onglets Tout/Emelia fiche contact, REPLIED → tâche owner + bump lifecycle lead→mql, badge admin replies non lues.
 
 ---
 
@@ -308,10 +309,10 @@ Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête)
 
 ---
 
-## 6. Prochaine session — v2.4 : Auto-synchronisation Emelia
+## 6. v2.4 : Auto-synchronisation Emelia (LIVRÉ — 2026-05-21)
 
-### Objectif
-Détecter automatiquement quels contacts CRM sont présents dans quelles campagnes Emelia, **sans intervention manuelle**. Aujourd'hui la sync est lancée à la main via artisan. Demain elle doit se déclencher périodiquement.
+### Objectif (atteint)
+Détecter automatiquement quels contacts CRM sont présents dans quelles campagnes Emelia, **sans intervention manuelle**.
 
 ### Ce qui existe déjà (v2.3) ✓
 - Commande `php artisan emelia:sync-campaign {campaign_id} {--dry-run}` — sync fiable en prod
@@ -358,13 +359,22 @@ Secret  : (laisser vide ou utiliser la valeur de EMELIA_WEBHOOK_SECRET dans .env
 - La seule façon de savoir si un contact est dans une campagne = tenter de l'y ajouter (idempotent côté CRM)
 - Alternative : `GET /contact_lists` pour lister les listes de contacts, mais les listes n'exposent pas non plus leurs contacts
 
-### Fichiers à créer/modifier pour v2.4
-| Fichier | Action |
+### Fichiers livrés v2.4
+| Fichier | Statut |
 |---|---|
-| `app/Console/Commands/EmeliaSyncAllCampaigns.php` | Nouveau — liste les campagnes Emelia puis sync chacune |
-| `bootstrap/app.php` | Ajouter `$schedule->command('emelia:sync-all-campaigns')->daily()` |
-| `app/Jobs/SyncEmeliaCampaignJob.php` | Optionnel — version async de la sync |
-| `resources/views/pages/settings/*.blade.php` | Bouton "Sync Emelia maintenant" |
+| `app/Http/Controllers/Web/EmeliaController.php` | Bug fix `in_emelia` : vérifie `emelia_campaign_id OR emelia_contact_id` |
+| `app/Console/Commands/EmeliaSyncAllCampaigns.php` | Nouveau — liste toutes les campagnes Emelia puis appelle `emelia:sync-campaign` pour chacune |
+| `app/Jobs/SyncEmeliaCampaignJob.php` | Nouveau — job queue qui appelle `emelia:sync-all-campaigns` |
+| `routes/console.php` | Schedule quotidien : `emelia:sync-all-campaigns --only-linked` à minuit, `withoutOverlapping()` |
+| `routes/web.php` | Route `POST /settings/emelia/sync` |
+| `resources/views/pages/settings/fields.blade.php` | Section Emelia avec bouton "Synchroniser maintenant" |
+
+### Résultats tests prod (2026-05-21)
+- **1062 contacts** avec `emelia_campaign_id` en BDD (dont **1052** sans `emelia_contact_id` — le bug)
+- `GET /contacts/{id}/emelia/status` → `in_emelia: true` pour ces contacts ✓
+- `POST /settings/emelia/sync` → 200 JSON `{"message": "Synchronisation lancée en arrière-plan."}` ✓
+- Schedule `0 0 * * *` visible dans `php artisan schedule:list` ✓
+- Dry-run détecte **21 campagnes Emelia** actives ✓
 
 ### Variables `.env` prod actuelles (Emelia)
 ```
@@ -380,7 +390,86 @@ EMELIA_BASE_URL=https://api.emelia.io   ← configuré ✓
 
 ---
 
-## 7. Backlog feature en attente
+## 7. v2.5 : Sync events Emelia → activités fiche contact (LIVRÉ — 2026-05-22)
+
+### Ce qui est livré
+
+#### Architecture hybride (webhook + polling)
+
+- **`app/Support/EmeliaEventDispatcher.php`** — service central partagé :
+  - `dispatch(Contact, type, payload, occurredAt, externalId, title, body)` : crée l'`Activity` via `updateOrCreate` (idempotence) si `externalId` non null, sinon `create` direct
+  - `typeFromEmeliaEvent(string)` : mapping UPPERCASE Emelia → constante `Activity::TYPE_EMAIL_*`
+  - Actions secondaires sur `REPLIED` : tâche follow-up pour le owner (due demain 9h) + bump `lifecycle_stage` lead→mql
+
+- **`app/Console/Commands/EmeliaSyncContactEvents.php`** — polling artisan :
+  - `emelia:sync-contact-events {--only-linked} {--contact=} {--dry-run}`
+  - Pour chaque contact lié (`emelia_contact_id + emelia_campaign_id`), appelle `EmeliaService::getContactEvents()`
+  - `external_id = 'emelia:' + sha256("{emeliaContactId}:{type}:{isoDate}")` — idempotence totale
+  - Rate-limit Emelia respecté (`usleep(220_000)`)
+  - Chaîné automatiquement depuis `emelia:sync-all-campaigns` (schedule daily existant)
+
+- **`app/Services/EmeliaService::getContactEvents()`** — méthode de polling :
+  - Tente GraphQL enrichi `contact { activities { type date } }` (non documenté, fallback gracieux)
+  - Fallback sur agrégats : dérive events depuis `lastContacted`, `lastOpen`, `lastReplied`, `status`
+
+- **`app/Http/Controllers/Webhook/EmeliaWebhookController`** — refactorisé :
+  - Délègue à `EmeliaEventDispatcher::dispatch()`
+  - Parse `occurred_at` depuis `date ?? timestamp ?? created_at` du payload Emelia
+
+#### DB
+- `activities.occurred_at` — timestamp nullable indexé (timestamp réel de l'event)
+- `users.emelia_replies_last_seen` — timestamp nullable (pour le badge admin)
+
+#### UI fiche contact
+- **Onglets Tout / Emelia** au-dessus du fil d'activité (Alpine `activeTab`)
+- **Badge `sync`/`live`** sur les activités Emelia (gris si `metadata.synthetic`, vert si webhook)
+- **Bouton "Voir →"** du panneau Emelia réparé : `$dispatch('switch-activity-tab', 'emelia')` + scroll
+- **Heure affichée** depuis `occurred_at ?? created_at` (heure réelle si disponible)
+
+#### Badge admin
+- **Sidebar** : badge rouge sur l'icône Contacts — compte les `email_replied` créées après `emelia_replies_last_seen`
+- **`POST /notifications/emelia-replies/seen`** — met à jour `emelia_replies_last_seen = now()`, déclenché au clic sur le lien Contacts
+
+### Fichiers livrés v2.5
+| Fichier | Statut |
+|---|---|
+| `app/Support/EmeliaEventDispatcher.php` | Nouveau |
+| `app/Console/Commands/EmeliaSyncContactEvents.php` | Nouveau |
+| `app/Http/Controllers/Web/NotificationController.php` | Nouveau |
+| `database/migrations/2026_05_22_000001_add_occurred_at_to_activities.php` | Nouveau |
+| `database/migrations/2026_05_22_000002_add_emelia_replies_last_seen_to_users.php` | Nouveau |
+| `tests/Feature/EmeliaEventDispatcherTest.php` | Nouveau (8 tests) |
+| `tests/Feature/EmeliaSyncContactEventsTest.php` | Nouveau (7 tests) |
+| `app/Services/EmeliaService.php` | `getContactEvents()` ajouté |
+| `app/Http/Controllers/Webhook/EmeliaWebhookController.php` | Refactorisé → EmeliaEventDispatcher |
+| `app/Models/Activity.php` | `occurred_at` dans fillable + casts |
+| `app/Models/User.php` | `emelia_replies_last_seen` dans fillable + casts |
+| `app/Console/Commands/EmeliaSyncAllCampaigns.php` | Chaîne `sync-contact-events` après push |
+| `resources/views/components/activity-timeline.blade.php` | `occurred_at`, filtre source, badges sync/live |
+| `resources/views/pages/contacts/show.blade.php` | Onglets Tout/Emelia, bouton Voir → réparé |
+| `resources/views/components/app-shell.blade.php` | Badge admin replies non lues |
+| `routes/web.php` | Route `POST /notifications/emelia-replies/seen` |
+
+### Procédure de déploiement v2.5 (après la sync locale)
+```bash
+# Sur le VPS :
+php artisan migrate --force                    # 2 nouvelles migrations
+php artisan cache:clear && php artisan view:clear
+# Webhook Emelia (à faire UNE FOIS dans l'UI Emelia) :
+# app.emelia.io → Settings → Webhooks
+# URL : https://crm.nana-intelligence.fr/api/webhooks/emelia
+# Events : SENT, OPENED, FIRST_OPEN, CLICKED, REPLIED, BOUNCED, UNSUBSCRIBED, CONTACT_UNSUBSCRIBED
+# Secret : $EMELIA_WEBHOOK_SECRET (dans .env)
+```
+
+### Comportement en production
+- **Sans webhook Emelia configuré** : seul le polling daily s'exécute. Les events sont créés avec `metadata.synthetic = true` et badge `sync`. Latence max 24h.
+- **Avec webhook Emelia configuré** : events créés en temps réel avec le timestamp Emelia dans `occurred_at` et badge `live`. Le polling daily rattrape les éventuels oublis.
+- **REPLIED** : crée une tâche pour le owner + bump lifecycle lead→mql. Visible immédiatement dans la timeline + onglet Emelia + badge sidebar admin.
+
+---
+
+## 8. Backlog feature en attente
 
 - **Export CSV** contacts/companies : `fputcsv` natif, inclure `custom_values` labellés
 - **Palette ⌘K** : `<x-command-palette>` Alpine, endpoint `/search` déjà existant

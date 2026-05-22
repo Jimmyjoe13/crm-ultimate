@@ -94,6 +94,34 @@
             </div>
         </form>
     </div>
+
+    <div class="card p-5" x-data="{ syncing: false, msg: '', isError: false }">
+        <div class="mono-label mb-3">Intégration Emelia</div>
+        <p class="text-sm text-secondary mb-4 leading-relaxed">
+            Synchronise tous les contacts CRM avec les campagnes Emelia actives.<br>
+            La synchronisation automatique tourne chaque nuit.
+        </p>
+        <div class="flex items-center gap-3">
+            <button class="btn primary" :disabled="syncing"
+                    @click="syncing = true; msg = ''; isError = false;
+                        fetch('/settings/emelia/sync', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                            },
+                            credentials: 'same-origin'
+                        })
+                        .then(r => r.json())
+                        .then(d => { msg = d.message || 'Synchronisation lancée.'; syncing = false; })
+                        .catch(() => { msg = 'Erreur lors du lancement.'; isError = true; syncing = false; })">
+                <span x-show="!syncing">Synchroniser maintenant</span>
+                <span x-show="syncing">Lancement…</span>
+            </button>
+            <span class="text-sm" :style="isError ? 'color:var(--err)' : 'color:var(--text-secondary)'" x-text="msg"></span>
+        </div>
+    </div>
 </div>
 
 </x-app-shell>

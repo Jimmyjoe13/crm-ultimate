@@ -61,11 +61,7 @@
             @endforelse
         </div>
 
-        {{-- Add deal --}}
-        <a href="{{ '/deals' }}" class="btn ghost w-full justify-center mt-1 text-[12px]">
-            <svg class="ic" style="width:14px;height:14px;stroke-width:2;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Ajouter deal
-        </a>
+
     </div>
     @endforeach
 </div>
