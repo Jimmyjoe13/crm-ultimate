@@ -13,7 +13,15 @@
          init() {
              const stored = sessionStorage.getItem('ai:{{ $endpoint }}');
              if (stored) {
-                 try { const p = JSON.parse(stored); this.content = p.data; this.cached = true; } catch {}
+                 try {
+                     const p = JSON.parse(stored);
+                     if (p.timestamp && (Date.now() - p.timestamp < 15 * 60 * 1000)) {
+                         this.content = p.data;
+                         this.cached = true;
+                     } else {
+                         sessionStorage.removeItem('ai:{{ $endpoint }}');
+                     }
+                 } catch {}
              }
          },
          async generate(fresh = false) {
@@ -33,14 +41,15 @@
                  if (!resp.ok) { this.error = json.message ?? 'Erreur serveur'; return; }
                  this.content = json.data;
                  this.cached = json.cached ?? false;
-                 if (!fresh) sessionStorage.setItem('ai:{{ $endpoint }}', JSON.stringify({ data: json.data }));
+                 if (!fresh) sessionStorage.setItem('ai:{{ $endpoint }}', JSON.stringify({ data: json.data, timestamp: Date.now() }));
              } catch (e) {
                  this.error = 'Impossible de contacter le serveur.';
              } finally {
                  this.loading = false;
              }
          }
-     }">
+     }"
+     @submit.window="sessionStorage.removeItem('ai:{{ $endpoint }}')">
 
     <div class="flex items-center justify-between mb-3">
         <div class="mono-label flex items-center gap-1.5">

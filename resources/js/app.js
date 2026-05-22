@@ -60,4 +60,24 @@ Alpine.store('bulk', {
     },
 });
 
+window.copyToClipboard = function(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+    }
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.position = 'absolute';
+    el.style.left = '-9999px';
+    document.body.appendChild(el);
+    el.select();
+    try {
+        const success = document.execCommand('copy');
+        document.body.removeChild(el);
+        return success ? Promise.resolve() : Promise.reject();
+    } catch (err) {
+        document.body.removeChild(el);
+        return Promise.reject(err);
+    }
+};
+
 Alpine.start();

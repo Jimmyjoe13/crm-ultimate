@@ -6,7 +6,7 @@
     'filterSource' => null,
 ])
 
-<div class="flex flex-col gap-0">
+<div x-data="{ limit: 15, total: {{ $activities->count() }} }" class="flex flex-col gap-0">
     @if($showComposer)
     <form method="POST" action="/activities" class="card p-4 mb-4">
         @csrf
@@ -66,6 +66,7 @@
         $isTask = $activity->type === 'task';
     @endphp
     <div class="tl-item"
+         x-show="{{ $loop->index }} < limit"
          data-source="{{ $activity->source }}"
          @if($isTask)
          x-data="{ done: {{ $activity->status === 'completed' ? 'true' : 'false' }} }"
@@ -113,4 +114,8 @@
     @empty
     <div class="py-8 text-center text-tertiary text-sm">Aucune activité pour l'instant.</div>
     @endforelse
+
+    <button type="button" x-show="limit < total" @click="limit += 15" class="btn ghost w-full justify-center mt-3 text-xs">
+        Afficher plus d'activités...
+    </button>
 </div>

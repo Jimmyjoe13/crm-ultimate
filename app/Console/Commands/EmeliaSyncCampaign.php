@@ -92,11 +92,19 @@ class EmeliaSyncCampaign extends Command
                         $linked++;
                     } catch (\Throwable $e) {
                         if (str_contains($e->getMessage(), 'already included')) {
-                            // Contact déjà dans cette campagne — on met quand même à jour les champs CRM
-                            $contact->update([
+                            // Contact déjà dans la campagne — résoudre l'ID Emelia manquant si besoin
+                            $updates = [
                                 'emelia_campaign_id'   => $campaignId,
                                 'emelia_campaign_name' => $campaignName,
-                            ]);
+                            ];
+                            if (! $contact->emelia_contact_id) {
+                                $emeliData = $emelia->getContactByEmail($contact->email, $campaignName);
+                                if ($emeliData && isset($emeliData['_id'])) {
+                                    $updates['emelia_contact_id'] = $emeliData['_id'];
+                                }
+                                usleep(220_000);
+                            }
+                            $contact->update($updates);
                             $skip++;
                         } else {
                             $this->newLine();

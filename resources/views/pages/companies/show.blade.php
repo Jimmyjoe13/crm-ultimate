@@ -44,7 +44,7 @@
                     </div>
                     <div x-data="{ copied: false }" class="flex items-center gap-1.5 group/copy mt-0.5">
                         <a href="{{ $company->website }}" target="_blank" class="text-[13px] text-accent hover:underline truncate font-medium">{{ $company->website }}</a>
-                        <button type="button" @click="navigator.clipboard.writeText('{{ $company->website }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        <button type="button" @click="window.copyToClipboard('{{ $company->website }}'); copied = true; setTimeout(() => copied = false, 2000)"
                                 class="opacity-100 lg:opacity-0 lg:group-hover/copy:opacity-100 transition-opacity p-0.5 text-tertiary hover:text-primary flex-shrink-0"
                                 title="Copier le site web">
                             <svg class="ic" style="width:11px; height:11px;" viewBox="0 0 24 24">
@@ -75,7 +75,7 @@
                     </div>
                     <div x-data="{ copied: false }" class="flex items-center gap-1.5 group/copy mt-0.5">
                         <a href="tel:{{ preg_replace('/[^0-9+]/', '', $company->phone) }}" class="text-[13px] font-mono text-primary hover:text-accent hover:underline truncate">{{ $company->phone }}</a>
-                        <button type="button" @click="navigator.clipboard.writeText('{{ $company->phone }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        <button type="button" @click="window.copyToClipboard('{{ $company->phone }}'); copied = true; setTimeout(() => copied = false, 2000)"
                                 class="opacity-100 lg:opacity-0 lg:group-hover/copy:opacity-100 transition-opacity p-0.5 text-tertiary hover:text-primary flex-shrink-0"
                                 title="Copier le téléphone">
                             <svg class="ic" style="width:11px; height:11px;" viewBox="0 0 24 24">

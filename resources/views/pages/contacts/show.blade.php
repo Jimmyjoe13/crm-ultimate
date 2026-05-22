@@ -58,7 +58,7 @@
                     </div>
                     <div x-data="{ copied: false }" class="flex items-center gap-1.5 group/copy mt-0.5">
                         <a href="mailto:{{ $contact->email }}" class="text-[13px] font-mono text-accent hover:underline truncate">{{ $contact->email }}</a>
-                        <button type="button" @click="navigator.clipboard.writeText('{{ $contact->email }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        <button type="button" @click="window.copyToClipboard('{{ $contact->email }}'); copied = true; setTimeout(() => copied = false, 2000)"
                                 class="opacity-100 lg:opacity-0 lg:group-hover/copy:opacity-100 transition-opacity p-0.5 text-tertiary hover:text-primary flex-shrink-0"
                                 title="Copier l'email">
                             <svg class="ic" style="width:11px; height:11px;" viewBox="0 0 24 24">
@@ -79,7 +79,7 @@
                     </div>
                     <div x-data="{ copied: false }" class="flex items-center gap-1.5 group/copy mt-0.5">
                         <a href="tel:{{ preg_replace('/[^0-9+]/', '', $contact->phone) }}" class="text-[13px] font-mono text-primary hover:text-accent hover:underline truncate">{{ $contact->phone }}</a>
-                        <button type="button" @click="navigator.clipboard.writeText('{{ $contact->phone }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        <button type="button" @click="window.copyToClipboard('{{ $contact->phone }}'); copied = true; setTimeout(() => copied = false, 2000)"
                                 class="opacity-100 lg:opacity-0 lg:group-hover/copy:opacity-100 transition-opacity p-0.5 text-tertiary hover:text-primary flex-shrink-0"
                                 title="Copier le téléphone">
                             <svg class="ic" style="width:11px; height:11px;" viewBox="0 0 24 24">
@@ -372,15 +372,35 @@
 
                     <template x-if="!status.webhook_active">
                         <p class="text-[10px] text-tertiary mb-3 leading-relaxed">
-                            Pour activer les compteurs : <strong>app.emelia.io › Settings › Webhooks</strong>
-                            → URL&nbsp;: <code style="font-size:9px">crm.nana-intelligence.fr/api/webhooks/emelia</code>
+                            Webhook non disponible sur ce plan Emelia — utilisez le bouton Sync pour importer les événements manuellement.
                         </p>
                     </template>
 
-                    <div class="flex gap-1.5">
+                    <div class="flex gap-1.5" x-data="{ syncing: false, syncDone: false }">
                         <button class="btn ghost text-xs flex-1"
                                 @click="$dispatch('open-emelia-modal')">
                             Changer
+                        </button>
+                        <button class="btn ghost text-xs"
+                                :disabled="syncing"
+                                :class="{ 'opacity-50': syncing }"
+                                @click="
+                                    syncing = true; syncDone = false;
+                                    fetch('{{ route('contacts.emelia.sync', $contact) }}', {
+                                        method: 'POST',
+                                        headers: {
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                            'Accept': 'application/json',
+                                        },
+                                        credentials: 'same-origin',
+                                    })
+                                    .then(r => r.json())
+                                    .then(d => { syncing = false; syncDone = true; if (d.created > 0) window.location.reload(); })
+                                    .catch(() => { syncing = false; });
+                                ">
+                            <span x-show="!syncing && !syncDone">Sync</span>
+                            <span x-show="syncing">…</span>
+                            <span x-show="syncDone">OK</span>
                         </button>
                         <button class="btn ghost text-xs"
                                 @click="$dispatch('switch-activity-tab', 'emelia'); document.getElementById('activityFeed').scrollIntoView({behavior:'smooth'})"

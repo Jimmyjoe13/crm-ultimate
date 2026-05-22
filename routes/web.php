@@ -82,6 +82,7 @@ Route::middleware('web.auth')->group(function () {
     // ─── Emelia ───────────────────────────────────────────────────────────────
     Route::get('/emelia/campaigns', [EmeliaController::class, 'campaigns'])->name('emelia.campaigns');
     Route::get('/contacts/{contact}/emelia/status', [EmeliaController::class, 'status'])->name('contacts.emelia.status');
+    Route::post('/contacts/{contact}/emelia/sync', [EmeliaController::class, 'syncContact'])->name('contacts.emelia.sync');
 
     // ─── Admin + Manager uniquement ──────────────────────────────────────────
     Route::middleware('role:admin,manager')->group(function () {
