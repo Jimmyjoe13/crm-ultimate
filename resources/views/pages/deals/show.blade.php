@@ -93,20 +93,40 @@
                     $isActive = $deal->pipeline_stage_id === $stage->id;
                     $isPast   = $stage->position < $currentPos;
                 @endphp
-                <div class="flex-1 flex flex-col items-center">
-                    <div class="w-full h-1.5
-                        @if($isActive) rounded-none outline outline-2 outline-offset-1
-                        @elseif($loop->first) rounded-l-full
-                        @elseif($loop->last) rounded-r-full
-                        @endif"
-                        style="background: {{ $isActive ? 'var(--accent)' : ($isPast ? 'var(--text)' : 'var(--surface2)') }};
-                               @if($isActive) outline-color: var(--accent-soft); @endif">
-                    </div>
-                    <span class="mono-label mt-1.5 {{ $isActive ? 'font-semibold' : '' }}"
-                          style="{{ $isActive ? 'color: var(--accent);' : ($isPast ? 'color: var(--text);' : '') }}">
-                        {{ $stage->name }}{{ $isActive ? ' ●' : '' }}
-                    </span>
-                </div>
+                <form method="POST" action="{{ '/deals/' . $deal->id }}" class="flex-1 flex flex-col items-center">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="name" value="{{ $deal->name }}">
+                    <input type="hidden" name="amount" value="{{ $deal->amount }}">
+                    <input type="hidden" name="close_date" value="{{ $deal->close_date?->format('Y-m-d') }}">
+                    <input type="hidden" name="pipeline_stage_id" value="{{ $stage->id }}">
+                    @if($deal->custom_values)
+                        @foreach($deal->custom_values as $k => $v)
+                            @if(is_array($v))
+                                @foreach($v as $subV)
+                                    <input type="hidden" name="custom_values[{{ $k }}][]" value="{{ $subV }}">
+                                @endforeach
+                            @else
+                                <input type="hidden" name="custom_values[{{ $k }}]" value="{{ is_bool($v) ? ($v ? '1' : '0') : $v }}">
+                            @endif
+                        @endforeach
+                    @endif
+
+                    <button type="submit" class="w-full flex flex-col items-center group cursor-pointer border-0 bg-transparent p-0 text-center hover:opacity-90 transition-opacity" style="font-family: inherit; font-size: inherit; color: inherit;" title="Passer à l'étape {{ $stage->name }}">
+                        <div class="w-full h-1.5 transition-all group-hover:scale-y-125
+                            @if($isActive) rounded-none outline outline-2 outline-offset-1
+                            @elseif($loop->first) rounded-l-full
+                            @elseif($loop->last) rounded-r-full
+                            @endif"
+                            style="background: {{ $isActive ? 'var(--accent)' : ($isPast ? 'var(--text)' : 'var(--surface2)') }};
+                                   @if($isActive) outline-color: var(--accent-soft); @endif">
+                        </div>
+                        <span class="mono-label mt-1.5 group-hover:text-accent transition-colors {{ $isActive ? 'font-semibold' : '' }}"
+                              style="{{ $isActive ? 'color: var(--accent);' : ($isPast ? 'color: var(--text);' : '') }} text-align: center;">
+                            {{ $stage->name }}{{ $isActive ? ' ●' : '' }}
+                        </span>
+                    </button>
+                </form>
                 @endforeach
             </div>
             <div class="flex items-center justify-between mt-4">
@@ -171,11 +191,43 @@
                             </span>
                         </div>
                         @endif
-                        <div class="flex justify-between">
+                        <div class="flex justify-between items-center" x-data="{ open: false }">
                             <span class="text-tertiary">Statut</span>
-                            <span class="chip {{ match($deal->status) { 'won' => 'ok', 'lost' => 'err', default => '' } }}">
-                                {{ $deal->status }}
-                            </span>
+                            <div class="relative">
+                                <button type="button" @click="open = !open" class="chip cursor-pointer hover:opacity-80 transition-opacity {{ match($deal->status) { 'won' => 'ok', 'lost' => 'err', default => '' } }}" style="padding-right: 8px;">
+                                    {{ $deal->status }} <span class="text-[9px] opacity-70">▼</span>
+                                </button>
+                                <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-1 z-30 bg-surface border border-default rounded shadow-lg p-1 min-w-[110px] flex flex-col gap-0.5" style="background: var(--surface); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                    @foreach(['open' => 'open', 'won' => 'won', 'lost' => 'lost'] as $val => $lbl)
+                                    <form method="POST" action="{{ '/deals/' . $deal->id }}" class="m-0 p-0 flex">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="name" value="{{ $deal->name }}">
+                                        <input type="hidden" name="amount" value="{{ $deal->amount }}">
+                                        <input type="hidden" name="close_date" value="{{ $deal->close_date?->format('Y-m-d') }}">
+                                        <input type="hidden" name="pipeline_stage_id" value="{{ $deal->pipeline_stage_id }}">
+                                        <input type="hidden" name="status" value="{{ $val }}">
+                                        @if($deal->custom_values)
+                                            @foreach($deal->custom_values as $k => $v)
+                                                @if(is_array($v))
+                                                    @foreach($v as $subV)
+                                                        <input type="hidden" name="custom_values[{{ $k }}][]" value="{{ $subV }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="custom_values[{{ $k }}]" value="{{ is_bool($v) ? ($v ? '1' : '0') : $v }}">
+                                                @endif
+                                            @endforeach
+                                        @endif
+                                        <button type="submit" class="w-full text-left px-2.5 py-1.5 text-xs hover:bg-surface-alt rounded border-0 bg-transparent cursor-pointer font-sans flex items-center justify-between" style="color: var(--text);">
+                                            <span>{{ $lbl }}</span>
+                                            @if($deal->status === $val)
+                                            <span class="text-accent text-[10px]">✓</span>
+                                            @endif
+                                        </button>
+                                    </form>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                     </div>
 

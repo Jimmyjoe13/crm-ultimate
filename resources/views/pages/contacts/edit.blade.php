@@ -54,6 +54,15 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="field">
+                    <label>Statut Lead</label>
+                    <select name="lead_status" class="select-arrow">
+                        <option value="">—</option>
+                        @foreach(['new' => 'Nouveau', 'open' => 'Ouvert', 'in_progress' => 'En cours', 'connected' => 'Connecté', 'unqualified' => 'Non qualifié', 'bad_fit' => 'Hors cible'] as $val => $lbl)
+                        <option value="{{ $val }}" {{ old('lead_status', $contact->lead_status) === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <x-custom-fields-form entity-type="contact" :values="old('custom_values', $contact->custom_values ?? [])" />
             </div>
         </div>

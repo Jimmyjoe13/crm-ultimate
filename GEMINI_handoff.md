@@ -4,7 +4,14 @@
 
 Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pages de détails (Contacts, Sociétés, Deals) en mettant en place un layout modernisé, équilibré et à trois colonnes, inspiré des meilleures pratiques des CRM modernes (type HubSpot).
 
-**v3.0 (Cette Session - Courante) :**
+**v3.1 (Cette Session - Courante) :**
+
+- **Sélecteur de statut de deal rapide :** Remplacement de la puce de statut statique du Deal par un sélecteur déroulant interactif (Alpine.js) permettant de mettre à jour le statut (`open`, `won`, `lost`) en un clic.
+- **Étapes de pipeline cliquables :** La barre de progression des étapes de pipeline sur la fiche Deal est devenue cliquable, permettant de faire progresser le deal à n'importe quelle étape instantanément avec validation et gestion des inputs requis en arrière-plan.
+- **Sélecteurs rapides de contact (Lifecycle & Statut Lead) :** Ajout de sélecteurs déroulants interactifs dans la fiche Contact pour modifier instantanément l'étape lifecycle (`lead`, `mql`, `sql`, etc.) et le statut du lead (`new`, `open`, etc.).
+- **Améliorations de robustesse UI & QA :** Correction d'un bug d'évaluation de constante de trait PHP dans `contacts/show.blade.php`, ajout d'un bouton de création de deal toujours accessible dans la fiche contact pour une meilleure expérience utilisateur, et mise à jour de la configuration de connexion E2E avec 100% de réussite sur les tests automatisés Playwright.
+
+**v3.0 :**
 
 - **Design du sélecteur de date (close_date) amélioré :** Intégration d'une icône de calendrier interactive et de boutons de présélection intelligents ("Fin de mois", "Fin trim.", "+30j", "+90j") pilotés par Alpine.js et reliés à Flatpickr pour une édition en un clic dans la fiche Deal (modale propriétés) et le formulaire d'édition générale.
 - **Refonte esthétique globale de Flatpickr :** Application des variables CSS du CRM (thème clair/sombre, z-index élevé à 99999 pour éliminer tout conflit d'affichage dans les tiroirs/modales, police technique JetBrains Mono, suppression des styles de sélection système pour le mois et l'année).
@@ -66,31 +73,32 @@ Déploiement et activation réussis de la version **v3.0** sur le VPS de product
 
 ---
 
-## 3. Fichiers concernés (v3.0)
+## 3. Fichiers concernés (v3.1)
 
 ### Logique & Vues
 
 | Fichier                                         | Rôle                                                                              |
 | ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| `resources/views/components/form-field.blade.php` | Enveloppement automatique et icône calendrier pour tous les champs de type `date` |
-| `resources/views/pages/deals/show.blade.php`    | Modale d'édition des propriétés du Deal avec boutons présélections Alpine.js      |
-| `resources/views/pages/deals/edit.blade.php`    | Page d'édition complète du Deal avec boutons présélections Alpine.js              |
-| `resources/css/app.css`                         | Charte graphique et styles personnalisés Flatpickr (JetBrains Mono, z-index 99999) |
+| `resources/views/pages/deals/show.blade.php`    | Étape de pipeline interactive et sélecteur rapide de statut de Deal               |
+| `resources/views/pages/contacts/show.blade.php`   | Sélecteurs de Lifecycle stage & Lead status, bouton toujours visible "+ Créer un deal" |
+| `resources/views/pages/contacts/edit.blade.php`   | Formulaire de modification standard avec champ `lead_status`                       |
+| `app/Http/Controllers/Web/ContactController.php` | Validation pour `lead_status` et `lifecycle_stage`                                 |
+| `app/Http/Controllers/Web/DealController.php`    | Validation pour le statut du Deal                                                 |
+| `tests/e2e/helpers.ts`                           | Correction de l'adresse email de connexion admin pour les tests Playwright         |
 
 ### Assets Compilés
 
 | Fichier                                | Rôle                                                         |
 | -------------------------------------- | ------------------------------------------------------------ |
-| `public/build/assets/app-C9nu5FtS.css` | Styles CSS d'application compilés incluant le style Flatpickr|
-| `public/build/assets/app-C67st75E.js`  | Scripts JS d'application compilés                            |
+| `public/build/assets/app-B_badhOe.css` | Styles CSS d'application compilés                            |
 | `public/build/manifest.json`           | Manifeste Vite mis à jour                                    |
 
 ---
 
 ## 4. Ce qui a échoué / Points d'attention
 
-- **Permissions d'accès public/build en production :** Le build initial a généré le répertoire `public/build` avec des permissions restreintes (`700`), ce qui a provoqué une erreur 500 temporaire ("Vite manifest not found") pour l'utilisateur de serveur web `www-data`. Un `chmod -R 755 public/build` a été appliqué et a résolu définitivement le problème.
-- **Tests unitaires en production :** Les dépendances de développement (y compris `phpunit`) ne sont pas installées sur l'environnement de production (déploiement sans `--dev`), ce qui empêche de lancer les tests PHPUnit natifs en prod. En revanche, les tests QA automatisés de bout en bout avec le navigateur simulé ont validé à 100% le bon fonctionnement.
+- **Accès aux constantes de trait en PHP :** L'accès direct à `HasLifecycle::LEAD_STATUSES` provoquait une erreur PHP fatale. Il a été corrigé en accédant à la constante via la classe modèle `Contact` qui utilise le trait.
+- **Identifiant de test E2E admin :** L'email d'administration utilisé dans les tests Playwright (`admin@demo.com`) différait de l'email généré par le seeder local (`admin@example.com`), provoquant le timeout du login. L'email a été harmonisé.
 
 ---
 
@@ -98,14 +106,11 @@ Déploiement et activation réussis de la version **v3.0** sur le VPS de product
 
 ### Production — URL : https://crm.nana-intelligence.fr
 
-- Les conteneurs tournent correctement.
-- Les caches Laravel ont été vidés et régénérés (`config:cache`, `route:cache`, `view:cache`, `view:clear`).
-- **Datepicker & Presets** : Activés et testés avec succès en direct (connexion de test effectuée, modification de date via le preset `+30j` et enregistrement en base de données validés).
+- **Prochaine étape** : Committer et pousser les modifications sur GitHub pour permettre le déploiement sur la production via le script `deploy.sh`.
 
 ---
 
 ## 6. Backlog de la prochaine session
 
-- **Présélections et raccourcis d'édition rapides :** Étendre l'approche ergonomique des presets rapides de date à d'autres propriétés clés du CRM (ex: boutons rapides de changement de statut ou de pipeline stage dans les fiches).
-- **Optimisation des performances d'assets :** Suivre les performances de chargement de Flatpickr et s'assurer que le z-index très élevé n'entre pas en collision avec d'autres bibliothèques tierces futures.
+- **Supervision & Maintenance** : Surveiller les retours utilisateur sur les raccourcis d'édition rapides et s'assurer que toutes les interactions restent fluides et sans bug.
 

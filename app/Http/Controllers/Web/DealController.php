@@ -151,6 +151,7 @@ class DealController extends Controller
             'amount'            => ['required', 'numeric', 'min:0'],
             'pipeline_stage_id' => ['required', 'exists:pipeline_stages,id'],
             'close_date'        => ['nullable', 'date'],
+            'status'            => ['nullable', 'in:open,won,lost'],
         ], CustomValueValidator::validationRules('deal')));
 
         $stage = PipelineStage::findOrFail($data['pipeline_stage_id']);

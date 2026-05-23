@@ -69,16 +69,18 @@ class EmeliaService
             return null;
         }
 
-        // Filtrer par nom de campagne si fourni
+        // Filtrer par nom de campagne si fourni — retourne null si le contact
+        // existe dans Emelia mais pas dans cette campagne spécifique
         if ($campaignName) {
             foreach ($contacts as $c) {
                 if (in_array($campaignName, $c['campaigns'] ?? [])) {
                     return $c;
                 }
             }
+            return null;
         }
 
-        // Prendre le contact avec un statut non-null en priorité
+        // Sans filtre campagne : prendre le contact avec un statut non-null en priorité
         foreach ($contacts as $c) {
             if ($c['status'] !== null) {
                 return $c;

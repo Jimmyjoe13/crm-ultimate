@@ -46,7 +46,8 @@ class ContactController extends Controller
 
     public function create()
     {
-        return view('pages.contacts.create');
+        $companies = \App\Models\Company::orderBy('name')->get(['id', 'name']);
+        return view('pages.contacts.create', compact('companies'));
     }
 
     public function store(Request $request)
@@ -58,11 +59,21 @@ class ContactController extends Controller
             'phone'           => ['nullable', 'string', 'max:255'],
             'job_title'       => ['nullable', 'string', 'max:255'],
             'lifecycle_stage' => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+            'lead_status'     => ['nullable', 'in:new,open,in_progress,connected,unqualified,bad_fit'],
+            'company_id'      => ['nullable', 'exists:companies,id'],
         ], CustomValueValidator::validationRules('contact')));
 
-        $data['custom_values'] = CustomValueValidator::cast('contact', $data['custom_values'] ?? []);
+        $companyId = $data['company_id'] ?? null;
+        unset($data['company_id']);
+
+        $data['lifecycle_stage'] = $data['lifecycle_stage'] ?? 'lead';
+        $data['custom_values']   = CustomValueValidator::cast('contact', $data['custom_values'] ?? []);
 
         $contact = Contact::create($data);
+
+        if ($companyId) {
+            $contact->companies()->attach($companyId);
+        }
 
         return redirect('/contacts/' . $contact->id)->with('flash_toast', [
             'message' => 'Contact créé.',
@@ -98,6 +109,7 @@ class ContactController extends Controller
             'phone'           => ['nullable', 'string', 'max:255'],
             'job_title'       => ['nullable', 'string', 'max:255'],
             'lifecycle_stage' => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+            'lead_status'     => ['nullable', 'in:new,open,in_progress,connected,unqualified,bad_fit'],
         ], CustomValueValidator::validationRules('contact')));
 
         $data['custom_values'] = CustomValueValidator::cast('contact', $data['custom_values'] ?? []);

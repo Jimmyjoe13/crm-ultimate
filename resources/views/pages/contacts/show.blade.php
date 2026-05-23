@@ -119,17 +119,97 @@
                 </div>
                 @endif
 
-                @if($contact->lead_status)
+                <div>
+                    <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
+                        <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        Étape Lifecycle
+                    </div>
+                    <div class="mt-0.5" x-data="{ open: false }">
+                        <div class="relative inline-block">
+                            <button type="button" @click="open = !open" class="chip cursor-pointer hover:opacity-80 transition-opacity" style="padding-right: 8px;">
+                                {{ $contact->lifecycle_stage ?: '— Non défini' }} <span class="text-[9px] opacity-70">▼</span>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-cloak class="absolute left-0 mt-1 z-30 bg-surface border border-default rounded shadow-lg p-1 min-w-[150px] flex flex-col gap-0.5" style="background: var(--surface); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                @foreach(['lead' => 'Lead', 'mql' => 'MQL', 'sql' => 'SQL', 'opportunity' => 'Opportunité', 'customer' => 'Client', 'evangelist' => 'Évangéliste', 'other' => 'Autre'] as $val => $lbl)
+                                <form method="POST" action="{{ '/contacts/' . $contact->id }}" class="m-0 p-0 flex">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="hidden" name="first_name" value="{{ $contact->first_name }}">
+                                    <input type="hidden" name="last_name" value="{{ $contact->last_name }}">
+                                    <input type="hidden" name="email" value="{{ $contact->email }}">
+                                    <input type="hidden" name="phone" value="{{ $contact->phone }}">
+                                    <input type="hidden" name="job_title" value="{{ $contact->job_title }}">
+                                    <input type="hidden" name="lead_status" value="{{ $contact->lead_status }}">
+                                    <input type="hidden" name="lifecycle_stage" value="{{ $val }}">
+                                    @if($contact->custom_values)
+                                        @foreach($contact->custom_values as $k => $v)
+                                            @if(is_array($v))
+                                                @foreach($v as $subV)
+                                                    <input type="hidden" name="custom_values[{{ $k }}][]" value="{{ $subV }}">
+                                                @endforeach
+                                            @else
+                                                <input type="hidden" name="custom_values[{{ $k }}]" value="{{ is_bool($v) ? ($v ? '1' : '0') : $v }}">
+                                            @endif
+                                        @endforeach
+                                    @endif
+                                    <button type="submit" class="w-full text-left px-2.5 py-1.5 text-xs hover:bg-surface-alt rounded border-0 bg-transparent cursor-pointer font-sans flex items-center justify-between" style="color: var(--text);">
+                                        <span>{{ $lbl }}</span>
+                                        @if($contact->lifecycle_stage === $val)
+                                        <span class="text-accent text-[10px]">✓</span>
+                                        @endif
+                                    </button>
+                                </form>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div>
                     <div class="text-[10px] text-tertiary font-mono uppercase tracking-wider flex items-center gap-1">
                         <svg class="ic" style="width:10px;height:10px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
                         Statut Lead
                     </div>
-                    <div class="mt-0.5">
-                        <span class="chip">{{ $contact->lead_status }}</span>
+                    <div class="mt-0.5" x-data="{ open: false }">
+                        <div class="relative inline-block">
+                            <button type="button" @click="open = !open" class="chip cursor-pointer hover:opacity-80 transition-opacity" style="padding-right: 8px;">
+                                {{ $contact->lead_status ? (\App\Models\Contact::LEAD_STATUSES[$contact->lead_status] ?? $contact->lead_status) : '— Non défini' }} <span class="text-[9px] opacity-70">▼</span>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-cloak class="absolute left-0 mt-1 z-30 bg-surface border border-default rounded shadow-lg p-1 min-w-[150px] flex flex-col gap-0.5" style="background: var(--surface); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                @foreach(\App\Models\Contact::LEAD_STATUSES as $val => $lbl)
+                                <form method="POST" action="{{ '/contacts/' . $contact->id }}" class="m-0 p-0 flex">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="hidden" name="first_name" value="{{ $contact->first_name }}">
+                                    <input type="hidden" name="last_name" value="{{ $contact->last_name }}">
+                                    <input type="hidden" name="email" value="{{ $contact->email }}">
+                                    <input type="hidden" name="phone" value="{{ $contact->phone }}">
+                                    <input type="hidden" name="job_title" value="{{ $contact->job_title }}">
+                                    <input type="hidden" name="lifecycle_stage" value="{{ $contact->lifecycle_stage }}">
+                                    <input type="hidden" name="lead_status" value="{{ $val }}">
+                                    @if($contact->custom_values)
+                                        @foreach($contact->custom_values as $k => $v)
+                                            @if(is_array($v))
+                                                @foreach($v as $subV)
+                                                    <input type="hidden" name="custom_values[{{ $k }}][]" value="{{ $subV }}">
+                                                @endforeach
+                                            @else
+                                                <input type="hidden" name="custom_values[{{ $k }}]" value="{{ is_bool($v) ? ($v ? '1' : '0') : $v }}">
+                                            @endif
+                                        @endforeach
+                                    @endif
+                                    <button type="submit" class="w-full text-left px-2.5 py-1.5 text-xs hover:bg-surface-alt rounded border-0 bg-transparent cursor-pointer font-sans flex items-center justify-between" style="color: var(--text);">
+                                        <span>{{ $lbl }}</span>
+                                        @if($contact->lead_status === $val)
+                                        <span class="text-accent text-[10px]">✓</span>
+                                        @endif
+                                    </button>
+                                </form>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 </div>
-                @endif
 
                 @if($contact->owner)
                 <div>
@@ -225,7 +305,12 @@
         <div class="card overflow-hidden">
             <div class="card-h">
                 <span class="title">Deals associés</span>
-                <span class="meta">{{ $contact->deals->count() }}</span>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="text-accent hover:underline text-[11px] font-mono font-semibold" @click="$dispatch('open-create-deal-modal')">
+                        + Créer un deal
+                    </button>
+                    <span class="meta">{{ $contact->deals->count() }}</span>
+                </div>
             </div>
             @if($contact->deals->count())
             <div class="p-3 flex flex-col gap-2.5">
@@ -624,6 +709,15 @@
                         <option value="">—</option>
                         @foreach(['lead','mql','sql','opportunity','customer','evangelist','other'] as $stage)
                         <option value="{{ $stage }}" {{ old('lifecycle_stage', $contact->lifecycle_stage) === $stage ? 'selected' : '' }}>{{ $stage }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Statut Lead</label>
+                    <select name="lead_status" class="select-arrow">
+                        <option value="">—</option>
+                        @foreach(['new' => 'Nouveau', 'open' => 'Ouvert', 'in_progress' => 'En cours', 'connected' => 'Connecté', 'unqualified' => 'Non qualifié', 'bad_fit' => 'Hors cible'] as $val => $lbl)
+                        <option value="{{ $val }}" {{ old('lead_status', $contact->lead_status) === $val ? 'selected' : '' }}>{{ $lbl }}</option>
                         @endforeach
                     </select>
                 </div>

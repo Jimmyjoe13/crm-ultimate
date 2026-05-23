@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 
-export const ADMIN = { email: 'admin@demo.com', password: 'password' };
+export const ADMIN = { email: 'admin@example.com', password: 'password' };
 
 export async function login(page: Page, user = ADMIN) {
     await page.goto('/login');

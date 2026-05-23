@@ -53,6 +53,45 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="field col-span-2"
+                     x-data="{
+                         search: '{{ old('company_name', '') }}',
+                         companyId: '{{ old('company_id', '') }}',
+                         open: false,
+                         companies: {{ Js::from($companies->map(fn($c) => ['id' => $c->id, 'name' => $c->name])) }},
+                         get filtered() {
+                             if (!this.search) return this.companies.slice(0, 50);
+                             const q = this.search.toLowerCase();
+                             return this.companies.filter(c => c.name.toLowerCase().includes(q)).slice(0, 50);
+                         },
+                         select(c) { this.search = c.name; this.companyId = c.id; this.open = false; },
+                         clear() { this.search = ''; this.companyId = ''; }
+                     }">
+                    <label>Entreprise</label>
+                    <input type="hidden" name="company_id" :value="companyId">
+                    <div class="relative">
+                        <input type="text" x-model="search"
+                               @focus="open = true"
+                               @input="companyId = ''; open = true"
+                               @click.outside="open = false"
+                               placeholder="Rechercher une entreprise…"
+                               autocomplete="off">
+                        <button type="button" x-show="search" @click="clear()"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">✕</button>
+                        <div x-show="open && filtered.length > 0"
+                             class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-pop mt-1 max-h-52 overflow-y-auto">
+                            <template x-for="c in filtered" :key="c.id">
+                                <div class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-50"
+                                     :class="companyId == c.id ? 'font-medium text-accent' : ''"
+                                     @click="select(c)" x-text="c.name"></div>
+                            </template>
+                        </div>
+                        <div x-show="open && search && filtered.length === 0"
+                             class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-pop mt-1 px-3 py-2 text-sm text-gray-400">
+                            Aucune entreprise trouvée
+                        </div>
+                    </div>
+                </div>
                 <x-custom-fields-form entity-type="contact" :values="old('custom_values', [])" />
             </div>
         </div>
