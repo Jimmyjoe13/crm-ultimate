@@ -118,8 +118,16 @@ class EmeliaService
      *
      * Chaque event retourné : ['type' => 'OPENED|REPLIED|SENT|BOUNCED|UNSUBSCRIBED', 'date' => Carbon]
      */
-    public function getContactEvents(string $emeliaContactId, string $campaignId): array
-    {
+    /**
+     * @param string|null $email       Email du contact CRM (pour fallback getContactByEmail)
+     * @param string|null $campaignName Nom de campagne (pour fallback getContactByEmail)
+     */
+    public function getContactEvents(
+        string  $emeliaContactId,
+        string  $campaignId,
+        ?string $email        = null,
+        ?string $campaignName = null,
+    ): array {
         // Tentative GraphQL enrichie (champ activities non documenté, présent dans certaines versions)
         $gql = 'query($id: ID!, $cid: ID!) {
             contact(id: $id, campaignId: $cid) {
@@ -145,41 +153,45 @@ class EmeliaService
             ], array_filter($data['activities'], fn($a) => isset($a['type'], $a['date'])));
         }
 
-        // Fallback : dériver des events depuis les agrégats
-        if (! is_array($data)) {
-            // Retenter avec la query simple existante (sans activities)
-            $gql2 = 'query($id: ID!, $cid: ID!) { contact(id: $id, campaignId: $cid) { _id email status mailsSent lastOpen lastContacted lastReplied } }';
-            $r2   = $this->http()->timeout(10)->post($this->url('/graphql'), [
-                'query'     => $gql2,
-                'variables' => ['id' => $emeliaContactId, 'campaignId' => $campaignId],
-            ]);
-            $data = $r2->json('data.contact');
+        // Fallback : getContactByEmail si disponible (données complètes garanties)
+        if ((! is_array($data) || empty($data['_id'])) && $email) {
+            $data = $this->getContactByEmail($email, $campaignName);
         }
 
         if (! is_array($data)) {
             return [];
         }
 
+        // Les timestamps Emelia (lastContacted, lastOpen, lastReplied) sont en millisecondes
+        $fromMs = function (?string $ms): ?\Carbon\Carbon {
+            if (empty($ms)) {
+                return null;
+            }
+            return \Carbon\Carbon::createFromTimestampMs((int) $ms);
+        };
+
         $events = [];
 
-        if (! empty($data['lastContacted'])) {
-            $events[] = ['type' => 'SENT', 'date' => \Carbon\Carbon::parse($data['lastContacted'])];
+        if ($d = $fromMs($data['lastContacted'] ?? null)) {
+            $events[] = ['type' => 'SENT', 'date' => $d];
         }
 
-        if (! empty($data['lastOpen'])) {
-            $events[] = ['type' => 'OPENED', 'date' => \Carbon\Carbon::parse($data['lastOpen'])];
+        if ($d = $fromMs($data['lastOpen'] ?? null)) {
+            $events[] = ['type' => 'OPENED', 'date' => $d];
         }
 
-        if (! empty($data['lastReplied'])) {
-            $events[] = ['type' => 'REPLIED', 'date' => \Carbon\Carbon::parse($data['lastReplied'])];
+        if ($d = $fromMs($data['lastReplied'] ?? null)) {
+            $events[] = ['type' => 'REPLIED', 'date' => $d];
         }
 
         if (($data['status'] ?? null) === 'BOUNCED') {
-            $events[] = ['type' => 'BOUNCED', 'date' => \Carbon\Carbon::parse($data['lastContacted'] ?? now())];
+            $d = $fromMs($data['lastContacted'] ?? null) ?? now();
+            $events[] = ['type' => 'BOUNCED', 'date' => $d];
         }
 
         if (($data['status'] ?? null) === 'UNSUBSCRIBED') {
-            $events[] = ['type' => 'UNSUBSCRIBED', 'date' => \Carbon\Carbon::parse($data['lastContacted'] ?? now())];
+            $d = $fromMs($data['lastContacted'] ?? null) ?? now();
+            $events[] = ['type' => 'UNSUBSCRIBED', 'date' => $d];
         }
 
         return $events;

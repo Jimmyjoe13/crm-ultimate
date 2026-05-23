@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Support\CustomFieldRenderer;
 use App\Support\CustomValueValidator;
 use Illuminate\Http\Request;
 
@@ -99,6 +100,56 @@ class CompanyController extends Controller
         return redirect('/companies')->with('flash_toast', [
             'message' => 'Entreprise supprimée.',
             'type'    => 'success',
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        $search       = $request->get('search');
+        $customFields = CustomFieldRenderer::forEntity('company');
+
+        $headers = array_merge(
+            ['id', 'nom', 'domaine', 'industrie', 'téléphone', 'site_web', 'ville', 'pays', 'étape_lifecycle', 'statut_lead', 'propriétaire', 'créé_le'],
+            $customFields->pluck('label')->toArray()
+        );
+
+        return response()->streamDownload(function () use ($search, $customFields, $headers) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM UTF-8 pour Excel
+            fputcsv($out, $headers);
+
+            Company::with(['owner'])
+                ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('industry', 'ilike', "%{$search}%"))
+                ->orderBy('name')
+                ->chunk(200, function ($companies) use ($out, $customFields) {
+                    foreach ($companies as $c) {
+                        $row = [
+                            $c->id,
+                            $c->name,
+                            $c->domain,
+                            $c->industry,
+                            $c->phone,
+                            $c->website,
+                            $c->city,
+                            $c->country,
+                            $c->lifecycle_stage,
+                            $c->lead_status,
+                            $c->owner?->name,
+                            $c->created_at?->format('d/m/Y'),
+                        ];
+                        foreach ($customFields as $field) {
+                            $raw      = $c->custom_values[$field->key] ?? null;
+                            $display  = CustomFieldRenderer::displayValue($field, $raw);
+                            $row[]    = $display === '—' ? '' : $display;
+                        }
+                        fputcsv($out, $row);
+                    }
+                });
+
+            fclose($out);
+        }, 'entreprises_' . date('Y-m-d') . '.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 

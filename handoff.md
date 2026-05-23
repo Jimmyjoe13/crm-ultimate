@@ -1,5 +1,11 @@
 # Handoff — CRM Ultimate
 
+> [!IMPORTANT]
+> **RÈGLE DE COHABITATION CLAUDE CODE / GEMINI :**
+> Claude Code gère ce fichier (`handoff.md`) et toute la logique backend (PHP, migrations, services, commandes artisan, routes, jobs). Gemini gère `GEMINI_handoff.md` et les vues d'interface. Ne jamais empiéter sur le périmètre de l'autre. En cas de modification partagée d'un fichier de vue (ex. `contacts/show.blade.php`), déployer uniquement les fichiers concernés et ne pas écraser les modifications mutuelles.
+
+---
+
 ## 1. Objectif
 
 Transformer le CRM Ultimate (Laravel 13 + Blade + Alpine.js + PostgreSQL) en un outil complet :
@@ -13,7 +19,8 @@ et intégration d'outils tiers (Emelia emailing).
 **v2.2 :** Interface mapping style HubSpot — cartes enrichies, combobox searchable, panneau sticky, création propriété inline.
 **v2.3 :** Intégration Emelia — sync CRM→campagne via GraphQL, webhook events→timeline, contact léger auto sur orphelin, sync manuelle 1062 contacts.
 **v2.4 :** Bug fix `in_emelia` (vérifiait `emelia_contact_id` null au lieu de `emelia_campaign_id`) + auto-sync quotidienne toutes campagnes + bouton "Sync maintenant" dans Settings + job queue `SyncEmeliaCampaignJob`.
-**v2.5 :** Sync events Emelia → activités fiche contact — `EmeliaEventDispatcher` partagé (webhook + polling), `occurred_at` sur activities, polling `emelia:sync-contact-events`, onglets Tout/Emelia fiche contact, REPLIED → tâche owner + bump lifecycle lead→mql, badge admin replies non lues.
+**v2.5 :** Sync events Emelia → activités fiche contact — `EmeliaEventDispatcher` partagé (webhook + polling), `occurred_at` sur activities, polling `emelia:sync-contact-events`, onglets Tout/Emelia fiche contact, REPLIED → tâche owner + bump lifecycle lead→mql, badge admin replies non lues. **Validé 15/15 tests prod (2026-05-22).**
+**v2.6 :** Export CSV contacts/entreprises (`fputcsv`, BOM UTF-8, custom fields labellés, filtre search propagé) + palette ⌘K (composant Alpine modale, endpoint `/search/quick`, navigation clavier ↑↓ + Entrée) + `Api\InfoController` (suppression closure → `route:cache` possible).
 
 ---
 
@@ -22,16 +29,19 @@ et intégration d'outils tiers (Emelia emailing).
 ### Ce qui fonctionne déjà
 
 **Sécurité**
+
 - Log de mot de passe retiré de `Web\AuthController::login`
 - `RequireRole` middleware dual-mode : JSON 403 si AJAX, `abort(403)` sinon
 - `<x-toast-container>` présent dans le layout actif — tous les `flash_toast` fonctionnent
 
 **CRUD Web**
+
 - Contacts : create / edit / destroy (soft delete) + flash toast
 - Companies : idem
 - Deals : edit / destroy (store existait déjà via modal)
 
 **Bulk delete + sélection globale (v2.1)**
+
 - `Alpine.store('bulk')` global avec `Set` + `selectAllMode` par entité (contact / company / deal)
 - `<x-bulk-bar entity delete-action :total-count>` : barre flottante bottom-fixed
 - Bouton "Tout sélectionner (N)" dans la toolbar contacts : sélectionne TOUS les contacts de la base (pas juste la page courante), indépendamment de la pagination
@@ -40,6 +50,7 @@ et intégration d'outils tiers (Emelia emailing).
 - Checkboxes header + row sur les 3 index, visibles admin/manager uniquement
 
 **Custom fields**
+
 - `CustomFieldRenderer::forEntity($type)` cache Redis 60 s + `displayValue($field, $raw)`
 - **Cache invalidé via model events** (`saved`/`deleted` sur `CustomField`) → `Cache::forget("custom_fields.{$entity_type}")` — bug critique résolu en v2.2
 - Composants Blade : `<x-form-field>`, `<x-custom-fields-form>`, `<x-custom-fields-show>`
@@ -47,11 +58,13 @@ et intégration d'outils tiers (Emelia emailing).
 - Intégré dans tous les create/edit + affichage labellé dans les show
 
 **`CustomValueValidator`**
+
 - `validationRules(string $entityType)` : règles Laravel per-field
 - `cast(string $entityType, array $values)` : cast `float`, `Y-m-d`, `bool`, `trim string`
 - Câblé dans Contact/Company/DealController (store + update)
 
 **Import CSV (v2.1 + v2.2)**
+
 - Wizard 3 étapes : upload → mapping → suivi progression
 - **Bug fix (v2.2)** : `CustomValueValidator::cast()` utilisait le cache Redis pour résoudre les champs custom. Si un champ était créé après la population du cache, il était silencieusement ignoré → `custom_values` jamais écrit. Résolu par invalidation automatique du cache dans `CustomField::boot()`
 - `ProcessCsvImport` (ShouldQueue) : partition `$combined` → core fields via `$fillable` + custom fields via `CustomValueValidator::cast()`
@@ -62,6 +75,7 @@ et intégration d'outils tiers (Emelia emailing).
 - Statut `completed` / `completed_with_errors` / `failed` — bug `'done'` vs `'completed'` résolu en v2.1
 
 **Interface mapping HubSpot (v2.2)**
+
 - **Layout 2 colonnes** : cartes empilées à gauche (flex-1), panneau sticky à droite (w-72)
 - **Une carte par colonne CSV** avec :
   - Icône type inféré (email/phone/date/number/url/text/boolean/select) — SVG inline par type
@@ -87,36 +101,43 @@ et intégration d'outils tiers (Emelia emailing).
   - Si créé pour une autre entité (ex: Société pendant import Contact) → créé en base mais non ajouté au dropdown courant
 
 **Preview enrichi (`/imports/preview`)**
+
 - Retourne `columns[]` : `{header, samples[], fill_rate, inferred_type}` — samples basés sur 10 premières lignes, dédupliqués, max 5 valeurs non-vides
 - `available_fields[]` : `{key, label, type, group, field_type, required}` — `group` = `standard` | `company` | `custom`, `field_type` = type natif du champ
 - `inferred_type` détecté par regex sur échantillons (seuil 60%) : email, phone, url, date, number, text
 
 **Fiche contact (v2.1)**
+
 - `lead_status` et `owner.name` affichés dans la card "Informations"
 - `ContactController::show()` eager-load la relation `owner`
 - Custom fields visibles via `<x-custom-fields-show>` (inclut automatiquement les champs importés)
 
 **IA Web**
+
 - `AiInsightService` (logique partagée Web ↔ API) — summarizeDeal, nextActionDeal, scoreDeal, summarizeContact, summarizeCompany, dailySuggestions
 - Cache 24 h par entité ; `?fresh=1` bypass cache (admin/manager)
 - `<x-ai-insight-card endpoint title>` Alpine intégré dans deals/show, contacts/show, companies/show, dashboard
 
 **UX v1.6**
+
 - Toggle tâches done/open : `ActivityController::toggleDone`
 - `<x-activity-timeline showComposer>` : composer + listing chrono avec toggle tâche inline
 - Onglets Informations / Activité sur fiches contact et company
 
 **Tri de colonnes**
+
 - `<x-sort-th column label :sort :dir>` avec ▲/▼ et URL preserving
 - Contacts : `last_name` (défaut), `email`, `created_at`
 - Companies : `name`, `industry`, `city`, `created_at`
 - Deals : `close_date`, `name`, `amount`
 
 **Corbeille**
+
 - `GET /trash` : soft-deleted contacts / companies / deals (onglets Alpine)
 - Restauration `POST /*/restore` — admin/manager uniquement
 
 **Intégration Emelia (v2.3)**
+
 - `EmeliaService` : `listCampaigns()` + `findCampaign()` + `addContactToCampaign()` via **GraphQL** (pas REST — voir §4)
 - `EmeliaController` (Web) : `GET /emelia/campaigns` + `POST /contacts/{contact}/emelia` + `GET /contacts/{contact}/emelia/status`
 - `EmeliaWebhookController` : `POST /api/webhooks/emelia` — HMAC SHA256 optionnel, idempotence `external_id`, contact léger auto sur orphelin
@@ -128,6 +149,7 @@ et intégration d'outils tiers (Emelia emailing).
 - 19 tests (webhook + service + controller) — **211 tests verts** au total
 
 ### Découverte API Emelia importante
+
 - `POST /campaigns/{id}/contacts` **n'existe pas** dans l'API REST Emelia → répond "Cannot POST" (404 Express)
 - La bonne méthode : **GraphQL mutation** `addContactToCampaignHook(id: ID!, contact: JSON!) → ID!`
 - La mutation retourne l'`_id` Emelia du contact créé
@@ -136,148 +158,201 @@ et intégration d'outils tiers (Emelia emailing).
 - Introspection GraphQL désactivée en prod (`__schema` bloqué) — mais les erreurs de validation révèlent les champs
 
 ### Dernière action effectuée
-v2.3 — Sync manuelle 1062 contacts CRM → campagne Emelia "acquisition-agence-marketing" via `emelia:sync-campaign`.
+
+v2.6 — Export CSV contacts/entreprises + palette ⌘K + InfoController (route:cache fix). Backlog restant : Backup BDD, mot de passe admin prod, sélection globale companies/deals, webhook Emelia via n8n.
 
 ---
 
 ## 3. Fichiers concernés
 
 ### Contrôleurs Web
-| Fichier | Rôle |
-|---|---|
-| `app/Http/Controllers/Web/AuthController.php` | Login — log password supprimé |
-| `app/Http/Controllers/Web/ContactController.php` | CRUD + bulkDestroy (select_all) + CustomValueValidator + owner eager-load |
-| `app/Http/Controllers/Web/CompanyController.php` | CRUD + bulkDestroy + CustomValueValidator |
-| `app/Http/Controllers/Web/DealController.php` | Edit + destroy + bulkDestroy + CustomValueValidator |
-| `app/Http/Controllers/Web/ImportController.php` | Wizard CSV : preview enrichi (columns/inferred_type/groups), store, status, quickField |
-| `app/Http/Controllers/Web/TrashController.php` | index + restore × 3 entités |
-| `app/Http/Controllers/Web/ActivityController.php` | index + toggleDone + store |
-| `app/Http/Controllers/Web/AiController.php` | 4 endpoints IA Web |
-| `app/Http/Controllers/Web/Settings/CustomFieldController.php` | CRUD + cache invalidation |
-| `app/Http/Controllers/Api/AiController.php` | Refactorisé → délègue à AiInsightService |
+
+| Fichier                                                       | Rôle                                                                                      |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `app/Http/Controllers/Web/AuthController.php`                 | Login — log password supprimé                                                             |
+| `app/Http/Controllers/Web/ContactController.php`              | CRUD + bulkDestroy (select_all) + CustomValueValidator + owner eager-load                 |
+| `app/Http/Controllers/Web/CompanyController.php`              | CRUD + bulkDestroy + CustomValueValidator                                                 |
+| `app/Http/Controllers/Web/DealController.php`                 | Edit + destroy + bulkDestroy + CustomValueValidator + auto-link company sur attachContact |
+| `app/Http/Controllers/Web/ImportController.php`               | Wizard CSV : preview enrichi (columns/inferred_type/groups), store, status, quickField    |
+| `app/Http/Controllers/Web/TrashController.php`                | index + restore × 3 entités                                                               |
+| `app/Http/Controllers/Web/ActivityController.php`             | index + toggleDone + store + destroy (avec contrôle droits)                               |
+| `app/Http/Controllers/Web/AiController.php`                   | 4 endpoints IA Web                                                                        |
+| `app/Http/Controllers/Web/EmeliaController.php`               | campaigns + status + addContact + syncNow + syncContact (bouton sync fiche contact)       |
+| `app/Http/Controllers/Web/NotificationController.php`         | markEmeliaRepliesSeen                                                                     |
+| `app/Http/Controllers/Web/Settings/CustomFieldController.php` | CRUD + cache invalidation                                                                 |
+| `app/Http/Controllers/Api/AiController.php`                   | Refactorisé → délègue à AiInsightService                                                  |
+| `app/Http/Controllers/Api/InfoController.php`                 | Remplace la closure `GET /api/v1/` → `route:cache` désormais possible                    |
 
 ### Jobs / Services / Support
-| Fichier | Rôle |
-|---|---|
-| `app/Jobs/ProcessCsvImport.php` | Import CSV : partition core/custom, stratégie doublons, merge custom_values |
-| `app/Models/ImportJob.php` | Modèle import — fillable `duplicate_strategy` |
-| `app/Models/CustomField.php` | Model events `saved`/`deleted` → Cache::forget (fix bug v2.2) |
-| `app/Services/AiInsightService.php` | Logique IA partagée Web ↔ API |
-| `app/Services/LlmService.php` | Client HTTP OpenRouter |
-| `app/Support/CustomFieldRenderer.php` | Cache Redis 60s + formatage |
-| `app/Support/CustomValueValidator.php` | Validation + cast per-type des custom_values |
+
+| Fichier                                 | Rôle                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `app/Jobs/ProcessCsvImport.php`         | Import CSV : partition core/custom, stratégie doublons, merge custom_values                       |
+| `app/Models/ImportJob.php`              | Modèle import — fillable `duplicate_strategy`                                                     |
+| `app/Models/CustomField.php`            | Model events `saved`/`deleted` → Cache::forget (fix bug v2.2)                                     |
+| `app/Models/Activity.php`               | `occurred_at` + `source` + `external_id` dans fillable + casts                                    |
+| `app/Models/User.php`                   | `emelia_replies_last_seen` dans fillable + casts                                                  |
+| `app/Services/AiInsightService.php`     | Logique IA partagée Web ↔ API                                                                     |
+| `app/Services/LlmService.php`           | Client HTTP OpenRouter                                                                            |
+| `app/Services/EmeliaService.php`        | `getContactEvents()` : timestamps Emelia en **millisecondes** → `Carbon::createFromTimestampMs()` |
+| `app/Support/CustomFieldRenderer.php`   | Cache Redis 60s + formatage                                                                       |
+| `app/Support/CustomValueValidator.php`  | Validation + cast per-type des custom_values                                                      |
+| `app/Support/EmeliaEventDispatcher.php` | Service central : dispatch Activity + actions REPLIED (tâche + lifecycle)                         |
 
 ### Routes
-| Fichier | Rôle |
-|---|---|
-| `routes/web.php` | Toutes les routes Web + `POST /imports/quick-field` |
+
+| Fichier          | Rôle                                                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| `routes/web.php` | Toutes les routes Web + `POST /contacts/{contact}/emelia/sync` + `POST /notifications/emelia-replies/seen` |
 
 ### Migrations
-| Fichier | Rôle |
-|---|---|
+
+| Fichier                                                                           | Rôle                                                                      |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `database/migrations/2026_05_20_000001_add_duplicate_strategy_to_import_jobs.php` | Colonne `duplicate_strategy VARCHAR(16) DEFAULT 'skip'` sur `import_jobs` |
+| `database/migrations/2026_05_22_000001_add_occurred_at_to_activities.php`         | `timestamp occurred_at nullable index` sur `activities`                   |
+| `database/migrations/2026_05_22_000002_add_emelia_replies_last_seen_to_users.php` | `timestamp emelia_replies_last_seen nullable` sur `users`                 |
+
+### Commandes Artisan
+
+| Fichier                                            | Rôle                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `app/Console/Commands/EmeliaSyncAllCampaigns.php`  | Liste toutes les campagnes Emelia + sync-campaign + chaîne sync-contact-events |
+| `app/Console/Commands/EmeliaSyncCampaign.php`      | Sync CRM→Emelia + résolution `emelia_contact_id` pour les "already included"   |
+| `app/Console/Commands/EmeliaSyncContactEvents.php` | Polling events Emelia → Activity (résout les IDs manquants automatiquement)    |
 
 ### Vues — composants
-| Fichier | Rôle |
-|---|---|
-| `resources/views/components/bulk-bar.blade.php` | Barre bulk delete avec mode sélection globale |
-| `resources/views/components/import-stepper.blade.php` | Stepper 3 étapes (lit `step` depuis Alpine parent) |
-| `resources/views/components/form-field.blade.php` | Input générique typé |
-| `resources/views/components/custom-fields-form.blade.php` | Section custom fields dans forms |
-| `resources/views/components/custom-fields-show.blade.php` | Affichage labellé custom fields |
-| `resources/views/components/ai-insight-card.blade.php` | Card IA Alpine fetch |
-| `resources/views/components/activity-timeline.blade.php` | Timeline + composer |
-| `resources/views/components/sort-th.blade.php` | En-tête triable ▲/▼ |
+
+| Fichier                                                   | Rôle                                                                                 |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `resources/views/components/bulk-bar.blade.php`           | Barre bulk delete avec mode sélection globale                                        |
+| `resources/views/components/import-stepper.blade.php`     | Stepper 3 étapes (lit `step` depuis Alpine parent)                                   |
+| `resources/views/components/form-field.blade.php`         | Input générique typé                                                                 |
+| `resources/views/components/custom-fields-form.blade.php` | Section custom fields dans forms                                                     |
+| `resources/views/components/custom-fields-show.blade.php` | Affichage labellé custom fields                                                      |
+| `resources/views/components/ai-insight-card.blade.php`    | Card IA Alpine fetch                                                                 |
+| `resources/views/components/activity-timeline.blade.php`  | Timeline + composer + `occurred_at` + filtre source + badges sync/live + suppression |
+| `resources/views/components/sort-th.blade.php`            | En-tête triable ▲/▼                                                                  |
+| `resources/views/components/app-shell.blade.php`          | Badge admin replies non lues (sidebar Contacts) + bouton ⌘K ouvre la palette        |
+| `resources/views/components/command-palette.blade.php`    | Palette ⌘K — Alpine `cmdPalette()`, endpoint `/search/quick`, nav clavier ↑↓+Entrée  |
 
 ### Vues — pages
-| Fichier | Rôle |
-|---|---|
-| `resources/views/pages/contacts/index.blade.php` | Bulk + sélection globale + toolbar "Tout sélectionner (N)" |
-| `resources/views/pages/contacts/show.blade.php` | lead_status + owner dans card Informations |
-| `resources/views/pages/imports/create.blade.php` | Wizard complet HubSpot-style (2600 lignes JS/Blade) |
-| `resources/views/pages/contacts/{create,edit}.blade.php` | CRUD + custom fields |
-| `resources/views/pages/companies/{index,show,create,edit}.blade.php` | idem |
-| `resources/views/pages/deals/{index,show,edit}.blade.php` | idem |
-| `resources/views/pages/settings/fields.blade.php` | Edit/delete inline custom fields |
 
-### JS / Assets
-| Fichier | Rôle |
-|---|---|
-| `resources/js/app.js` | `Alpine.store('bulk')` avec `selectAllMode` + `enableSelectAll` + `isSelectAllMode` |
-| `public/build/` | Assets compilés — **toujours reconstruire via `docker compose build`** |
+| Fichier                                          | Rôle                                                            |
+| ------------------------------------------------ | --------------------------------------------------------------- |
+| `resources/views/pages/contacts/index.blade.php` | Bulk + sélection globale + toolbar "Tout sélectionner (N)"      |
+| `resources/views/pages/contacts/show.blade.php`  | Onglets Tout/Emelia + bouton Sync Emelia + bouton Voir → réparé |
+| `resources/views/pages/imports/create.blade.php` | Wizard complet HubSpot-style (2600 lignes JS/Blade)             |
 
 ### Tests
-| Fichier | Rôle |
-|---|---|
-| `tests/Feature/BulkActionsTest.php` | Bulk delete × 3 entités + 403 viewer |
-| `tests/Feature/WebContactControllerTest.php` | CRUD contact Web |
-| `tests/Feature/ImportCustomFieldsTest.php` | custom_values écrits à l'import + cast types |
-| `tests/Feature/ImportRequiredFieldsTest.php` | Validation requis preview + store 422 |
-| `tests/Feature/ImportDuplicateStrategyTest.php` | skip/update/create + merge custom_values |
-| `tests/Feature/WebImportControllerTest.php` | Preview + store + duplicate_strategy |
+
+| Fichier                                         | Rôle                                                 |
+| ----------------------------------------------- | ---------------------------------------------------- |
+| `tests/Feature/BulkActionsTest.php`             | Bulk delete × 3 entités + 403 viewer                 |
+| `tests/Feature/WebContactControllerTest.php`    | CRUD contact Web                                     |
+| `tests/Feature/ImportCustomFieldsTest.php`      | custom_values écrits à l'import + cast types         |
+| `tests/Feature/ImportRequiredFieldsTest.php`    | Validation requis preview + store 422                |
+| `tests/Feature/ImportDuplicateStrategyTest.php` | skip/update/create + merge custom_values             |
+| `tests/Feature/WebImportControllerTest.php`     | Preview + store + duplicate_strategy                 |
+| `tests/Feature/EmeliaEventDispatcherTest.php`   | REPLIED → tâche + lifecycle + idempotence (8 tests)  |
+| `tests/Feature/EmeliaSyncContactEventsTest.php` | Polling + idempotence + dry-run + mock API (7 tests) |
+| `tests/Feature/ActivityDeleteTest.php`          | Suppression activité + contrôle droits               |
 
 ---
 
 ## 4. Ce qui a échoué
 
 ### CSRF dans les tests AJAX Web
+
 **Ce qui fonctionne :** `->post($url, ['_token' => 'test'])` avec `withSession(['_token' => 'test'])` dans `withAuth()`.
 
 ### `assertSee()` avec apostrophes dans les vues
+
 **Solution :** `assertSeeText("Modifier l'entreprise")` (compare le texte décodé, pas le HTML encodé).
 
 ### `assertSame` sur custom_values numériques post-DB
+
 **Solution :** `assertEquals(7500.0, ...)` — JSON round-trip transforme `7500.0` en `int(7500)`, `==` passe.
 
 ### Bug cache custom fields à l'import (résolu v2.2)
+
 **Symptôme :** Custom fields mappés à l'import silencieusement ignorés en production, tests verts.
 **Cause :** `CustomValueValidator::cast()` appelle `CustomFieldRenderer::forEntity()` qui lit un cache Redis TTL 60s. Quand un `CustomField` était créé après la population du cache, `cast()` ne le voyait pas et droppait silencieusement la valeur. `ProcessCsvImport` lisait les clés directement en DB (correct) mais `cast()` lisait le cache (stale).
 **Pourquoi les tests passaient :** `Cache::flush()` dans le setUp des tests garantissait un cache frais.
 **Fix :** Model events `saved`/`deleted` sur `CustomField` → `Cache::forget("custom_fields.{$entity_type}")`.
 
 ### API Emelia REST `POST /campaigns/{id}/contacts` inexistante (résolu v2.3)
+
 **Symptôme :** 100% des contacts échouaient avec `"Cannot POST /campaigns/..."` (Express 404).
 **Cause :** Cet endpoint REST n'existe pas dans l'API Emelia. Documenté nulle part.
 **Fix :** Utiliser la mutation GraphQL `addContactToCampaignHook(id: ID!, contact: JSON!)` sur `/graphql`.
 **La mutation n'est pas idempotente** — si le contact est déjà dans la campagne : `RuntimeException("This contact is already included...")`. Géré dans `EmeliaSyncCampaign` : `str_contains($e->getMessage(), 'already included')` → skip + update champs CRM sans compter comme erreur.
 
 ### `subject_type` polymorphique doit être un FQCN (résolu v2.3)
+
 **Symptôme :** 500 sur le dashboard après les premiers webhooks Emelia.
-**Cause :** `Activity::create(['subject_type' => 'contact', ...])` stocke une string. Laravel's `morphTo()` tente d'instancier `Class "contact"` → fatal error. Toutes les requêtes qui eager-load `Activity::with(['subject'])` (dont `DashboardController`) plantaient.
 **Fix :** `'subject_type' => Contact::class` (= `'App\Models\Contact'`). Corriger les enregistrements corrompus en base : `UPDATE activities SET subject_type = 'App\Models\Contact' WHERE source = 'emelia' AND subject_type = 'contact'`.
 
 ### Events Emelia sont en UPPERCASE sans préfixe (résolu v2.3)
+
 **Symptôme :** Webhooks reçus mais aucune Activity créée (retour 422).
-**Cause :** Le code matchait `'email_sent'`, `'email_opened'`… mais Emelia envoie `SENT`, `OPENED`, `FIRST_OPEN`.
 **Fix :** `match(strtoupper($request->input('event', '')))` avec les deux formes dans les cases.
+
+### Contacts sans `emelia_contact_id` invisibles au polling (résolu v2.5)
+
+**Symptôme :** 924/1062 contacts avaient un `emelia_campaign_name` mais pas d'`emelia_contact_id`. La commande `sync-contact-events` les ignorait silencieusement.
+**Cause :** Dans `EmeliaSyncCampaign`, le chemin "already included" sauvegardait `emelia_campaign_id` + `emelia_campaign_name` mais **pas** `emelia_contact_id`.
+**Fix :** `EmeliaSyncContactEvents` résout maintenant l'ID via `getContactByEmail()` avant le polling. `EmeliaSyncCampaign` résout aussi l'ID dans le chemin "already included". Résultat : 138 → 1016 contacts avec ID résolu après une sync.
+
+### Timestamps Emelia en millisecondes (résolu v2.5)
+
+**Symptôme :** `getContactEvents()` ne créait aucune activité malgré des données `lastReplied`/`lastOpen` non nulles.
+**Cause :** L'API Emelia renvoie `lastContacted`/`lastOpen`/`lastReplied` en **millisecondes** (ex: `1778837804955`). `Carbon::parse(1778837804955)` interprète comme des secondes → date en l'an 57000 → exception ou date invalide → activité non créée.
+**Fix :** `Carbon::createFromTimestampMs((int) $ms)` dans `EmeliaService::getContactEvents()`.
+
+### Webhook Emelia non disponible dans le plan actuel
+
+**Symptôme :** Pas de compteurs temps réel, pas de badge `live`.
+**Cause :** Le plan Emelia actuel ne propose pas de configuration webhook via l'interface.
+**Workaround :** Bouton "Sync" dans le panel Emelia de la fiche contact (`POST /contacts/{contact}/emelia/sync`) + polling daily automatique. Les activités créées ont `metadata.synthetic = true` et le badge `sync`.
+
+### `attachContact` n'auto-linkait pas la company (résolu v2.5)
+
+**Symptôme :** Quand un contact est ajouté à un deal existant via le bouton "Associer un contact", la company du contact n'apparaît pas dans le deal.
+**Cause :** `DealController::attachContact()` manquait le bloc d'auto-association company (présent dans `store()` mais oublié dans `attachContact()`).
+**Fix :** Après `contacts()->syncWithoutDetaching()`, récupérer `$contact->companies()->first()` et attacher la company si elle n'est pas déjà liée au deal.
 
 ---
 
 ## 5. État du déploiement production
 
 ### Infrastructure — VPS 51.38.99.226 (Ubuntu 22.04)
+
 **URL : https://crm.nana-intelligence.fr** (HTTPS Let's Encrypt via Caddy)
 
 #### Architecture
+
 - Caddy Docker partagé sur réseau `web` (`/home/jimmy/docker/docker-compose.yml`)
 - Repo CRM : `/home/jimmy/crm-ultimate/`
 - Compose prod : `docker compose -f /home/jimmy/crm-ultimate/docker-compose.prod.yml`
 
 #### Conteneurs prod
-| Conteneur | Image | Rôle |
-|---|---|---|
-| `crm-app` | `crm-ultimate-app` | Nginx:8080 + PHP-FPM:9000 via supervisord |
-| `crm-queue` | `crm-ultimate-queue` | Worker queue Redis |
-| `crm-postgres` | `postgres:17-alpine` | Base de données (volume `pgdata`) |
-| `crm-redis` | `redis:7-alpine` | Cache + sessions + queue |
+
+| Conteneur      | Image                | Rôle                                      |
+| -------------- | -------------------- | ----------------------------------------- |
+| `crm-app`      | `crm-ultimate-app`   | Nginx:8080 + PHP-FPM:9000 via supervisord |
+| `crm-queue`    | `crm-ultimate-queue` | Worker queue Redis                        |
+| `crm-postgres` | `postgres:17-alpine` | Base de données (volume `pgdata`)         |
+| `crm-redis`    | `redis:7-alpine`     | Cache + sessions + queue                  |
 
 #### Procédure de redéploiement — IMPORTANT
+
 Le code PHP et les vues Blade sont **embarqués dans les images Docker** au moment du `build`.
 **Un simple SCP + `view:clear` ne met PAS à jour le code en production.**
 
 ```bash
 # Workflow complet à chaque déploiement :
-# 1. Copier les fichiers modifiés sur le VPS (SCP ou via la session Claude Code)
+# 1. Copier les fichiers modifiés sur le VPS (SCP ou paramiko depuis Claude Code)
 # 2. Rebuilder les images
 cd ~/crm-ultimate
 docker compose -f docker-compose.prod.yml build app queue
@@ -288,22 +363,39 @@ docker compose -f docker-compose.prod.yml exec -T app php artisan view:clear
 docker compose -f docker-compose.prod.yml exec -T app php artisan cache:clear
 ```
 
+#### Tests en production (sans PHPUnit disponible)
+
+`composer install --no-dev` dans l'image → PHPUnit et `tinker` sont absents.
+Utiliser des scripts PHP temporaires + `docker cp` :
+
+```bash
+docker cp /home/jimmy/crm-ultimate/_test.php crm-app:/var/www/html/_test.php
+docker exec crm-app php /var/www/html/_test.php
+docker exec crm-app rm /var/www/html/_test.php
+```
+
 #### Variables `.env` VPS
+
 ```
 APP_URL=https://crm.nana-intelligence.fr
 ASSET_URL=https://crm.nana-intelligence.fr
 TRUSTED_PROXIES=*
 OPENROUTER_API_KEY=sk-or-v1-...   ← configuré ✓
 OPENROUTER_MODEL=anthropic/claude-haiku-4-5
+EMELIA_API_KEY=5jwwzTUNnb0IrdDEJtMVe1D0h8nsOgECa07X73IJsLozKq6U   ← configuré ✓
+EMELIA_WEBHOOK_SECRET=bc36d8f114a744e03e578c1b4f9380fbe416de780da2a8c4cebb271ee7a5d08e   ← configuré ✓
+EMELIA_BASE_URL=https://api.emelia.io   ← configuré ✓
 ```
 
 #### Compte admin de production
+
 ```
 Email    : admin@example.com
 Password : password   ← à changer
 ```
 
 #### Bug connu : `route:cache` et closure dans `routes/api.php`
+
 `Route::get('/', fn() => ...)` est une closure → Laravel refuse de cacher les routes.
 Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête).
 
@@ -311,86 +403,43 @@ Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête)
 
 ## 6. v2.4 : Auto-synchronisation Emelia (LIVRÉ — 2026-05-21)
 
-### Objectif (atteint)
-Détecter automatiquement quels contacts CRM sont présents dans quelles campagnes Emelia, **sans intervention manuelle**.
-
-### Ce qui existe déjà (v2.3) ✓
-- Commande `php artisan emelia:sync-campaign {campaign_id} {--dry-run}` — sync fiable en prod
-- GraphQL `addContactToCampaignHook(id, contact)` → fonctionne + idempotence gérée côté CRM
-- Webhook `POST /api/webhooks/emelia` — reçoit les events mais **non configuré dans l'UI Emelia** (pas d'API pour ça)
-- Champs `emelia_campaign_id`, `emelia_campaign_name`, `emelia_contact_id` sur `contacts`
-
-### Ce qu'il faut implémenter
-
-#### Option A — Scheduled command (recommandée)
-Créer un `Kernel.php` schedule ou utiliser `bootstrap/app.php` (Laravel 11) pour planifier la sync :
-```php
-// bootstrap/app.php (pattern Laravel 11)
-$schedule->command('emelia:sync-campaign 69eb1cca5033df0a8663a88e --only-linked')
-         ->daily()
-         ->withoutOverlapping();
-```
-- `--only-linked` : ne retraite que les contacts déjà liés (économie d'API)
-- La commande est idempotente : passer un contact déjà dans la campagne = skip silencieux
-
-**Nouveau flag utile à créer : `--campaigns=all`** (sync toutes les campagnes actives automatiquement) :
-```bash
-php artisan emelia:sync-all-campaigns   # nouveau artisan qui liste via GET /campaigns
-                                        # puis appelle sync-campaign pour chacune
-```
-
-#### Option B — Job Queue déclenché par webhook
-À chaque webhook Emelia reçu, déclencher un job `SyncEmeliaCampaignJob` qui met à jour les champs du contact. Avantage : temps réel. Inconvénient : dépend du webhook Emelia configuré.
-
-**Blocker** : Le webhook Emelia ne peut pas être configuré via API (pas d'endpoint de création). Il faut le faire à la main dans l'UI Emelia → `https://app.emelia.io` → Settings → Webhooks :
-```
-URL     : https://crm.nana-intelligence.fr/api/webhooks/emelia
-Events  : tous (SENT, OPENED, CLICKED, REPLIED, BOUNCED, UNSUBSCRIBED)
-Secret  : (laisser vide ou utiliser la valeur de EMELIA_WEBHOOK_SECRET dans .env)
-```
-
-#### Option C — Hybrid (recommandée pour v2.4)
-1. Scheduled daily sync pour les campagnes connues (via les IDs stockés dans `.env` ou une table config)
-2. Webhook pour les events temps réel (si configuré dans Emelia UI)
-3. Un bouton "Synchroniser maintenant" dans les Settings du CRM → déclenche le job
-
-### Limite API Emelia confirmée
-- **Impossible de lister les contacts D'UNE campagne** via l'API Emelia (REST ou GraphQL) — `GET /campaigns/{id}/contacts` = 404, GraphQL `campaign.contacts` = champ invalide
-- La seule façon de savoir si un contact est dans une campagne = tenter de l'y ajouter (idempotent côté CRM)
-- Alternative : `GET /contact_lists` pour lister les listes de contacts, mais les listes n'exposent pas non plus leurs contacts
-
 ### Fichiers livrés v2.4
-| Fichier | Statut |
-|---|---|
-| `app/Http/Controllers/Web/EmeliaController.php` | Bug fix `in_emelia` : vérifie `emelia_campaign_id OR emelia_contact_id` |
-| `app/Console/Commands/EmeliaSyncAllCampaigns.php` | Nouveau — liste toutes les campagnes Emelia puis appelle `emelia:sync-campaign` pour chacune |
-| `app/Jobs/SyncEmeliaCampaignJob.php` | Nouveau — job queue qui appelle `emelia:sync-all-campaigns` |
-| `routes/console.php` | Schedule quotidien : `emelia:sync-all-campaigns --only-linked` à minuit, `withoutOverlapping()` |
-| `routes/web.php` | Route `POST /settings/emelia/sync` |
-| `resources/views/pages/settings/fields.blade.php` | Section Emelia avec bouton "Synchroniser maintenant" |
 
-### Résultats tests prod (2026-05-21)
-- **1062 contacts** avec `emelia_campaign_id` en BDD (dont **1052** sans `emelia_contact_id` — le bug)
-- `GET /contacts/{id}/emelia/status` → `in_emelia: true` pour ces contacts ✓
-- `POST /settings/emelia/sync` → 200 JSON `{"message": "Synchronisation lancée en arrière-plan."}` ✓
-- Schedule `0 0 * * *` visible dans `php artisan schedule:list` ✓
-- Dry-run détecte **21 campagnes Emelia** actives ✓
+| Fichier                                           | Statut                                                                                          |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `app/Http/Controllers/Web/EmeliaController.php`   | Bug fix `in_emelia` : vérifie `emelia_campaign_id OR emelia_contact_id`                         |
+| `app/Console/Commands/EmeliaSyncAllCampaigns.php` | Nouveau — liste toutes les campagnes Emelia puis appelle `emelia:sync-campaign` pour chacune    |
+| `app/Jobs/SyncEmeliaCampaignJob.php`              | Nouveau — job queue qui appelle `emelia:sync-all-campaigns`                                     |
+| `routes/console.php`                              | Schedule quotidien : `emelia:sync-all-campaigns --only-linked` à minuit, `withoutOverlapping()` |
+| `routes/web.php`                                  | Route `POST /settings/emelia/sync`                                                              |
+| `resources/views/pages/settings/fields.blade.php` | Section Emelia avec bouton "Synchroniser maintenant"                                            |
 
-### Variables `.env` prod actuelles (Emelia)
-```
-EMELIA_API_KEY=5jwwzTUNnb0IrdDEJtMVe1D0h8nsOgECa07X73IJsLozKq6U   ← configuré ✓
-EMELIA_WEBHOOK_SECRET=bc36d8f114a744e03e578c1b4f9380fbe416de780da2a8c4cebb271ee7a5d08e   ← configuré ✓
-EMELIA_BASE_URL=https://api.emelia.io   ← configuré ✓
-```
+### Option C — Hybrid (choisie et implémentée)
+
+1. ✅ Scheduled daily sync pour toutes les campagnes (`emelia:sync-all-campaigns`)
+2. ✅ Bouton "Synchroniser maintenant" dans Settings
+3. ✅ Bouton "Sync" par fiche contact (`POST /contacts/{contact}/emelia/sync`)
+4. ⚠️ Webhook temps réel non disponible (limitation plan Emelia)
 
 ### Campagnes Emelia connues
-| Campaign ID | Nom | Contacts Emelia |
-|---|---|---|
+
+| Campaign ID                | Nom                          | Contacts Emelia          |
+| -------------------------- | ---------------------------- | ------------------------ |
 | `69eb1cca5033df0a8663a88e` | acquisition-agence-marketing | ~1062 (syncs 2026-05-21) |
 
 ---
 
-## 7. v2.5 : Sync events Emelia → activités fiche contact (LIVRÉ — 2026-05-22)
+## 7. v2.5 : Sync events Emelia → activités fiche contact (LIVRÉ + validé — 2026-05-22)
+
+### Résultats tests prod (15/15)
+
+- T1 — Colonnes DB (`occurred_at`, `emelia_replies_last_seen`) : PASS
+- T2 — Classes PHP autoloadées (`EmeliaEventDispatcher`, `EmeliaSyncContactEvents`) : PASS
+- T3 — Routes (`emelia-replies/seen`, `webhooks/emelia`) : PASS
+- T4 — Schedule (`emelia:sync-all-campaigns`) : PASS
+- T5 — Intégration REPLIED : Activity créée + tâche + lifecycle lead→mql + occurred_at : PASS
+- T6 — `emelia:sync-contact-events --dry-run` exit 0 : PASS
+- T7 — HTTP `/login 200` + webhook `200` : PASS
 
 ### Ce qui est livré
 
@@ -403,78 +452,61 @@ EMELIA_BASE_URL=https://api.emelia.io   ← configuré ✓
 
 - **`app/Console/Commands/EmeliaSyncContactEvents.php`** — polling artisan :
   - `emelia:sync-contact-events {--only-linked} {--contact=} {--dry-run}`
-  - Pour chaque contact lié (`emelia_contact_id + emelia_campaign_id`), appelle `EmeliaService::getContactEvents()`
+  - Résout automatiquement `emelia_contact_id` manquant via `getContactByEmail()` avant le polling
   - `external_id = 'emelia:' + sha256("{emeliaContactId}:{type}:{isoDate}")` — idempotence totale
   - Rate-limit Emelia respecté (`usleep(220_000)`)
   - Chaîné automatiquement depuis `emelia:sync-all-campaigns` (schedule daily existant)
 
-- **`app/Services/EmeliaService::getContactEvents()`** — méthode de polling :
-  - Tente GraphQL enrichi `contact { activities { type date } }` (non documenté, fallback gracieux)
-  - Fallback sur agrégats : dérive events depuis `lastContacted`, `lastOpen`, `lastReplied`, `status`
+- **`app/Services/EmeliaService::getContactEvents()`** :
+  - Timestamps Emelia **en millisecondes** → `Carbon::createFromTimestampMs()` ← CRITIQUE
+  - Tente GraphQL enrichi `contact { activities { type date } }` (fallback gracieux)
+  - Fallback sur agrégats : `lastContacted→SENT`, `lastOpen→OPENED`, `lastReplied→REPLIED`, `status BOUNCED/UNSUBSCRIBED`
+  - Accepte `email` + `campaignName` en paramètres optionnels pour fallback `getContactByEmail()`
 
-- **`app/Http/Controllers/Webhook/EmeliaWebhookController`** — refactorisé :
-  - Délègue à `EmeliaEventDispatcher::dispatch()`
-  - Parse `occurred_at` depuis `date ?? timestamp ?? created_at` du payload Emelia
+- **`app/Http/Controllers/Web/EmeliaController::syncContact()`** :
+  - `POST /contacts/{contact}/emelia/sync` — sync manuelle d'un contact individuel
+  - Résout l'ID Emelia si absent avant le polling
+  - Invalide le cache `emelia_status_{contact_id}` après sync
 
 #### DB
+
 - `activities.occurred_at` — timestamp nullable indexé (timestamp réel de l'event)
 - `users.emelia_replies_last_seen` — timestamp nullable (pour le badge admin)
 
 #### UI fiche contact
+
 - **Onglets Tout / Emelia** au-dessus du fil d'activité (Alpine `activeTab`)
 - **Badge `sync`/`live`** sur les activités Emelia (gris si `metadata.synthetic`, vert si webhook)
+- **Bouton "Sync"** dans le panel Emelia → `POST /contacts/{contact}/emelia/sync` → recharge si nouvelles activités créées
 - **Bouton "Voir →"** du panneau Emelia réparé : `$dispatch('switch-activity-tab', 'emelia')` + scroll
 - **Heure affichée** depuis `occurred_at ?? created_at` (heure réelle si disponible)
+- **Message webhook** mis à jour : "Webhook non disponible sur ce plan Emelia — utilisez le bouton Sync"
 
 #### Badge admin
+
 - **Sidebar** : badge rouge sur l'icône Contacts — compte les `email_replied` créées après `emelia_replies_last_seen`
 - **`POST /notifications/emelia-replies/seen`** — met à jour `emelia_replies_last_seen = now()`, déclenché au clic sur le lien Contacts
 
-### Fichiers livrés v2.5
-| Fichier | Statut |
-|---|---|
-| `app/Support/EmeliaEventDispatcher.php` | Nouveau |
-| `app/Console/Commands/EmeliaSyncContactEvents.php` | Nouveau |
-| `app/Http/Controllers/Web/NotificationController.php` | Nouveau |
-| `database/migrations/2026_05_22_000001_add_occurred_at_to_activities.php` | Nouveau |
-| `database/migrations/2026_05_22_000002_add_emelia_replies_last_seen_to_users.php` | Nouveau |
-| `tests/Feature/EmeliaEventDispatcherTest.php` | Nouveau (8 tests) |
-| `tests/Feature/EmeliaSyncContactEventsTest.php` | Nouveau (7 tests) |
-| `app/Services/EmeliaService.php` | `getContactEvents()` ajouté |
-| `app/Http/Controllers/Webhook/EmeliaWebhookController.php` | Refactorisé → EmeliaEventDispatcher |
-| `app/Models/Activity.php` | `occurred_at` dans fillable + casts |
-| `app/Models/User.php` | `emelia_replies_last_seen` dans fillable + casts |
-| `app/Console/Commands/EmeliaSyncAllCampaigns.php` | Chaîne `sync-contact-events` après push |
-| `resources/views/components/activity-timeline.blade.php` | `occurred_at`, filtre source, badges sync/live |
-| `resources/views/pages/contacts/show.blade.php` | Onglets Tout/Emelia, bouton Voir → réparé |
-| `resources/views/components/app-shell.blade.php` | Badge admin replies non lues |
-| `routes/web.php` | Route `POST /notifications/emelia-replies/seen` |
+### Comportement en production (2026-05-23)
 
-### Procédure de déploiement v2.5 (après la sync locale)
-```bash
-# Sur le VPS :
-php artisan migrate --force                    # 2 nouvelles migrations
-php artisan cache:clear && php artisan view:clear
-# Webhook Emelia (à faire UNE FOIS dans l'UI Emelia) :
-# app.emelia.io → Settings → Webhooks
-# URL : https://crm.nana-intelligence.fr/api/webhooks/emelia
-# Events : SENT, OPENED, FIRST_OPEN, CLICKED, REPLIED, BOUNCED, UNSUBSCRIBED, CONTACT_UNSUBSCRIBED
-# Secret : $EMELIA_WEBHOOK_SECRET (dans .env)
-```
-
-### Comportement en production
-- **Sans webhook Emelia configuré** : seul le polling daily s'exécute. Les events sont créés avec `metadata.synthetic = true` et badge `sync`. Latence max 24h.
-- **Avec webhook Emelia configuré** : events créés en temps réel avec le timestamp Emelia dans `occurred_at` et badge `live`. Le polling daily rattrape les éventuels oublis.
-- **REPLIED** : crée une tâche pour le owner + bump lifecycle lead→mql. Visible immédiatement dans la timeline + onglet Emelia + badge sidebar admin.
+- 1016 contacts ont désormais `emelia_contact_id` résolu (contre 138 avant)
+- Sync journalière automatique via schedule `emelia:sync-all-campaigns`
+- Bouton "Sync" disponible sur chaque fiche contact pour synchronisation immédiate
 
 ---
 
-## 8. Backlog feature en attente
+## 8. Backlog / Prochaine session
 
-- **Export CSV** contacts/companies : `fputcsv` natif, inclure `custom_values` labellés
-- **Palette ⌘K** : `<x-command-palette>` Alpine, endpoint `/search` déjà existant
+### Bug à corriger en priorité
+
+- ✅ **Deal → Company auto-link** (corrigé en fin de session v2.5) : `DealController::attachContact()` n'auto-associait pas la company du contact. Fix appliqué localement — **à déployer**.
+
+### Features backlog
+
+- ✅ **Export CSV** contacts/companies : `GET /contacts/export` + `GET /companies/export` — `fputcsv`, BOM UTF-8, custom fields labellés, filtre search propagé. Boutons "Exporter CSV" dans les index (admin/manager).
+- ✅ **Palette ⌘K** : `<x-command-palette>` Alpine (`cmdPalette()`), endpoint `/search/quick?q=` JSON, navigation clavier ↑↓+Entrée, Échap pour fermer, inclus dans `app-shell`. Bouton header ouvre la palette, old JS handler ⌘K supprimé.
+- ✅ **Closure route:cache** : `Api\InfoController::index()` créé — `Route::get('/', fn()=>...)` remplacé — `route:cache` désormais possible.
 - **Backup BDD** : script cron `pg_dump` quotidien → `/opt/backups/crm/` avec rotation 7 jours
-- **Closure route:cache** : déplacer `Route::get('/', fn()=>...)` dans `Api\InfoController`
 - **Mot de passe admin** : changer `password` par défaut en production
 - **Sélection globale companies/deals** : même pattern que contacts (toolbar "Tout sélectionner")
-- **Webhook Emelia** : configurer manuellement dans UI Emelia → `https://crm.nana-intelligence.fr/api/webhooks/emelia`
+- **Webhook Emelia** : configurer manuellement dans UI Emelia si le plan l'autorise ou passer par un webhook n8n avec l'instance n8n.nana-intelligence.fr qui est déployé sur le VPS 51.38.116.229. Tu as accès à n8n via ton mcp docker.

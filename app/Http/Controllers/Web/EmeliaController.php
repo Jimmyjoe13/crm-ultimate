@@ -7,6 +7,7 @@ use App\Jobs\SyncEmeliaCampaignJob;
 use App\Models\Activity;
 use App\Models\Contact;
 use App\Services\EmeliaService;
+use App\Support\EmeliaEventDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -145,5 +146,57 @@ class EmeliaController extends Controller
     {
         SyncEmeliaCampaignJob::dispatch(onlyLinked: false);
         return response()->json(['message' => 'Synchronisation lancée en arrière-plan.']);
+    }
+
+    public function syncContact(Contact $contact, EmeliaService $emelia): JsonResponse
+    {
+        // Résoudre l'ID Emelia si absent
+        if (! $contact->emelia_contact_id) {
+            if (! $contact->emelia_campaign_name) {
+                return response()->json(['error' => 'Contact non lié à Emelia.'], 422);
+            }
+            $emeliData = $emelia->getContactByEmail($contact->email, $contact->emelia_campaign_name);
+            $resolvedId = $emeliData['_id'] ?? null;
+            if (! $resolvedId) {
+                return response()->json(['error' => 'Contact introuvable dans Emelia.'], 404);
+            }
+            $contact->update([
+                'emelia_contact_id' => $resolvedId,
+                'emelia_campaign_id' => $contact->emelia_campaign_id
+                    ?? ($emeliData['campaigns'][0] ?? null),
+            ]);
+            $contact->refresh();
+        }
+
+        $events  = $emelia->getContactEvents(
+            $contact->emelia_contact_id,
+            $contact->emelia_campaign_id,
+            $contact->email,
+            $contact->emelia_campaign_name,
+        );
+        $created = 0;
+
+        foreach ($events as $event) {
+            $type = EmeliaEventDispatcher::typeFromEmeliaEvent($event['type']);
+            if (! $type) {
+                continue;
+            }
+            $date       = $event['date'];
+            $externalId = 'emelia:' . hash('sha256', "{$contact->emelia_contact_id}:{$type}:{$date->toIso8601String()}");
+            $activity   = EmeliaEventDispatcher::dispatch(
+                contact:    $contact,
+                type:       $type,
+                payload:    ['synthetic' => true, 'source_contact_id' => $contact->emelia_contact_id],
+                occurredAt: $date,
+                externalId: $externalId,
+            );
+            if ($activity !== null) {
+                $created++;
+            }
+        }
+
+        Cache::forget("emelia_status_{$contact->id}");
+
+        return response()->json(['created' => $created, 'total_events' => count($events)]);
     }
 }

@@ -116,13 +116,14 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                    {{-- Global search --}}
-                    <a href="{{ route('search') }}" class="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm"
-                       style="border-color: var(--border); background: var(--surface); width: 320px;">
+                    {{-- Global search — ouvre la palette ⌘K --}}
+                    <button @click="$dispatch('open-cmd-palette')"
+                            class="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm"
+                            style="border-color: var(--border); background: var(--surface); width: 320px; cursor: text; text-align:left;">
                         <svg class="ic" style="color: var(--text3);" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                         <span class="text-sm text-tertiary flex-1">Rechercher deal, contact, entreprise…</span>
                         <span class="kbd">⌘ K</span>
-                    </a>
+                    </button>
 
                     {{-- Header actions slot (optional override) --}}
                     {{ $actions ?? '' }}
@@ -150,13 +151,7 @@ function toggleTheme() {
     document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
 }
-
-// ⌘K opens search
-document.addEventListener('keydown', function(e) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        window.location.href = '/search';
-    }
-});
 </script>
+
+<x-command-palette />
 </x-layouts.app>

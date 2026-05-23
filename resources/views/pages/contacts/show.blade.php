@@ -43,10 +43,15 @@
 <div class="px-7 pb-12 grid grid-cols-12 gap-6">
     {{-- Colonne Gauche : Propriétés & Informations --}}
     <div class="col-span-12 lg:col-span-3 flex flex-col gap-4">
-        <div class="card p-5">
-            <div class="mono-label mb-4 pb-2 border-b border-default flex items-center gap-2">
-                <svg class="ic" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                À propos
+        <div class="card p-5" x-data>
+            <div class="mono-label mb-4 pb-2 border-b border-default flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="ic" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    À propos
+                </div>
+                <button type="button" @click="$dispatch('open-edit-properties-modal')" class="text-accent hover:underline text-[11px] font-mono font-semibold" title="Modifier les propriétés">
+                    ✏️ Modifier
+                </button>
             </div>
             
             <div class="flex flex-col gap-4">
@@ -146,6 +151,14 @@
             </div>
 
             <x-custom-fields-show :entity="$contact" entity-type="contact" layout="stacked" />
+
+            @if(in_array(auth()->user()?->role, ['admin','manager']))
+            <div class="mt-4 pt-3 border-t border-default flex justify-center">
+                <button type="button" @click="$dispatch('open-create-property-modal')" class="text-accent hover:underline text-[11px] font-mono font-semibold">
+                    + Créer une propriété
+                </button>
+            </div>
+            @endif
         </div>
     </div>
 
@@ -562,5 +575,155 @@
         </form>
     </div>
 </div>
+
+{{-- Modal de modification des propriétés (Contact) --}}
+<div x-data="{ open: false }"
+     @open-edit-properties-modal.window="open = true;"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+     style="background: rgba(0,0,0,.45);"
+     @keydown.escape.window="open = false"
+     @click="open = false">
+    <div class="card p-6 w-full max-w-lg" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold">Modifier les propriétés</h2>
+            <button @click="open = false" class="btn ghost icon">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <form method="POST" action="{{ '/contacts/' . $contact->id }}" class="flex flex-col gap-4 overflow-y-auto pr-1">
+            @csrf
+            @method('PUT')
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="field">
+                    <label>Prénom <span class="text-err">*</span></label>
+                    <input type="text" name="first_name" value="{{ old('first_name', $contact->first_name) }}" required>
+                </div>
+                <div class="field">
+                    <label>Nom</label>
+                    <input type="text" name="last_name" value="{{ old('last_name', $contact->last_name) }}">
+                </div>
+                <div class="field">
+                    <label>Email</label>
+                    <input type="email" name="email" value="{{ old('email', $contact->email) }}">
+                </div>
+                <div class="field">
+                    <label>Téléphone</label>
+                    <input type="text" name="phone" value="{{ old('phone', $contact->phone) }}">
+                </div>
+                <div class="field">
+                    <label>Poste</label>
+                    <input type="text" name="job_title" value="{{ old('job_title', $contact->job_title) }}">
+                </div>
+                <div class="field">
+                    <label>Lifecycle stage</label>
+                    <select name="lifecycle_stage" class="select-arrow">
+                        <option value="">—</option>
+                        @foreach(['lead','mql','sql','opportunity','customer','evangelist','other'] as $stage)
+                        <option value="{{ $stage }}" {{ old('lifecycle_stage', $contact->lifecycle_stage) === $stage ? 'selected' : '' }}>{{ $stage }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <x-custom-fields-form entity-type="contact" :values="old('custom_values', $contact->custom_values ?? [])" />
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-default">
+                <button type="button" @click="open = false" class="btn ghost">Annuler</button>
+                <button type="submit" class="btn primary">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal d'ajout de propriété (création de champ personnalisé) --}}
+@if(in_array(auth()->user()?->role, ['admin','manager']))
+<div x-data="{
+    open: false,
+    fieldType: 'text',
+    label: '',
+    key: '',
+    options: [''],
+    updateKey() {
+        this.key = this.label.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '_')
+            .replace(/-+/g, '_');
+    },
+    addOption() {
+        this.options.push('');
+    },
+    removeOption(index) {
+        this.options.splice(index, 1);
+    }
+}"
+     @open-create-property-modal.window="open = true; fieldType = 'text'; label = ''; key = ''; options = [''];"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+     style="background: rgba(0,0,0,.45);"
+     @keydown.escape.window="open = false"
+     @click="open = false">
+    <div class="card p-6 w-full max-w-md" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold">Créer une propriété (Contact)</h2>
+            <button @click="open = false" class="btn ghost icon">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <form method="POST" action="/settings/fields" class="flex flex-col gap-4 overflow-y-auto pr-1">
+            @csrf
+            <input type="hidden" name="entity_type" value="contact">
+
+            <div class="field">
+                <label>Nom de la propriété (Label) <span class="text-err">*</span></label>
+                <input type="text" name="label" x-model="label" @input="updateKey()" placeholder="ex: Statut de facturation" required>
+            </div>
+
+            <div class="field">
+                <label>Clé technique (Key) <span class="text-err">*</span></label>
+                <input type="text" name="key" x-model="key" placeholder="ex: statut_facturation" required>
+            </div>
+
+            <div class="field">
+                <label>Type de champ <span class="text-err">*</span></label>
+                <select name="field_type" x-model="fieldType" class="select-arrow" required>
+                    <option value="text">Texte court</option>
+                    <option value="number">Nombre</option>
+                    <option value="date">Date</option>
+                    <option value="boolean">Case à cocher (booléen)</option>
+                    <option value="select">Liste de sélection</option>
+                </select>
+            </div>
+
+            <template x-if="fieldType === 'select'">
+                <div class="field mt-2">
+                    <label class="flex justify-between items-center">
+                        <span>Options</span>
+                        <button type="button" @click="addOption()" class="text-accent hover:underline text-xs">+ Ajouter option</button>
+                    </label>
+                    <div class="flex flex-col gap-2 mt-1">
+                        <template x-for="(opt, idx) in options" :key="idx">
+                            <div class="flex items-center gap-2">
+                                <input type="text" :name="'options[' + idx + ']'" x-model="options[idx]" placeholder="Option label" class="flex-1" required>
+                                <button type="button" @click="removeOption(idx)" class="text-err text-xs" :disabled="options.length <= 1">X</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-default">
+                <button type="button" @click="open = false" class="btn ghost">Annuler</button>
+                <button type="submit" class="btn primary">Créer</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 </x-app-shell>

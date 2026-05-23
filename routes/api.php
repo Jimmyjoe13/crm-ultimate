@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\InfoController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\CustomFieldController;
@@ -25,22 +26,7 @@ Route::post('/webhooks/emelia', [EmeliaWebhookController::class, 'handle'])
     ->name('webhooks.emelia');
 
 Route::prefix('v1')->name('api.')->group(function (): void {
-    Route::get('/', fn () => response()->json([
-        'name' => 'CRM Ultimate API',
-        'version' => 'v1',
-        'status' => 'ok',
-        'documentation' => '/docs/openapi.yaml',
-        'frontend' => '/',
-        'endpoints' => [
-            'login' => 'POST /api/v1/auth/login',
-            'me' => 'GET /api/v1/auth/me',
-            'companies' => 'GET|POST /api/v1/companies',
-            'contacts' => 'GET|POST /api/v1/contacts',
-            'deals' => 'GET|POST /api/v1/deals',
-            'activities' => 'GET|POST /api/v1/activities',
-            'pipelines' => 'GET|POST /api/v1/pipelines',
-        ],
-    ]));
+    Route::get('/', [InfoController::class, 'index']);
 
     Route::post('/auth/login', [AuthController::class, 'login']);
 

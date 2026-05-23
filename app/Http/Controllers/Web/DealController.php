@@ -196,8 +196,16 @@ class DealController extends Controller
         $pivot = ['role' => $data['role'] ?? 'primary'];
 
         $deal->contacts()->syncWithoutDetaching([$contactId => $pivot]);
-
         \App\Services\AssociationAuditor::recordAttach($deal, 'contacts', $contactId, \App\Models\Contact::class, $pivot);
+
+        // Auto-associate contact's company if not already linked to the deal
+        $contact = \App\Models\Contact::findOrFail($contactId);
+        $company = $contact->companies()->first();
+        if ($company && ! $deal->companies()->where('companies.id', $company->id)->exists()) {
+            $companyPivot = ['role' => 'customer', 'is_primary' => true];
+            $deal->companies()->attach($company->id, $companyPivot);
+            \App\Services\AssociationAuditor::recordAttach($deal, 'companies', $company->id, \App\Models\Company::class, $companyPivot);
+        }
 
         return redirect('/deals/' . $deal->id)
             ->with('flash_toast', ['message' => 'Contact associé au deal.', 'type' => 'success']);

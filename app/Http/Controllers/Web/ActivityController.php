@@ -67,4 +67,18 @@ class ActivityController extends Controller
 
         return back()->with('flash_toast', ['message' => 'Activité ajoutée.', 'type' => 'success']);
     }
+
+    public function destroy(Activity $activity): \Illuminate\Http\RedirectResponse
+    {
+        $user = auth()->user();
+
+        if ($activity->owner_id !== $user->id && !in_array($user->role, ['admin', 'manager'])) {
+            abort(403, 'Forbidden.');
+        }
+
+        $activity->delete();
+
+        return back()->with('flash_toast', ['message' => 'Activité supprimée.', 'type' => 'success']);
+    }
 }
+

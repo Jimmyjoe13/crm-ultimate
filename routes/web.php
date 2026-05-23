@@ -43,6 +43,7 @@ Route::middleware('web.auth')->group(function () {
     Route::get('/pipeline',  [PipelineController::class, 'index'])->name('pipeline.index');
 
     Route::get('/contacts',               [ContactController::class, 'index'])->name('contacts.index');
+    Route::get('/contacts/export',        [ContactController::class, 'export'])->name('contacts.export');
     Route::get('/contacts/create',        [ContactController::class, 'create']);
     Route::post('/contacts',              [ContactController::class, 'store']);
     Route::get('/contacts/{contact}',     [ContactController::class, 'show'])->name('contacts.show');
@@ -50,6 +51,7 @@ Route::middleware('web.auth')->group(function () {
     Route::put('/contacts/{contact}',     [ContactController::class, 'update']);
 
     Route::get('/companies',               [CompanyController::class, 'index'])->name('companies.index');
+    Route::get('/companies/export',        [CompanyController::class, 'export'])->name('companies.export');
     Route::get('/companies/create',        [CompanyController::class, 'create']);
     Route::post('/companies',              [CompanyController::class, 'store']);
     Route::get('/companies/{company}',     [CompanyController::class, 'show'])->name('companies.show');
@@ -59,6 +61,7 @@ Route::middleware('web.auth')->group(function () {
     Route::get('/activities',                            [ActivityController::class, 'index'])->name('activities.index');
     Route::post('/activities',                           [ActivityController::class, 'store']);
     Route::post('/activities/{activity}/toggle-done',    [ActivityController::class, 'toggleDone']);
+    Route::delete('/activities/{activity}',              [ActivityController::class, 'destroy']);
 
     Route::middleware('throttle:20,1')->group(function () {
         Route::post('/web/ai/deal/{id}/{action}',       [AiController::class, 'dealInsight']);
@@ -67,7 +70,8 @@ Route::middleware('web.auth')->group(function () {
         Route::post('/web/ai/dashboard/suggestions',    [AiController::class, 'dashboardSuggestions']);
     });
 
-    Route::get('/search',    [SearchController::class, 'index'])->name('search');
+    Route::get('/search',       [SearchController::class, 'index'])->name('search');
+    Route::get('/search/quick', [SearchController::class, 'quick'])->name('search.quick');
 
     Route::get('/segments',                  [SegmentController::class, 'index']);
     Route::get('/segments/create',           [SegmentController::class, 'create']);

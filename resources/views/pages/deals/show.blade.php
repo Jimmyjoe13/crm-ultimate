@@ -127,67 +127,24 @@
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] flex-1 overflow-y-auto lg:overflow-hidden">
 
             {{-- Gauche : activité --}}
-            <div class="overflow-y-visible lg:overflow-auto flex flex-col">
-                {{-- Onglets --}}
-                <div class="flex border-b border-default px-6 gap-0 flex-shrink-0">
-                    <button class="px-3 py-3 text-[13px] font-medium border-b-2" style="border-color: var(--accent); color: var(--text);">
-                        Activité <span class="chip ml-1" style="padding: 0 6px; font-size: 10px;">{{ $activities->count() }}</span>
-                    </button>
-                    <button class="px-3 py-3 text-[13px] text-secondary">Notes</button>
-                    <button class="px-3 py-3 text-[13px] text-secondary">Emails</button>
-                    <button class="px-3 py-3 text-[13px] text-secondary">Tâches</button>
-                </div>
-
-                {{-- Composer --}}
-                <div class="px-6 py-4 border-b border-default flex-shrink-0">
-                    <div class="card p-3">
-                        <div class="text-[13px] text-tertiary">Ajouter une note, un email, un appel…</div>
-                        <div class="flex gap-2 mt-2">
-                            <button class="btn sm">📝 Note</button>
-                            <button class="btn sm">📧 Email</button>
-                            <button class="btn sm">📞 Appel</button>
-                            <button class="btn sm">✓ Tâche</button>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Timeline --}}
-                <div class="px-6 py-3 overflow-auto flex-1">
-                    @forelse($activities as $activity)
-                    @php
-                        $dot = match($activity->type) {
-                            'email' => 'info',
-                            'call'  => 'accent',
-                            default => '',
-                        };
-                        $emoji = match($activity->type) {
-                            'email'  => '📧',
-                            'call'   => '📞',
-                            'note'   => '📝',
-                            'task'   => '✓',
-                            default  => '➕',
-                        };
-                    @endphp
-                    <div class="tl-item">
-                        <span class="tl-time">{{ $activity->created_at->format('d/m H:i') }}</span>
-                        <div class="tl-axis"><div class="tl-dot {{ $dot }}"></div></div>
-                        <div class="tl-content">
-                            <div class="ti">{{ $emoji }} {{ $activity->title }}</div>
-                            @if($activity->body)
-                            <div class="ts">{{ Str::limit($activity->body, 80) }}</div>
-                            @endif
-                        </div>
-                    </div>
-                    @empty
-                    <div class="py-8 text-center text-tertiary text-sm">Aucune activité pour ce deal.</div>
-                    @endforelse
-                </div>
+            <div class="overflow-y-visible lg:overflow-auto flex flex-col px-6 py-4">
+                <x-activity-timeline
+                    :activities="$activities"
+                    subject-type="deal"
+                    :subject-id="$deal->id"
+                    :show-composer="true"
+                />
             </div>
 
             {{-- Droite : propriétés --}}
-            <aside class="border-t lg:border-t-0 lg:border-l border-default overflow-y-visible lg:overflow-auto" style="background: var(--surface2);">
+            <aside class="border-t lg:border-t-0 lg:border-l border-default overflow-y-visible lg:overflow-auto" style="background: var(--surface2);" x-data>
                 <div class="p-5">
-                    <div class="mono-label mb-3">Propriétés</div>
+                    <div class="mono-label mb-3 flex items-center justify-between">
+                        <span>Propriétés</span>
+                        <button type="button" @click="$dispatch('open-edit-properties-modal')" class="text-accent hover:underline text-[11px] font-mono font-semibold" title="Modifier les propriétés">
+                            ✏️ Modifier
+                        </button>
+                    </div>
                     <div class="flex flex-col gap-2.5 text-[13px]">
                         <div class="flex justify-between">
                             <span class="text-tertiary">Montant</span>
@@ -304,6 +261,14 @@
                     @endif
 
                     <x-custom-fields-show :entity="$deal" entity-type="deal" layout="inline" />
+
+                    @if(in_array(auth()->user()?->role, ['admin','manager']))
+                    <div class="mt-4 pt-3 border-t border-default flex justify-center">
+                        <button type="button" @click="$dispatch('open-create-property-modal')" class="text-accent hover:underline text-[11px] font-mono font-semibold">
+                            + Créer une propriété
+                        </button>
+                    </div>
+                    @endif
 
                     <div class="mono-label mt-6 mb-3">Insights IA</div>
                     <div class="flex flex-col gap-3">
@@ -458,5 +423,146 @@
         </form>
     </div>
 </div>
+
+{{-- Modal de modification des propriétés (Deal) --}}
+<div x-data="{ open: false }"
+     @open-edit-properties-modal.window="open = true;"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+     style="background: rgba(0,0,0,.45);"
+     @keydown.escape.window="open = false"
+     @click="open = false">
+    <div class="card p-6 w-full max-w-lg" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold">Modifier les propriétés de {{ $deal->name }}</h2>
+            <button @click="open = false" class="btn ghost icon">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <form method="POST" action="{{ '/deals/' . $deal->id }}" class="flex flex-col gap-4 overflow-y-auto pr-1">
+            @csrf
+            @method('PUT')
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="field">
+                    <label>Nom du deal <span class="text-err">*</span></label>
+                    <input type="text" name="name" value="{{ old('name', $deal->name) }}" required>
+                </div>
+                <div class="field">
+                    <label>Montant (€) <span class="text-err">*</span></label>
+                    <input type="number" name="amount" min="0" step="0.01" value="{{ old('amount', $deal->amount) }}" required>
+                </div>
+                <div class="field">
+                    <label>Date de clôture</label>
+                    <input type="date" name="close_date" value="{{ old('close_date', $deal->close_date?->format('Y-m-d')) }}">
+                </div>
+                <div class="field">
+                    <label>Étape <span class="text-err">*</span></label>
+                    <select name="pipeline_stage_id" class="select-arrow" required>
+                        @foreach($stages as $stage)
+                            <option value="{{ $stage->id }}" {{ old('pipeline_stage_id', $deal->pipeline_stage_id) === $stage->id ? 'selected' : '' }}>{{ $stage->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <x-custom-fields-form entity-type="deal" :values="old('custom_values', $deal->custom_values ?? [])" />
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-default">
+                <button type="button" @click="open = false" class="btn ghost">Annuler</button>
+                <button type="submit" class="btn primary">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal d'ajout de propriété (création de champ personnalisé) --}}
+@if(in_array(auth()->user()?->role, ['admin','manager']))
+<div x-data="{
+    open: false,
+    fieldType: 'text',
+    label: '',
+    key: '',
+    options: [''],
+    updateKey() {
+        this.key = this.label.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '_')
+            .replace(/-+/g, '_');
+    },
+    addOption() {
+        this.options.push('');
+    },
+    removeOption(index) {
+        this.options.splice(index, 1);
+    }
+}"
+     @open-create-property-modal.window="open = true; fieldType = 'text'; label = ''; key = ''; options = [''];"
+     x-show="open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+     style="background: rgba(0,0,0,.45);"
+     @keydown.escape.window="open = false"
+     @click="open = false">
+    <div class="card p-6 w-full max-w-md" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold">Créer une propriété (Deal)</h2>
+            <button @click="open = false" class="btn ghost icon">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <form method="POST" action="/settings/fields" class="flex flex-col gap-4 overflow-y-auto pr-1">
+            @csrf
+            <input type="hidden" name="entity_type" value="deal">
+
+            <div class="field">
+                <label>Nom de la propriété (Label) <span class="text-err">*</span></label>
+                <input type="text" name="label" x-model="label" @input="updateKey()" placeholder="ex: Source de lead" required>
+            </div>
+
+            <div class="field">
+                <label>Clé technique (Key) <span class="text-err">*</span></label>
+                <input type="text" name="key" x-model="key" placeholder="ex: source_lead" required>
+            </div>
+
+            <div class="field">
+                <label>Type de champ <span class="text-err">*</span></label>
+                <select name="field_type" x-model="fieldType" class="select-arrow" required>
+                    <option value="text">Texte court</option>
+                    <option value="number">Nombre</option>
+                    <option value="date">Date</option>
+                    <option value="boolean">Case à cocher (booléen)</option>
+                    <option value="select">Liste de sélection</option>
+                </select>
+            </div>
+
+            <template x-if="fieldType === 'select'">
+                <div class="field mt-2">
+                    <label class="flex justify-between items-center">
+                        <span>Options</span>
+                        <button type="button" @click="addOption()" class="text-accent hover:underline text-xs">+ Ajouter option</button>
+                    </label>
+                    <div class="flex flex-col gap-2 mt-1">
+                        <template x-for="(opt, idx) in options" :key="idx">
+                            <div class="flex items-center gap-2">
+                                <input type="text" :name="'options[' + idx + ']'" x-model="options[idx]" placeholder="Option label" class="flex-1" required>
+                                <button type="button" @click="removeOption(idx)" class="text-err text-xs" :disabled="options.length <= 1">X</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-default">
+                <button type="button" @click="open = false" class="btn ghost">Annuler</button>
+                <button type="submit" class="btn primary">Créer</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 </x-app-shell>

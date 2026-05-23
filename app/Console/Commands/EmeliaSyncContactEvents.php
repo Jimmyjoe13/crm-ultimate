@@ -89,6 +89,8 @@ class EmeliaSyncContactEvents extends Command
                         $events = $emelia->getContactEvents(
                             $contact->emelia_contact_id,
                             $contact->emelia_campaign_id,
+                            $contact->email,
+                            $contact->emelia_campaign_name,
                         );
 
                         foreach ($events as $event) {

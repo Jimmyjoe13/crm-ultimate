@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Contact;
+use App\Support\CustomFieldRenderer;
 use App\Support\CustomValueValidator;
 use Illuminate\Http\Request;
 
@@ -100,6 +101,56 @@ class ContactController extends Controller
         return redirect('/contacts')->with('flash_toast', [
             'message' => 'Contact supprimé.',
             'type'    => 'success',
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        $search       = $request->get('search');
+        $customFields = CustomFieldRenderer::forEntity('contact');
+
+        $headers = array_merge(
+            ['id', 'prénom', 'nom', 'email', 'téléphone', 'poste', 'étape_lifecycle', 'statut_lead', 'propriétaire', 'entreprises', 'créé_le'],
+            $customFields->pluck('label')->toArray()
+        );
+
+        return response()->streamDownload(function () use ($search, $customFields, $headers) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM UTF-8 pour Excel
+            fputcsv($out, $headers);
+
+            Contact::with(['owner', 'companies'])
+                ->when($search, fn($q) => $q->where('first_name', 'ilike', "%{$search}%")
+                    ->orWhere('last_name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%"))
+                ->orderBy('last_name')
+                ->chunk(200, function ($contacts) use ($out, $customFields) {
+                    foreach ($contacts as $c) {
+                        $row = [
+                            $c->id,
+                            $c->first_name,
+                            $c->last_name,
+                            $c->email,
+                            $c->phone,
+                            $c->job_title,
+                            $c->lifecycle_stage,
+                            $c->lead_status,
+                            $c->owner?->name,
+                            $c->companies->pluck('name')->implode(', '),
+                            $c->created_at?->format('d/m/Y'),
+                        ];
+                        foreach ($customFields as $field) {
+                            $raw      = $c->custom_values[$field->key] ?? null;
+                            $display  = CustomFieldRenderer::displayValue($field, $raw);
+                            $row[]    = $display === '—' ? '' : $display;
+                        }
+                        fputcsv($out, $row);
+                    }
+                });
+
+            fclose($out);
+        }, 'contacts_' . date('Y-m-d') . '.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
