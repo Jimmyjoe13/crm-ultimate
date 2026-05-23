@@ -112,7 +112,14 @@ class ContactController extends Controller
             'lead_status'     => ['nullable', 'in:new,open,in_progress,connected,unqualified,bad_fit'],
         ], CustomValueValidator::validationRules('contact')));
 
-        $data['custom_values'] = CustomValueValidator::cast('contact', $data['custom_values'] ?? []);
+        if ($request->has('custom_values')) {
+            $data['custom_values'] = array_merge(
+                $contact->custom_values ?? [],
+                CustomValueValidator::cast('contact', $data['custom_values'] ?? [])
+            );
+        } else {
+            unset($data['custom_values']);
+        }
 
         $contact->update($data);
 
