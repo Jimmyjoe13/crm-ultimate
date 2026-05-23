@@ -70,6 +70,34 @@ class AiController extends Controller
         return response()->json(array_merge($result, ['generated_at' => now()->toIso8601String()]));
     }
 
+    public function draftEmail(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'contact_id' => ['nullable', 'integer', 'exists:contacts,id'],
+            'deal_id'    => ['nullable', 'integer', 'exists:deals,id'],
+            'intent'     => ['nullable', 'string', 'max:200'],
+        ]);
+
+        if (empty($validated['contact_id']) && empty($validated['deal_id'])) {
+            return response()->json(['message' => 'contact_id ou deal_id requis.'], 422);
+        }
+
+        try {
+            $draft = $this->ai->draftEmail(
+                $validated['contact_id'] ?? null,
+                $validated['deal_id'] ?? null,
+                $validated['intent'] ?? ''
+            );
+        } catch (ModelNotFoundException) {
+            return response()->json(['message' => 'Ressource introuvable.'], 404);
+        } catch (RuntimeException $e) {
+            $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+            return response()->json(['message' => $e->getMessage()], $status);
+        }
+
+        return response()->json($draft);
+    }
+
     public function dashboardSuggestions(Request $request): JsonResponse
     {
         $fresh = $request->boolean('fresh') && in_array(auth()->user()?->role, ['admin', 'manager']);

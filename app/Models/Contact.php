@@ -39,6 +39,8 @@ class Contact extends Model
         'lead_status',
         'owner_id',
         'custom_values',
+        'ai_score',
+        'ai_score_updated_at',
     ];
 
     protected function casts(): array

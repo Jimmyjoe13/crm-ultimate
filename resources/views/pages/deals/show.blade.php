@@ -327,6 +327,16 @@
                         <x-ai-insight-card endpoint="/web/ai/deal/{{ $deal->id }}/summarize" title="Résumé" />
                         <x-ai-insight-card endpoint="/web/ai/deal/{{ $deal->id }}/next-action" title="Prochaine action" />
                         <x-ai-insight-card endpoint="/web/ai/deal/{{ $deal->id }}/score" title="Score deal" />
+                        <button type="button"
+                                @click="$dispatch('open-email-draft-modal')"
+                                class="btn ghost w-full justify-center"
+                                style="font-size:12px;">
+                            <svg class="ic" style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                <polyline points="22,6 12,13 2,6"/>
+                            </svg>
+                            Rédiger un email
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -644,5 +654,7 @@
     </div>
 </div>
 @endif
+
+<x-email-draft-modal entity-type="deal" :entity-id="$deal->id" />
 
 </x-app-shell>

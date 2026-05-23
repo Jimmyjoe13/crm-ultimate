@@ -15,7 +15,7 @@ class ContactController extends Controller
     public function index(Request $request)
     {
         $search  = $request->get('search');
-        $allowed = ['last_name', 'email', 'created_at'];
+        $allowed = ['last_name', 'email', 'created_at', 'ai_score'];
         $sort    = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'last_name';
         $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
         $page    = (int) $request->get('page', 1);
@@ -27,7 +27,10 @@ class ContactController extends Controller
                 ->when($search, fn($q) => $q->where('first_name', 'ilike', "%{$search}%")
                     ->orWhere('last_name', 'ilike', "%{$search}%")
                     ->orWhere('email', 'ilike', "%{$search}%"))
-                ->orderBy($sort, $dir)
+                ->when($sort === 'ai_score',
+                    fn($q) => $q->orderByRaw("ai_score {$dir} NULLS LAST"),
+                    fn($q) => $q->orderBy($sort, $dir)
+                )
                 ->paginate(25, ['*'], 'page', $page);
 
             return ['items' => $pag->items(), 'total' => $pag->total()];

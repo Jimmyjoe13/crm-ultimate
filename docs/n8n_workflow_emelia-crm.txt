@@ -1,0 +1,171 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "campaignId": "69eb1cca5033df0a8663a88e",
+        "events": [
+          "replied",
+          "bounced",
+          "opened",
+          "sent",
+          "unsubscribed"
+        ]
+      },
+      "type": "n8n-nodes-base.emeliaTrigger",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -592
+      ],
+      "id": "e15b2cae-7e77-4d9c-91c0-066e1c5e24ed",
+      "name": "Emelia Trigger1",
+      "webhookId": "df41b070-7323-4ddf-b293-bf135c1018b6",
+      "credentials": {
+        "emeliaApi": {
+          "id": "f3Q24MOVU6pk1vzC",
+          "name": "Emelia account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "campaignId": "69ebb7281762b60a8169f625",
+        "events": [
+          "replied",
+          "opened",
+          "bounced",
+          "sent",
+          "unsubscribed"
+        ]
+      },
+      "type": "n8n-nodes-base.emeliaTrigger",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -416
+      ],
+      "id": "bc71083e-4844-4794-a6ec-726889ae50d6",
+      "name": "Emelia Trigger",
+      "webhookId": "e96e1d8d-509a-4b5e-88b3-40ef0dd2fe0c",
+      "credentials": {
+        "emeliaApi": {
+          "id": "f3Q24MOVU6pk1vzC",
+          "name": "Emelia account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nreturn [{ json: {\n  event:       d.event       || d.type,\n  email:       d.email,\n  contact_id:  d.contact_id  || d.contactId,\n  event_id:    d.event_id    || d.id         || d.eventId,\n  date:        d.date        || d.timestamp  || d.createdAt  || d.created_at,\n  subject:     d.subject,\n  preview:     d.preview     || d.previewText,\n  campaign_id: d.campaign_id || d.campaignId,\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -512
+      ],
+      "id": "f1e2d3c4-b5a6-9807-edcb-f21345678901",
+      "name": "Normalize Event"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.nana-intelligence.fr/api/webhooks/emelia",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -48,
+        -512
+      ],
+      "id": "d2e3f4a5-b6c7-8901-defa-123456789012",
+      "name": "Forward to CRM"
+    }
+  ],
+  "connections": {
+    "Emelia Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Normalize Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emelia Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Event": {
+      "main": [
+        [
+          {
+            "node": "Forward to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Emelia Trigger": [
+      {
+        "event": "OPENED",
+        "campaign": "conseiller-consultant-acquisition",
+        "sender": "jonathan@first-lead.fr",
+        "contact": {
+          "title": "Dirigeante",
+          "company": "GOETIC",
+          "sector": "Services de publicité",
+          "city": "Montauban",
+          "companyWebsite": "http://www.goetic.fr",
+          "domainemelia": "goetic.fr",
+          "firstName": "Magali",
+          "lastName": "Fernando",
+          "email": "magali.fernando@goetic.fr"
+        },
+        "date": "2026-05-23T19:12:39.046Z",
+        "step": 3
+      }
+    ],
+    "Normalize Event": [
+      {
+        "event": "OPENED",
+        "date": "2026-05-23T19:12:39.046Z"
+      }
+    ],
+    "Forward to CRM": [
+      {
+        "status": "ok"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9ad06fe87d18e2a86240b98a36512cd9e6db26e7d5f188d7c9968c835dfe9f0c"
+  }
+}

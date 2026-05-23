@@ -65,13 +65,14 @@
                     <th>Téléphone</th>
                     <th>Entreprise</th>
                     <th>Lifecycle</th>
+                    <x-sort-th column="ai_score" label="Score IA" :sort="$sort" :dir="$dir" />
                 </tr>
             </thead>
             <tbody>
                 {{-- Bannière "tous sélectionnés" --}}
                 @if(in_array(auth()->user()?->role, ['admin','manager']))
                 <tr x-show="$store.bulk.isSelectAllMode('contact')" style="display:none;">
-                    <td colspan="6" class="text-center py-2.5 text-[12.5px] font-medium" style="background:var(--ok-soft);color:var(--ok)">
+                    <td colspan="7" class="text-center py-2.5 text-[12.5px] font-medium" style="background:var(--ok-soft);color:var(--ok)">
                         Les {{ $total }} contacts sont sélectionnés.
                         <button @click="$store.bulk.clear('contact')"
                                 class="underline ml-1" style="color:var(--err)">
@@ -125,9 +126,20 @@
                         <span class="text-tertiary">—</span>
                         @endif
                     </td>
+                    <td>
+                        @if($contact->ai_score !== null)
+                        @php $s = $contact->ai_score; $hue = (int)($s * 1.2); @endphp
+                        <span title="Score IA : {{ $s }}/100 — mis à jour {{ $contact->ai_score_updated_at?->diffForHumans() }}"
+                              style="display:inline-flex;align-items:center;justify-content:center;min-width:36px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:600;color:#fff;background:hsl({{ $hue }},65%,42%);">
+                            {{ $s }}
+                        </span>
+                        @else
+                        <span class="text-tertiary">—</span>
+                        @endif
+                    </td>
                 </tr>
                 @empty
-                <tr><td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 6 : 5 }}" class="text-center py-12 text-tertiary text-sm">Aucun contact.</td></tr>
+                <tr><td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 7 : 6 }}" class="text-center py-12 text-tertiary text-sm">Aucun contact.</td></tr>
                 @endforelse
             </tbody>
         </table>

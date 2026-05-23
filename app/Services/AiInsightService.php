@@ -72,6 +72,53 @@ class AiInsightService
         });
     }
 
+    public function draftEmail(?int $contactId, ?int $dealId, string $intent = ''): array
+    {
+        $context = '';
+
+        if ($contactId) {
+            $contact    = Contact::with(['companies', 'owner', 'deals'])->findOrFail($contactId);
+            $activities = Activity::where('subject_type', Contact::class)->where('subject_id', $contactId)->latest()->limit(5)->get();
+            $context    = $this->contactContext($contact, $activities->toArray());
+        } elseif ($dealId) {
+            $deal       = Deal::with(['companies', 'contacts', 'stage', 'pipeline', 'owner'])->findOrFail($dealId);
+            $activities = Activity::where('subject_type', Deal::class)->where('subject_id', $dealId)->latest()->limit(5)->get();
+            $context    = $this->dealContext($deal, $activities->toArray(), []);
+        }
+
+        $intentLine = $intent ? "\nObjectif de l'email : {$intent}" : '';
+        $prompt     = $context.$intentLine."\n\nRédige un email professionnel B2B en français (maximum 200 mots). Objet accrocheur. Signature générique (prénom seulement). Réponds UNIQUEMENT en JSON valide : {\"subject\": \"Objet de l'email\", \"body\": \"Corps de l'email\"}";
+
+        $raw = $this->llm->complete(
+            'Tu es un assistant rédacteur B2B expert. Tu rédiges des emails commerciaux professionnels, concis et percutants en français.',
+            $prompt,
+            ['max_tokens' => 600]
+        );
+
+        if (preg_match('/\{.*\}/s', $raw, $matches)) {
+            $parsed = json_decode($matches[0], true);
+            if (is_array($parsed) && isset($parsed['subject'], $parsed['body'])) {
+                return $parsed;
+            }
+        }
+
+        return ['subject' => 'Email généré', 'body' => $raw];
+    }
+
+    public function scoreContact(int $id, bool $fresh = false): array
+    {
+        return $this->resolve('score-contact', 'contact', $id, $fresh, function () use ($id) {
+            $contact    = Contact::with(['companies', 'owner', 'deals'])->findOrFail($id);
+            $activities = Activity::where('subject_type', Contact::class)->where('subject_id', $id)->latest()->limit(10)->get();
+
+            return [
+                'context' => $this->contactContext($contact, $activities->toArray()),
+                'hash'    => md5('score-contact'.(string) $contact->updated_at.$activities->count()),
+                'prompt'  => 'score-contact',
+            ];
+        });
+    }
+
     public function summarizeCompany(int $id, bool $fresh = false): array
     {
         return $this->resolve('summarize-company', 'company', $id, $fresh, function () use ($id) {
@@ -94,28 +141,79 @@ class AiInsightService
             return ['data' => Cache::get($cacheKey), 'cached' => true];
         }
 
-        $stagnantDeals = Deal::with(['stage'])
+        $stagnantDeals = Deal::with('stage')
             ->where('status', 'open')
             ->where('updated_at', '<', now()->subDays(7))
-            ->orderBy('amount', 'desc')
+            ->orderByDesc('amount')
             ->limit(5)
             ->get();
 
-        if ($stagnantDeals->isEmpty()) {
-            return ['data' => ['suggestions' => ['Aucun deal stagnant détecté. Bonne journée !']], 'cached' => false];
+        $closingSoon = Deal::with('stage')
+            ->where('status', 'open')
+            ->whereBetween('close_date', [now(), now()->addDays(7)])
+            ->orderBy('close_date')
+            ->limit(5)
+            ->get();
+
+        $overdueTasks = Activity::where('type', Activity::TYPE_TASK)
+            ->where('status', 'open')
+            ->where('owner_id', $user->id)
+            ->where('due_at', '<', now())
+            ->limit(5)
+            ->get();
+
+        $recentReplies = Activity::where('type', Activity::TYPE_EMAIL_REPLIED)
+            ->where('created_at', '>', now()->subHours(48))
+            ->with('subject')
+            ->limit(5)
+            ->get();
+
+        $contextParts = [];
+
+        if ($stagnantDeals->isNotEmpty()) {
+            $lines = $stagnantDeals->map(fn ($d) =>
+                '- '.$d->name.' ('.$d->stage?->name.') : '.number_format($d->amount, 0, ',', ' ').' € — stagnant depuis '.now()->diffInDays($d->updated_at).' j'
+            )->join("\n");
+            $contextParts[] = "Deals stagnants (>7j sans modification) :\n{$lines}";
         }
 
-        $dealLines = $stagnantDeals->map(fn ($d) =>
-            "- {$d->name} ({$d->stage?->name}) : ".number_format($d->amount, 0, ',', ' ').' € — stagnant depuis '.now()->diffInDays($d->updated_at).' j'
-        )->join("\n");
+        if ($closingSoon->isNotEmpty()) {
+            $lines = $closingSoon->map(fn ($d) =>
+                '- '.$d->name.' : '.number_format($d->amount, 0, ',', ' ').' € — close le '.$d->close_date?->format('d/m/Y')
+            )->join("\n");
+            $contextParts[] = "Deals qui closent dans les 7 prochains jours :\n{$lines}";
+        }
 
-        $prompt = "Tu es un assistant CRM. Voici les deals stagnants d'un commercial :\n{$dealLines}\n\nPropose 3 à 5 suggestions d'actions concrètes pour débloquer le pipeline. Réponds UNIQUEMENT en JSON valide : {\"suggestions\": [\"action 1\", \"action 2\"]}";
+        if ($overdueTasks->isNotEmpty()) {
+            $lines = $overdueTasks->map(fn ($t) =>
+                '- '.$t->title.' (due le '.($t->due_at?->format('d/m/Y') ?? '?').')'
+            )->join("\n");
+            $contextParts[] = "Tâches en retard (overdue) :\n{$lines}";
+        }
+
+        if ($recentReplies->isNotEmpty()) {
+            $lines = $recentReplies->map(function ($a) {
+                $subject = $a->subject;
+                $name = $subject ? (($subject->first_name ?? '').' '.($subject->last_name ?? $subject->name ?? '')): 'contact inconnu';
+                return '- '.trim($name).' a répondu à une campagne Emelia';
+            })->join("\n");
+            $contextParts[] = "Contacts ayant répondu à Emelia dans les 48h (à relancer) :\n{$lines}";
+        }
+
+        if (empty($contextParts)) {
+            $data = ['suggestions' => ['Aucune action urgente détectée. Bonne journée !'], 'alerts' => [], 'priorities' => []];
+            Cache::put($cacheKey, $data, now()->addHours(12));
+            return ['data' => $data, 'cached' => false];
+        }
+
+        $context = implode("\n\n", $contextParts);
+        $prompt = "Tu es un assistant CRM commercial B2B. Voici l'état du pipeline aujourd'hui :\n\n{$context}\n\nPropose des suggestions d'actions concrètes, des alertes urgentes et les priorités du jour. Réponds UNIQUEMENT en JSON valide : {\"suggestions\": [\"action 1\"], \"alerts\": [\"alerte urgente 1\"], \"priorities\": [\"priorité 1\"]}";
 
         try {
             $raw = $this->llm->complete(
                 'Tu es un assistant CRM commercial B2B expert. Réponds en français, de façon concise et actionnable.',
                 $prompt,
-                ['max_tokens' => 600]
+                ['max_tokens' => 800]
             );
         } catch (RuntimeException $e) {
             throw $e;
@@ -125,7 +223,7 @@ class AiInsightService
         if (preg_match('/\{.*\}/s', $raw, $matches)) {
             $parsed = json_decode($matches[0], true);
         }
-        $data = $parsed ?? ['suggestions' => [$raw]];
+        $data = $parsed ?? ['suggestions' => [$raw], 'alerts' => [], 'priorities' => []];
 
         Cache::put($cacheKey, $data, now()->addHours(12));
 
@@ -152,21 +250,23 @@ class AiInsightService
         $system = 'Tu es un assistant CRM commercial B2B expert. Tu analyses les données CRM et génères des insights actionnables en français. Sois concis et précis.';
 
         $user = match ($promptType) {
-            'summarize'   => $context."\n\nGénère un brief synthétique de 4 à 6 lignes pour aider le commercial à reprendre ce dossier.",
-            'next-action' => $context."\n\nSuggère la prochaine action commerciale concrète. Réponds UNIQUEMENT en JSON valide : {\"action\": \"...\", \"rationale\": \"...\", \"priority\": \"high\"}",
-            'score'       => $context."\n\nÉvalue la santé de ce deal. Donne un score sur 100, une tendance ('warming', 'cooling', 'stable'), des raisons clés, des points forts (green_flags), des risques ou points de vigilance (red_flags) et des recommandations d'action concrètes pour le commercial. Réponds UNIQUEMENT en JSON valide : {\"score\": 75, \"trend\": \"warming\", \"reasons\": [\"raison 1\"], \"green_flags\": [\"point fort 1\"], \"red_flags\": [\"point de vigilance 1\"], \"recommendations\": [\"recommandation 1\"]}",
-            default       => $context,
+            'summarize'    => $context."\n\nGénère un brief synthétique de 4 à 6 lignes pour aider le commercial à reprendre ce dossier.",
+            'next-action'  => $context."\n\nSuggère la prochaine action commerciale concrète. Réponds UNIQUEMENT en JSON valide : {\"action\": \"...\", \"rationale\": \"...\", \"priority\": \"high\"}",
+            'score'        => $context."\n\nÉvalue la santé de ce deal. Donne un score sur 100, une tendance ('warming', 'cooling', 'stable'), des raisons clés, des points forts (green_flags), des risques ou points de vigilance (red_flags) et des recommandations d'action concrètes pour le commercial. Réponds UNIQUEMENT en JSON valide : {\"score\": 75, \"trend\": \"warming\", \"reasons\": [\"raison 1\"], \"green_flags\": [\"point fort 1\"], \"red_flags\": [\"point de vigilance 1\"], \"recommendations\": [\"recommandation 1\"]}",
+            'score-contact' => $context."\n\nÉvalue l'engagement commercial de ce contact sur 100. Tiens compte du lifecycle, des interactions Emelia (ouvertures, réponses) et de l'activité CRM récente. Réponds UNIQUEMENT en JSON valide : {\"score\": 75, \"rationale\": \"Justification en 1-2 phrases.\"}",
+            default        => $context,
         };
 
         $options = match ($promptType) {
-            'summarize'   => [],
-            'next-action' => ['max_tokens' => 300],
-            'score'       => ['max_tokens' => 600],
-            default       => [],
+            'summarize'    => [],
+            'next-action'  => ['max_tokens' => 300],
+            'score'        => ['max_tokens' => 600],
+            'score-contact' => ['max_tokens' => 250],
+            default        => [],
         };
         $raw = $this->llm->complete($system, $user, $options);
 
-        if (in_array($promptType, ['next-action', 'score'])) {
+        if (in_array($promptType, ['next-action', 'score', 'score-contact'])) {
             if (preg_match('/\{.*\}/s', $raw, $matches)) {
                 $parsed = json_decode($matches[0], true);
                 if ($parsed !== null) {
@@ -223,6 +323,7 @@ class AiInsightService
             'Poste : '.($contact->job_title ?? 'Non renseigné'),
             'Entreprise : '.($contact->companies->first()?->name ?? 'Non renseignée'),
             'Responsable : '.($contact->owner?->name ?? 'Non assigné'),
+            'Lifecycle : '.($contact->lifecycle_stage ?? 'N/A'),
         ];
 
         if (count($activities) > 0) {
@@ -232,6 +333,25 @@ class AiInsightService
             }
         } else {
             $lines[] = "\nAucune activité enregistrée.";
+        }
+
+        if ($contact->emelia_campaign_id) {
+            $emeliaStats = Activity::where('subject_type', Contact::class)
+                ->where('subject_id', $contact->id)
+                ->where('source', 'emelia')
+                ->selectRaw('type, COUNT(*) as cnt, MAX(occurred_at) as last_at')
+                ->groupBy('type')
+                ->get();
+
+            if ($emeliaStats->isNotEmpty()) {
+                $lines[] = "\nEngagement email (Emelia) :";
+                foreach ($emeliaStats as $ea) {
+                    $lastAt = $ea->last_at ? \Carbon\Carbon::parse($ea->last_at)->format('d/m/Y') : 'N/A';
+                    $lines[] = "- {$ea->type} : {$ea->cnt}x (dernier : {$lastAt})";
+                }
+            }
+            $campaignLabel = $contact->emelia_campaign_name ?? $contact->emelia_campaign_id;
+            $lines[] = "Campagne Emelia : {$campaignLabel}";
         }
 
         return implode("\n", $lines);

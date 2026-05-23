@@ -176,13 +176,50 @@
 
     {{-- Suggestions (dashboard) --}}
     <template x-if="content && content.suggestions">
-        <ul class="flex flex-col gap-1.5">
-            <template x-for="s in content.suggestions">
-                <li class="flex items-start gap-1.5 text-[12.5px] text-secondary">
-                    <span class="text-accent mt-0.5">›</span>
-                    <span x-text="s"></span>
-                </li>
+        <div class="flex flex-col gap-2.5">
+            <template x-if="content.alerts && content.alerts.length">
+                <div>
+                    <div class="mono-label text-[9.5px] text-err font-semibold mb-1 flex items-center gap-1">
+                        <span>⚠</span> Alertes
+                    </div>
+                    <ul class="flex flex-col gap-1">
+                        <template x-for="a in content.alerts">
+                            <li class="flex items-start gap-1.5 text-[12px] text-secondary">
+                                <span class="text-err mt-0.5">!</span>
+                                <span x-text="a"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
             </template>
-        </ul>
+            <template x-if="content.priorities && content.priorities.length">
+                <div :class="content.alerts && content.alerts.length ? 'pt-2 border-t border-default' : ''">
+                    <div class="mono-label text-[9.5px] text-accent font-semibold mb-1 flex items-center gap-1">
+                        <span>✦</span> Priorités du jour
+                    </div>
+                    <ul class="flex flex-col gap-1">
+                        <template x-for="p in content.priorities">
+                            <li class="flex items-start gap-1.5 text-[12px] text-secondary">
+                                <span class="text-accent mt-0.5">›</span>
+                                <span x-text="p"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+            <div :class="(content.alerts && content.alerts.length) || (content.priorities && content.priorities.length) ? 'pt-2 border-t border-default' : ''">
+                <template x-if="(content.alerts && content.alerts.length) || (content.priorities && content.priorities.length)">
+                    <div class="mono-label text-[9.5px] text-secondary font-semibold mb-1">Suggestions</div>
+                </template>
+                <ul class="flex flex-col gap-1.5">
+                    <template x-for="s in content.suggestions">
+                        <li class="flex items-start gap-1.5 text-[12.5px] text-secondary">
+                            <span class="text-accent mt-0.5">›</span>
+                            <span x-text="s"></span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+        </div>
     </template>
 </div>
