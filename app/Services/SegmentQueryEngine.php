@@ -106,6 +106,7 @@ class SegmentQueryEngine
                 'type'      => $type,
                 'source'    => 'core',
                 'operators' => $this->operatorsForType($type),
+                'options'   => $this->optionsForField($entityType, $col),
             ];
         }
 
@@ -117,6 +118,7 @@ class SegmentQueryEngine
                 'type'      => $cf['field_type'],
                 'source'    => 'custom',
                 'operators' => $this->operatorsForType($cf['field_type']),
+                'options'   => is_string($cf['options']) ? json_decode($cf['options'], true) : ($cf['options'] ?? []),
             ];
         }
 
@@ -137,6 +139,7 @@ class SegmentQueryEngine
                         $this->operatorsForType($type),
                         ['exists', 'not_exists', 'count_gte', 'count_lt']
                     ),
+                    'options'   => $this->optionsForField($relEntity, $col),
                 ];
             }
         }
@@ -364,7 +367,7 @@ class SegmentQueryEngine
         if (! isset($this->customFieldKeys[$entityType])) {
             $this->customFieldKeys[$entityType] = CustomField::query()
                 ->where('entity_type', $entityType)
-                ->get(['key', 'label', 'field_type'])
+                ->get(['key', 'label', 'field_type', 'options'])
                 ->toArray();
         }
 
@@ -378,7 +381,8 @@ class SegmentQueryEngine
     private function inferCoreType(string $entityType, string $col): string
     {
         $dateFields = ['created_at', 'updated_at', 'close_date'];
-        $numberFields = ['id', 'amount', 'pipeline_id', 'pipeline_stage_id', 'owner_id'];
+        $numberFields = ['id', 'amount'];
+        $selectFields = ['lifecycle_stage', 'lead_status', 'status', 'currency', 'pipeline_id', 'pipeline_stage_id', 'owner_id'];
 
         if (in_array($col, $dateFields, true)) {
             return 'date';
@@ -386,12 +390,69 @@ class SegmentQueryEngine
         if (in_array($col, $numberFields, true)) {
             return 'number';
         }
-        // select-like fields with known enums
-        if (in_array($col, ['lifecycle_stage', 'lead_status', 'status', 'currency'], true)) {
+        if (in_array($col, $selectFields, true)) {
             return 'select';
         }
 
         return 'text';
+    }
+
+    private function optionsForField(string $entityType, string $col): array
+    {
+        if ($col === 'lifecycle_stage') {
+            return [
+                ['value' => 'lead', 'label' => 'Lead'],
+                ['value' => 'mql', 'label' => 'MQL'],
+                ['value' => 'sql', 'label' => 'SQL'],
+                ['value' => 'opportunity', 'label' => 'Opportunity'],
+                ['value' => 'customer', 'label' => 'Customer'],
+                ['value' => 'evangelist', 'label' => 'Evangelist'],
+                ['value' => 'other', 'label' => 'Other'],
+            ];
+        }
+        if ($col === 'lead_status') {
+            return [
+                ['value' => 'new', 'label' => 'New'],
+                ['value' => 'open', 'label' => 'Open'],
+                ['value' => 'in_progress', 'label' => 'In progress'],
+                ['value' => 'connected', 'label' => 'Connected'],
+                ['value' => 'unqualified', 'label' => 'Unqualified'],
+                ['value' => 'bad_fit', 'label' => 'Bad fit'],
+            ];
+        }
+        if ($col === 'status' && $entityType === 'deal') {
+            return [
+                ['value' => 'open', 'label' => 'Open'],
+                ['value' => 'won', 'label' => 'Won'],
+                ['value' => 'lost', 'label' => 'Lost'],
+            ];
+        }
+        if ($col === 'currency') {
+            return [
+                ['value' => 'EUR', 'label' => 'EUR'],
+                ['value' => 'USD', 'label' => 'USD'],
+            ];
+        }
+        if ($col === 'owner_id') {
+            return \App\Models\User::orderBy('name')->get(['id', 'name'])->map(fn($u) => [
+                'value' => (string) $u->id,
+                'label' => $u->name
+            ])->toArray();
+        }
+        if ($col === 'pipeline_id') {
+            return \App\Models\Pipeline::orderBy('name')->get(['id', 'name'])->map(fn($p) => [
+                'value' => (string) $p->id,
+                'label' => $p->name
+            ])->toArray();
+        }
+        if ($col === 'pipeline_stage_id') {
+            return \App\Models\PipelineStage::with('pipeline')->get()->map(fn($s) => [
+                'value' => (string) $s->id,
+                'label' => ($s->pipeline?->name ?? 'Pipeline') . ' : ' . $s->name
+            ])->toArray();
+        }
+
+        return [];
     }
 
     private function operatorsForType(string $type): array

@@ -12,6 +12,38 @@ window.__segFields = @json($fieldsByEntity);
 window.__segRules  = {!! json_encode($isEdit ? ($segment->rules ?: ['op'=>'AND','rules'=>[]]) : ['op'=>'AND','rules'=>[]]) !!};
 </script>
 
+<style>
+.rule-builder-row select,
+.rule-builder-row input {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color .12s, box-shadow .12s;
+    height: 34px;
+}
+.rule-builder-row select:focus,
+.rule-builder-row input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.rule-builder-row select.select-arrow {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2392908a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+}
+.rule-builder-row select[multiple] {
+    height: auto;
+    min-height: 60px;
+}
+</style>
+
 <div x-data="segmentBuilder(window.__segRules, '{{ $initEntity }}', window.__segFields)" x-init="init()" class="px-7 pt-6 pb-12">
 
     {{-- Header --}}
@@ -226,6 +258,23 @@ function segmentBuilder(initRules, initEntity, allFields) {
         updateLeaf(path, key, value) {
             const node = this.getNode(path);
             node[key] = value;
+            if (key === 'field') {
+                const fieldMeta = this.fields.find(f => f.key === value);
+                const ops = this.opsForField(fieldMeta);
+                node.operator = ops[0]?.value ?? 'eq';
+                node.value = '';
+            } else if (key === 'operator') {
+                // If operator becomes standard scalar and was a list/between, reset value
+                if (['is_null', 'is_not_null', 'exists', 'not_exists'].includes(value)) {
+                    node.value = '';
+                } else if (value === 'between') {
+                    node.value = ['', ''];
+                } else if (['in', 'not_in'].includes(value)) {
+                    node.value = Array.isArray(node.value) ? node.value : [];
+                } else {
+                    node.value = Array.isArray(node.value) ? '' : node.value;
+                }
+            }
             this.rules = { ...this.rules };
             this.schedulePreview();
         },
@@ -290,6 +339,7 @@ function segmentBuilder(initRules, initEntity, allFields) {
             const fieldKey = rule.field ?? '';
             const op = rule.operator ?? 'eq';
             const fieldMeta = this.fields.find(f => f.key === fieldKey);
+            const type = fieldMeta?.type ?? 'text';
 
             // Field select
             let fieldSel = `<select class="select-arrow text-[12px]" style="flex:1 1 0; min-width:120px;"
@@ -314,14 +364,67 @@ function segmentBuilder(initRules, initEntity, allFields) {
             const needsValue = !['is_null','is_not_null','exists','not_exists'].includes(op);
             let valInput = '';
             if (needsValue) {
-                const v = rule.value ?? '';
-                valInput = `<input type="text" class="text-[12px]" style="flex:1 1 0; min-width:100px;"
-                    value="${String(v).replace(/"/g, '&quot;')}"
-                    @input="updateLeaf(${pathStr}, 'value', $event.target.value)"
-                    placeholder="Valeur">`;
+                if (type === 'boolean') {
+                    const currentVal = String(rule.value ?? '');
+                    let optionsHtml = '';
+                    optionsHtml += `<option value="1" ${currentVal === '1' || currentVal === 'true' ? 'selected' : ''}>Oui</option>`;
+                    optionsHtml += `<option value="0" ${currentVal === '0' || currentVal === 'false' ? 'selected' : ''}>Non</option>`;
+                    valInput = `<select class="select-arrow text-[12px]" style="flex:1 1 0; min-width:100px;"
+                        @change="updateLeaf(${pathStr}, 'value', $event.target.value)">
+                        ${optionsHtml}
+                    </select>`;
+                } else if (type === 'select' && fieldMeta?.options) {
+                    const opts = fieldMeta.options || [];
+                    if (['in', 'not_in'].includes(op)) {
+                        // Choix multiple
+                        let optionsHtml = '';
+                        const selectedValues = Array.isArray(rule.value) ? rule.value : (rule.value ? String(rule.value).split(',') : []);
+                        opts.forEach(opt => {
+                            const optVal = typeof opt === 'object' ? opt.value : opt;
+                            const optLabel = typeof opt === 'object' ? opt.label : opt;
+                            const sel = selectedValues.includes(String(optVal)) ? 'selected' : '';
+                            optionsHtml += `<option value="${optVal}" ${sel}>${optLabel}</option>`;
+                        });
+                        valInput = `<select multiple class="text-[12px] p-1 rounded border border-default" style="flex:1 1 0; min-width:100px; height: 50px;"
+                            @change="const vals = Array.from($event.target.selectedOptions).map(o => o.value); updateLeaf(${pathStr}, 'value', vals)">
+                            ${optionsHtml}
+                        </select>`;
+                    } else {
+                        // Choix unique
+                        let optionsHtml = '<option value="">Choisir…</option>';
+                        opts.forEach(opt => {
+                            const optVal = typeof opt === 'object' ? opt.value : opt;
+                            const optLabel = typeof opt === 'object' ? opt.label : opt;
+                            const sel = String(optVal) === String(rule.value ?? '') ? 'selected' : '';
+                            optionsHtml += `<option value="${optVal}" ${sel}>${optLabel}</option>`;
+                        });
+                        valInput = `<select class="select-arrow text-[12px]" style="flex:1 1 0; min-width:100px;"
+                            @change="updateLeaf(${pathStr}, 'value', $event.target.value)">
+                            ${optionsHtml}
+                        </select>`;
+                    }
+                } else if (op === 'between') {
+                    const currentArray = Array.isArray(rule.value) ? rule.value : [rule.value ?? '', ''];
+                    const inputType = type === 'date' ? 'date' : 'number';
+                    valInput = `<div class="flex items-center gap-1" style="flex:1 1 0; min-width:180px;">
+                        <input type="${inputType}" class="text-[12px] w-1/2 p-1 rounded border border-default" value="${currentArray[0] ?? ''}" placeholder="Min"
+                            @input="const arr = [...${JSON.stringify(currentArray)}]; arr[0] = $event.target.value; updateLeaf(${pathStr}, 'value', arr)">
+                        <span class="text-[11px] text-tertiary">et</span>
+                        <input type="${inputType}" class="text-[12px] w-1/2 p-1 rounded border border-default" value="${currentArray[1] ?? ''}" placeholder="Max"
+                            @input="const arr = [...${JSON.stringify(currentArray)}]; arr[1] = $event.target.value; updateLeaf(${pathStr}, 'value', arr)">
+                    </div>`;
+                } else {
+                    const v = rule.value ?? '';
+                    const inputType = type === 'date' ? 'date' : (type === 'number' ? 'number' : 'text');
+                    const placeholder = ['in', 'not_in'].includes(op) ? 'valeur1, valeur2, ...' : 'Valeur';
+                    valInput = `<input type="${inputType}" step="any" class="text-[12px]" style="flex:1 1 0; min-width:100px;"
+                        value="${String(v).replace(/"/g, '&quot;')}"
+                        @input="updateLeaf(${pathStr}, 'value', $event.target.value)"
+                        placeholder="${placeholder}">`;
+                }
             }
 
-            return `<div class="flex items-center gap-2 mb-2">
+            return `<div class="flex items-center gap-2 mb-2 rule-builder-row">
                 ${fieldSel}
                 ${opSel}
                 ${valInput}
@@ -336,19 +439,37 @@ function segmentBuilder(initRules, initEntity, allFields) {
             const base = [
                 { value: 'eq', label: '=' },
                 { value: 'neq', label: '≠' },
-                { value: 'is_null', label: 'est vide' },
-                { value: 'is_not_null', label: 'non vide' },
+                { value: 'is_null', label: 'est inconnu' },
+                { value: 'is_not_null', label: 'est connu' },
             ];
+            if (type === 'boolean') {
+                return base;
+            }
+            if (type === 'select') {
+                return [
+                    { value: 'eq', label: '=' },
+                    { value: 'neq', label: '≠' },
+                    { value: 'in', label: 'dans la liste' },
+                    { value: 'not_in', label: 'hors liste' },
+                    { value: 'is_null', label: 'est inconnu' },
+                    { value: 'is_not_null', label: 'est connu' },
+                ];
+            }
             if (['number','amount','date'].includes(type)) {
-                return [...base,
+                const ops = [...base,
                     { value: 'gt', label: '>' },
                     { value: 'gte', label: '>=' },
                     { value: 'lt', label: '<' },
                     { value: 'lte', label: '<=' },
                     { value: 'between', label: 'entre' },
-                    { value: 'days_ago_lt', label: 'il y a < X jours' },
-                    { value: 'days_ago_gt', label: 'il y a > X jours' },
                 ];
+                if (type === 'date') {
+                    ops.push(
+                        { value: 'days_ago_lt', label: 'il y a < X jours' },
+                        { value: 'days_ago_gt', label: 'il y a > X jours' }
+                    );
+                }
+                return ops;
             }
             if (type === 'rel') {
                 return [
