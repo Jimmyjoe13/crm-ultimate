@@ -8,12 +8,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 
 class Deal extends Model
 {
     use Auditable;
     use HasFactory;
     use SoftDeletes;
+
+    protected static function boot(): void
+    {
+        parent::boot();
+        $flush = fn() => Cache::tags(['deals.index'])->flush();
+        static::saved($flush);
+        static::deleted($flush);
+    }
 
     protected $fillable = [
         'name',

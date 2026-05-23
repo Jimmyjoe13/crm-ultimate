@@ -7,6 +7,8 @@ use App\Models\Company;
 use App\Support\CustomFieldRenderer;
 use App\Support\CustomValueValidator;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 
 class CompanyController extends Controller
 {
@@ -16,13 +18,27 @@ class CompanyController extends Controller
         $allowed = ['name', 'industry', 'city', 'created_at'];
         $sort    = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'name';
         $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
+        $page    = (int) $request->get('page', 1);
 
-        $companies = Company::with('contacts')
-            ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%")
-                ->orWhere('industry', 'ilike', "%{$search}%"))
-            ->orderBy($sort, $dir)
-            ->paginate(25)
-            ->withQueryString();
+        $cacheKey = 'companies.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search);
+
+        $cached = Cache::tags(['companies.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page) {
+            $pag = Company::with(['contacts:id,first_name,last_name', 'owner:id,name'])
+                ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('industry', 'ilike', "%{$search}%"))
+                ->orderBy($sort, $dir)
+                ->paginate(25, ['*'], 'page', $page);
+
+            return ['items' => $pag->items(), 'total' => $pag->total()];
+        });
+
+        $companies = new LengthAwarePaginator(
+            $cached['items'],
+            $cached['total'],
+            25,
+            $page,
+            ['path' => url('/companies'), 'query' => $request->query()]
+        );
 
         return view('pages.companies.index', compact('companies', 'search', 'sort', 'dir'));
     }

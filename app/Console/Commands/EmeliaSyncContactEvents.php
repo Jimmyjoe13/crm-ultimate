@@ -34,8 +34,10 @@ class EmeliaSyncContactEvents extends Command
                 ->whereNotNull('emelia_campaign_id');
         } else {
             $query = Contact::where(function ($q) {
-                $q->whereNotNull('emelia_contact_id')->whereNotNull('emelia_campaign_id');
-            })->orWhereNotNull('emelia_campaign_name');
+                $q->where(function ($inner) {
+                    $inner->whereNotNull('emelia_contact_id')->whereNotNull('emelia_campaign_id');
+                })->orWhereNotNull('emelia_campaign_name');
+            });
         }
 
         if ($contactId) {

@@ -46,7 +46,9 @@ class EmeliaServiceTest extends TestCase
     public function test_add_contact_to_campaign_sends_correct_payload(): void
     {
         Http::fake([
-            'api.emelia.io/campaigns/camp_1/contacts' => Http::response(['id' => 'emcontact_99'], 201),
+            'api.emelia.io/graphql' => Http::response([
+                'data' => ['addContactToCampaignHook' => 'emcontact_99'],
+            ], 200),
         ]);
 
         $service = new EmeliaService();
@@ -59,8 +61,9 @@ class EmeliaServiceTest extends TestCase
         $this->assertEquals('emcontact_99', $result['id']);
 
         Http::assertSent(fn ($req) =>
-            str_contains($req->url(), '/campaigns/camp_1/contacts') &&
-            $req->data()['email'] === 'alice@test.com'
+            str_contains($req->url(), '/graphql') &&
+            str_contains($req->body(), 'addContactToCampaignHook') &&
+            str_contains($req->body(), 'camp_1')
         );
     }
 

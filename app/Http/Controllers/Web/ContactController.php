@@ -7,6 +7,8 @@ use App\Models\Contact;
 use App\Support\CustomFieldRenderer;
 use App\Support\CustomValueValidator;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 
 class ContactController extends Controller
 {
@@ -16,14 +18,28 @@ class ContactController extends Controller
         $allowed = ['last_name', 'email', 'created_at'];
         $sort    = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'last_name';
         $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
+        $page    = (int) $request->get('page', 1);
 
-        $contacts = Contact::with('companies')
-            ->when($search, fn($q) => $q->where('first_name', 'ilike', "%{$search}%")
-                ->orWhere('last_name', 'ilike', "%{$search}%")
-                ->orWhere('email', 'ilike', "%{$search}%"))
-            ->orderBy($sort, $dir)
-            ->paginate(25)
-            ->withQueryString();
+        $cacheKey = 'contacts.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search);
+
+        $cached = Cache::tags(['contacts.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page) {
+            $pag = Contact::with(['companies:id,name', 'owner:id,name'])
+                ->when($search, fn($q) => $q->where('first_name', 'ilike', "%{$search}%")
+                    ->orWhere('last_name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%"))
+                ->orderBy($sort, $dir)
+                ->paginate(25, ['*'], 'page', $page);
+
+            return ['items' => $pag->items(), 'total' => $pag->total()];
+        });
+
+        $contacts = new LengthAwarePaginator(
+            $cached['items'],
+            $cached['total'],
+            25,
+            $page,
+            ['path' => url('/contacts'), 'query' => $request->query()]
+        );
 
         return view('pages.contacts.index', compact('contacts', 'search', 'sort', 'dir'));
     }
