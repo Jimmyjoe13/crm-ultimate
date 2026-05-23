@@ -23,6 +23,7 @@
 
 # Session handoff / scratch files
 /handoff.md
+/GEMINI_handoff.md
 /list_users.php
 /test_curl.html
 /test_headers.txt
