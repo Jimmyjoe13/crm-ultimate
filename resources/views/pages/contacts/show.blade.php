@@ -141,24 +141,7 @@
                                 <form method="POST" action="{{ '/contacts/' . $contact->id }}" class="m-0 p-0 flex">
                                     @csrf
                                     @method('PUT')
-                                    <input type="hidden" name="first_name" value="{{ $contact->first_name }}">
-                                    <input type="hidden" name="last_name" value="{{ $contact->last_name }}">
-                                    <input type="hidden" name="email" value="{{ $contact->email }}">
-                                    <input type="hidden" name="phone" value="{{ $contact->phone }}">
-                                    <input type="hidden" name="job_title" value="{{ $contact->job_title }}">
-                                    <input type="hidden" name="lead_status" value="{{ $contact->lead_status }}">
                                     <input type="hidden" name="lifecycle_stage" value="{{ $val }}">
-                                    @if($contact->custom_values)
-                                        @foreach($contact->custom_values as $k => $v)
-                                            @if(is_array($v))
-                                                @foreach($v as $subV)
-                                                    <input type="hidden" name="custom_values[{{ $k }}][]" value="{{ $subV }}">
-                                                @endforeach
-                                            @else
-                                                <input type="hidden" name="custom_values[{{ $k }}]" value="{{ is_bool($v) ? ($v ? '1' : '0') : $v }}">
-                                            @endif
-                                        @endforeach
-                                    @endif
                                     <button type="submit" class="w-full text-left px-2.5 py-1.5 text-xs hover:bg-surface-alt rounded border-0 bg-transparent cursor-pointer font-sans flex items-center justify-between" style="color: var(--text);">
                                         <span>{{ $lbl }}</span>
                                         @if($contact->lifecycle_stage === $val)
@@ -187,24 +170,7 @@
                                 <form method="POST" action="{{ '/contacts/' . $contact->id }}" class="m-0 p-0 flex">
                                     @csrf
                                     @method('PUT')
-                                    <input type="hidden" name="first_name" value="{{ $contact->first_name }}">
-                                    <input type="hidden" name="last_name" value="{{ $contact->last_name }}">
-                                    <input type="hidden" name="email" value="{{ $contact->email }}">
-                                    <input type="hidden" name="phone" value="{{ $contact->phone }}">
-                                    <input type="hidden" name="job_title" value="{{ $contact->job_title }}">
-                                    <input type="hidden" name="lifecycle_stage" value="{{ $contact->lifecycle_stage }}">
                                     <input type="hidden" name="lead_status" value="{{ $val }}">
-                                    @if($contact->custom_values)
-                                        @foreach($contact->custom_values as $k => $v)
-                                            @if(is_array($v))
-                                                @foreach($v as $subV)
-                                                    <input type="hidden" name="custom_values[{{ $k }}][]" value="{{ $subV }}">
-                                                @endforeach
-                                            @else
-                                                <input type="hidden" name="custom_values[{{ $k }}]" value="{{ is_bool($v) ? ($v ? '1' : '0') : $v }}">
-                                            @endif
-                                        @endforeach
-                                    @endif
                                     <button type="submit" class="w-full text-left px-2.5 py-1.5 text-xs hover:bg-surface-alt rounded border-0 bg-transparent cursor-pointer font-sans flex items-center justify-between" style="color: var(--text);">
                                         <span>{{ $lbl }}</span>
                                         @if($contact->lead_status === $val)

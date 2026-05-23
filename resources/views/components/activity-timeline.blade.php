@@ -206,6 +206,24 @@
                     @elseif($activity->source === 'emelia')
                     <span style="font-size:9px;padding:1px 4px;border-radius:3px;background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok);vertical-align:middle;margin-left:4px;">live</span>
                     @endif
+                    @if($activity->type === 'email_replied' && !empty($activity->metadata['sentiment']))
+                    @php
+                        $s = $activity->metadata['sentiment'];
+                        $sentimentEmoji = match($s['sentiment'] ?? '') {
+                            'positif'           => '😊',
+                            'négatif', 'negatif' => '😟',
+                            default             => '😐',
+                        };
+                        $sentimentColor = match($s['sentiment'] ?? '') {
+                            'positif'           => 'var(--ok)',
+                            'négatif', 'negatif' => 'var(--err)',
+                            default             => 'var(--text-tertiary)',
+                        };
+                    @endphp
+                    <span title="{{ $s['summary'] ?? '' }}"
+                          style="font-size:12px;vertical-align:middle;margin-left:5px;cursor:default;opacity:.85;"
+                    >{{ $sentimentEmoji }}</span>
+                    @endif
                 </div>
                 @if($activity->owner_id === auth()->id() || in_array(auth()->user()?->role, ['admin', 'manager']))
                 <form method="POST" action="/activities/{{ $activity->id }}"

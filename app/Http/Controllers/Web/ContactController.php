@@ -106,13 +106,13 @@ class ContactController extends Controller
     public function update(Request $request, Contact $contact)
     {
         $data = $request->validate(array_merge([
-            'first_name'      => ['required', 'string', 'max:255'],
-            'last_name'       => ['nullable', 'string', 'max:255'],
-            'email'           => ['nullable', 'email', 'max:255'],
-            'phone'           => ['nullable', 'string', 'max:255'],
-            'job_title'       => ['nullable', 'string', 'max:255'],
-            'lifecycle_stage' => ['nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
-            'lead_status'     => ['nullable', 'in:new,open,in_progress,connected,unqualified,bad_fit'],
+            'first_name'      => ['sometimes', 'required', 'string', 'max:255'],
+            'last_name'       => ['sometimes', 'nullable', 'string', 'max:255'],
+            'email'           => ['sometimes', 'nullable', 'email', 'max:255'],
+            'phone'           => ['sometimes', 'nullable', 'string', 'max:255'],
+            'job_title'       => ['sometimes', 'nullable', 'string', 'max:255'],
+            'lifecycle_stage' => ['sometimes', 'nullable', 'in:lead,mql,sql,opportunity,customer,evangelist,other'],
+            'lead_status'     => ['sometimes', 'nullable', 'in:new,open,in_progress,connected,unqualified,bad_fit'],
         ], CustomValueValidator::validationRules('contact')));
 
         if ($request->has('custom_values')) {

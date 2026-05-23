@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Jobs\AnalyzeReplySentiment;
 use App\Models\Activity;
 use App\Models\Contact;
 use Carbon\Carbon;
@@ -77,6 +78,7 @@ class EmeliaEventDispatcher
 
         if ($type === Activity::TYPE_EMAIL_REPLIED) {
             self::handleReply($contact, $payload, $occurred);
+            AnalyzeReplySentiment::dispatch($activity);
         }
 
         return $activity;

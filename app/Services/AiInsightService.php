@@ -105,6 +105,24 @@ class AiInsightService
         return ['subject' => 'Email généré', 'body' => $raw];
     }
 
+    public function analyzeSentiment(string $text): array
+    {
+        $raw = $this->llm->complete(
+            'Tu es un analyseur de sentiment d\'emails commerciaux. Réponds uniquement en JSON valide.',
+            "Analyse le sentiment de cette réponse email :\n\"{$text}\"\n\nRéponds UNIQUEMENT en JSON valide : {\"sentiment\": \"positif\", \"score\": 0.8, \"summary\": \"Résumé en 1 phrase.\"}",
+            ['max_tokens' => 150]
+        );
+
+        if (preg_match('/\{.*\}/s', $raw, $matches)) {
+            $parsed = json_decode($matches[0], true);
+            if (is_array($parsed) && isset($parsed['sentiment'])) {
+                return $parsed;
+            }
+        }
+
+        return ['sentiment' => 'neutre', 'score' => 0.0, 'summary' => ''];
+    }
+
     public function scoreContact(int $id, bool $fresh = false): array
     {
         return $this->resolve('score-contact', 'contact', $id, $fresh, function () use ($id) {
