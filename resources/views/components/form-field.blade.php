@@ -26,7 +26,7 @@
             @endforeach
         </select>
     @elseif($type === 'date')
-        <input type="date" name="{{ $name }}" value="{{ $value }}" @if($required) required @endif>
+        <input type="text" name="{{ $name }}" x-datepicker value="{{ $value }}" @if($required) required @endif placeholder="Sélectionnez une date...">
     @elseif($type === 'number')
         <input type="number" name="{{ $name }}" value="{{ $value }}" step="any" @if($required) required @endif>
     @elseif($type === 'textarea')

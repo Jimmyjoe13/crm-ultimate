@@ -80,4 +80,30 @@ window.copyToClipboard = function(text) {
     }
 };
 
+import flatpickr from 'flatpickr';
+import { French } from 'flatpickr/dist/l10n/fr.js';
+
+// Register x-datepicker directive
+Alpine.directive('datepicker', (el, { expression }, { evaluate }) => {
+    if (el._flatpickr) return;
+
+    const options = {
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'd/m/Y',
+        allowInput: true,
+        locale: French,
+        onChange: function(selectedDates, dateStr, instance) {
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    };
+
+    if (expression) {
+        Object.assign(options, evaluate(expression));
+    }
+
+    flatpickr(el, options);
+});
+
 Alpine.start();

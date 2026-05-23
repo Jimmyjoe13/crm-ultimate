@@ -456,7 +456,7 @@
                 </div>
                 <div class="field">
                     <label>Date de clôture</label>
-                    <input type="date" name="close_date" value="{{ old('close_date', $deal->close_date?->format('Y-m-d')) }}">
+                    <input type="text" name="close_date" x-datepicker value="{{ old('close_date', $deal->close_date?->format('Y-m-d')) }}" placeholder="Sélectionnez une date...">
                 </div>
                 <div class="field">
                     <label>Étape <span class="text-err">*</span></label>

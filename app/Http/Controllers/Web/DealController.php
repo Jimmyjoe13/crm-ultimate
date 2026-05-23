@@ -8,6 +8,8 @@ use App\Models\Deal;
 use App\Models\PipelineStage;
 use App\Support\CustomValueValidator;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 
 class DealController extends Controller
 {
@@ -18,17 +20,44 @@ class DealController extends Controller
         $allowed = ['name', 'amount', 'close_date', 'created_at'];
         $sort    = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'close_date';
         $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
+        $page    = (int) $request->get('page', 1);
 
-        $base = Deal::with('stage', 'companies', 'contacts', 'owner')->where('status', 'open');
+        $cacheKey = 'deals.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search);
 
-        $allCount = (clone $base)->count();
-        $total    = (clone $base)->sum('amount');
+        $cached = Cache::tags(['deals.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page) {
+            $base = Deal::with([
+                'stage:id,name',
+                'companies:id,name',
+                'contacts:id,first_name,last_name',
+                'owner:id,name',
+            ])->where('status', 'open');
 
-        $deals = (clone $base)
-            ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%"))
-            ->orderBy($sort, $dir)
-            ->paginate(20)
-            ->withQueryString();
+            $allCount = (clone $base)->count();
+            $total    = (clone $base)->sum('amount');
+
+            $pag = (clone $base)
+                ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%"))
+                ->orderBy($sort, $dir)
+                ->paginate(20, ['*'], 'page', $page);
+
+            return [
+                'items'    => $pag->items(),
+                'total'    => $pag->total(),
+                'allCount' => $allCount,
+                'amount'   => $total,
+            ];
+        });
+
+        $deals = new LengthAwarePaginator(
+            $cached['items'],
+            $cached['total'],
+            20,
+            $page,
+            ['path' => url('/deals'), 'query' => $request->query()]
+        );
+
+        $allCount = $cached['allCount'];
+        $total    = $cached['amount'];
 
         $stages = PipelineStage::orderBy('position')->get();
 
