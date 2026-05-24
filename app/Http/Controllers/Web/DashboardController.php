@@ -17,6 +17,8 @@ class DashboardController extends Controller
         $startOf30d   = $now->copy()->subDays(30);
 
         $pipelineTotal = Deal::where('status', 'open')->sum('amount');
+        $caTotal       = Deal::where('status', 'won')->sum('amount');
+        $caLost        = Deal::where('status', 'lost')->sum('amount');
 
         $wonThisMonth  = Deal::where('status', 'won')->where('updated_at', '>=', $startOfMonth)->get();
         $lostThisMonth = Deal::where('status', 'lost')->where('updated_at', '>=', $startOfMonth)->get();
@@ -51,6 +53,8 @@ class DashboardController extends Controller
                 'lost_count'     => $lostThisMonth->count(),
                 'lost_amount'    => $lostThisMonth->sum('amount'),
                 'lost_names'     => $lostThisMonth->take(3)->pluck('name'),
+                'ca_total'       => $caTotal,
+                'ca_lost'        => $caLost,
             ],
             'stagesData'  => $stagesData,
             'maxTotal'    => $maxTotal,

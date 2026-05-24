@@ -320,6 +320,14 @@ html.dark {
         background: linear-gradient(135deg, #ef6a2a 0%, #d85816 100%);
         color: white;
     }
+    .kpi-ok {
+        background: linear-gradient(135deg, #2f8a5f 0%, #1d6b46 100%);
+        color: white;
+    }
+    .kpi-err {
+        background: linear-gradient(135deg, #c63d2f 0%, #a8332a 100%);
+        color: white;
+    }
 
     /* ── form field ── */
     .field { display: flex; flex-direction: column; gap: 5px; }
