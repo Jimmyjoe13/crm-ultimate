@@ -93,7 +93,13 @@ class EmeliaWebhookController extends Controller
                 $pivotData['first_event_at'] = $occurredAt;
                 $pivotData['last_event_at']  = $occurredAt;
                 $pivotData['status']         = strtoupper($request->input('event', ''));
-                $contact->emeliaCampaigns()->attach($campaign->id, $pivotData);
+                try {
+                    $contact->emeliaCampaigns()->attach($campaign->id, $pivotData);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                    // Conflit de concurrence (pivot créé entre le check et l'insert) — on met à jour
+                    unset($pivotData['first_event_at']);
+                    $contact->emeliaCampaigns()->updateExistingPivot($campaign->id, $pivotData);
+                }
             }
 
             // Compat legacy — maintenir les colonnes plates avec la campagne courante

@@ -1,0 +1,325 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "campaignId": "69eb1cca5033df0a8663a88e",
+        "events": [
+          "replied",
+          "bounced",
+          "opened",
+          "sent",
+          "unsubscribed"
+        ]
+      },
+      "type": "n8n-nodes-base.emeliaTrigger",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -592
+      ],
+      "id": "e15b2cae-7e77-4d9c-91c0-066e1c5e24ed",
+      "name": "Emelia Trigger1",
+      "webhookId": "df41b070-7323-4ddf-b293-bf135c1018b6",
+      "credentials": {
+        "emeliaApi": {
+          "id": "f3Q24MOVU6pk1vzC",
+          "name": "Emelia account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "campaignId": "69ebb7281762b60a8169f625",
+        "events": [
+          "replied",
+          "opened",
+          "bounced",
+          "sent",
+          "unsubscribed"
+        ]
+      },
+      "type": "n8n-nodes-base.emeliaTrigger",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -416
+      ],
+      "id": "bc71083e-4844-4794-a6ec-726889ae50d6",
+      "name": "Emelia Trigger",
+      "webhookId": "e96e1d8d-509a-4b5e-88b3-40ef0dd2fe0c",
+      "credentials": {
+        "emeliaApi": {
+          "id": "f3Q24MOVU6pk1vzC",
+          "name": "Emelia account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst email = d.contact?.email || d.email || '';\nconst event = d.event || d.type || '';\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || '';\n\n// Mapping nom campagne -> UUID\nconst campaignMap = {\n  'conseiller-consultant-acquisition': '69ebb7281762b60a8169f625',\n  'acquisition-agence-marketing':      '69eb1cca5033df0a8663a88e',\n};\nconst campaignName = d.campaign || '';\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\n// event_id deterministe pour idempotence cote CRM\nconst eventId = (email && event && date)\n  ? (email + '_' + event + '_' + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -512
+      ],
+      "id": "f1e2d3c4-b5a6-9807-edcb-f21345678901",
+      "name": "Normalize Event"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.nana-intelligence.fr/api/webhooks/emelia",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -48,
+        -512
+      ],
+      "id": "d2e3f4a5-b6c7-8901-defa-123456789012",
+      "name": "Forward to CRM"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -720,
+        -160
+      ],
+      "id": "39f212df-5c8f-4556-9568-8bdac5d99fb4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.emelia.io/emails/campaigns/{{ $json._id }}/activities",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        -160
+      ],
+      "id": "f09f67fc-48af-4df7-a163-9dab5fc278f6",
+      "name": "get_activities",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "MRNhTkKpToQwLojz",
+          "name": "emelia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.emelia.io/emails/campaigns",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "5jwwzTUNnb0IrdDEJtMVe1D0h8nsOgECa07X73IJsLozKq6U"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -512,
+        -160
+      ],
+      "id": "f7c1eda3-a912-4e1c-ad26-fecc8ffc4c2b",
+      "name": "get_campaignid"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "campaigns",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        -160
+      ],
+      "id": "a0642334-cfdc-4d4c-9925-2784471e0a2a",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jsCode": "const activitiesResp = $input.first().json;\nconst rawActivities = activitiesResp.activities || [];\n\nlet campaignId = null;\nlet campaignName = null;\ntry {\n  const campaign = $('Split Out').item.json;\n  campaignId = campaign._id || null;\n  campaignName = campaign.name || null;\n} catch(e) {}\n\nconst activities = rawActivities.filter(a => a && a._id && a.event && a.contact && a.contact.email);\nif (activities.length === 0) return [];\n\nreturn activities.map(a => ({\n  json: {\n    event:         a.event,\n    email:         a.contact.email,\n    event_id:      a.contact.email + '_' + a.event + '_' + (a.date || ''),\n    date:          a.date,\n    subject:       null,\n    preview:       null,\n    full_reply:    null,\n    campaign_id:   campaignId,\n    campaign_name: campaignName,\n    first_name:    a.contact.firstName || null,\n    last_name:     a.contact.lastName  || null,\n    step:          a.step !== undefined ? a.step : null,\n    contact_id:    a.contact._id || null,\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -160
+      ],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Normalize Activities"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.nana-intelligence.fr/api/webhooks/emelia",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        -160
+      ],
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Forward Activities to CRM"
+    }
+  ],
+  "connections": {
+    "Emelia Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Normalize Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emelia Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Event": {
+      "main": [
+        [
+          {
+            "node": "Forward to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "get_campaignid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_campaignid": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "get_activities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_activities": {
+      "main": [
+        [
+          {
+            "node": "Normalize Activities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Activities": {
+      "main": [
+        [
+          {
+            "node": "Forward Activities to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
