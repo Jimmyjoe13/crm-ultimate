@@ -452,52 +452,7 @@
 
 {{-- Modal Emelia (écoute les events window) --}}
 @php $linkedEmeliaIds = $contact->emeliaCampaigns()->pluck('emelia_id')->toArray(); @endphp
-<div x-data="{
-    open: false,
-    campaigns: [],
-    loading: false,
-    error: '',
-    selectedIds: @json($linkedEmeliaIds),
-    submitting: false,
-    fetchCampaigns() {
-        this.loading = true;
-        this.error = '';
-        fetch('/emelia/campaigns', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
-            .then(r => r.json())
-            .then(data => {
-                this.campaigns = Array.isArray(data) ? data : [];
-                this.loading = false;
-                if (this.campaigns.length === 0) this.error = 'Aucune campagne trouvée dans Emelia.';
-            })
-            .catch(() => {
-                this.error = 'Impossible de charger les campagnes Emelia.';
-                this.loading = false;
-            });
-    },
-    submit() {
-        if (!this.selectedIds.length) return;
-        this.submitting = true;
-        fetch('/contacts/{{ $contact->id }}/emelia', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({ campaign_ids: this.selectedIds }),
-        })
-        .then(r => r.json())
-        .then(d => {
-            if (d.error) { this.error = d.error; this.submitting = false; return; }
-            window.location.reload();
-        })
-        .catch(() => {
-            this.error = 'Une erreur est survenue.';
-            this.submitting = false;
-        });
-    }
-}"
+<div x-data="emeliaModalComponent({{ $contact->id }}, @json($linkedEmeliaIds))"
      @open-emelia-modal.window="open = true; if (!campaigns.length) fetchCampaigns()"
      x-show="open"
      x-cloak
@@ -599,7 +554,7 @@
 </div>
 
 {{-- Modal de modification des propriétés (Contact) --}}
-<div x-data="{ open: false }"
+<div x-data="{ open: {{ $errors->any() ? 'true' : 'false' }} }"
      @open-edit-properties-modal.window="open = true;"
      x-show="open"
      x-cloak
@@ -618,6 +573,14 @@
         <form method="POST" action="{{ '/contacts/' . $contact->id }}" class="flex flex-col gap-4 overflow-y-auto pr-1">
             @csrf
             @method('PUT')
+
+            @if($errors->any())
+            <div class="chip err px-3 py-2 rounded-lg mb-2 text-xs flex flex-col gap-1">
+                @foreach($errors->all() as $error)
+                    <div>• {{ $error }}</div>
+                @endforeach
+            </div>
+            @endif
 
             <div class="grid grid-cols-2 gap-4">
                 <div class="field">
@@ -758,5 +721,56 @@
 @endif
 
 <x-email-draft-modal entity-type="contact" :entity-id="$contact->id" />
+
+<script>
+window.emeliaModalComponent = function(contactId, initialSelectedIds) {
+    return {
+        open: false,
+        campaigns: [],
+        loading: false,
+        error: '',
+        selectedIds: initialSelectedIds,
+        submitting: false,
+        fetchCampaigns() {
+            this.loading = true;
+            this.error = '';
+            fetch('/emelia/campaigns', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => {
+                    this.campaigns = Array.isArray(data) ? data : [];
+                    this.loading = false;
+                    if (this.campaigns.length === 0) this.error = 'Aucune campagne trouvée dans Emelia.';
+                })
+                .catch(() => {
+                    this.error = 'Impossible de charger les campagnes Emelia.';
+                    this.loading = false;
+                });
+        },
+        submit() {
+            if (!this.selectedIds.length) return;
+            this.submitting = true;
+            fetch('/contacts/' + contactId + '/emelia', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ campaign_ids: this.selectedIds }),
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.error) { this.error = d.error; this.submitting = false; return; }
+                window.location.reload();
+            })
+            .catch(() => {
+                this.error = 'Une erreur est survenue.';
+                this.submitting = false;
+            });
+        }
+    };
+};
+</script>
 
 </x-app-shell>

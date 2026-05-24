@@ -23,7 +23,7 @@ class CustomValueValidator
                 'date'    => ['date'],
                 'boolean' => ['in:0,1'],
                 'select'  => $field->options ? [Rule::in($field->options)] : ['string'],
-                default   => ['string', 'max:1000'],
+                default   => ['string', 'max:65535'],
             };
 
             $rules["custom_values.{$field->key}"] = array_merge($base, $typeRules);
