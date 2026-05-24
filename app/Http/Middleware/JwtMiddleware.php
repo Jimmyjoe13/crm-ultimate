@@ -22,7 +22,8 @@ class JwtMiddleware
             $cookie = $request->cookie('crm_jwt');
             if ($cookie) {
                 try {
-                    $token = Crypt::decrypt($cookie, false);
+                    $decrypted = Crypt::decrypt($cookie, false);
+                    $token = str_contains($decrypted, '|') ? explode('|', $decrypted, 2)[1] : $decrypted;
                 } catch (\Throwable) {
                     // Fail gracefully if decryption fails
                 }
