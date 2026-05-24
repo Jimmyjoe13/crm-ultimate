@@ -318,31 +318,7 @@
         <x-ai-insight-card endpoint="/web/ai/contact/{{ $contact->id }}/summarize" title="Brief IA" />
 
         {{-- Panneau Emelia --}}
-        <div class="card p-4"
-             x-data="{
-                 status: null,
-                 loading: true,
-                 init() {
-                     fetch('/contacts/{{ $contact->id }}/emelia/status', {
-                         credentials: 'same-origin',
-                         headers: { 'Accept': 'application/json' }
-                     })
-                     .then(r => r.json())
-                     .then(d => { this.status = d; this.loading = false; })
-                     .catch(() => { this.loading = false; });
-                 },
-                 statusLabel(s) {
-                     const m = { SENT: 'Envoyé', OPENED: 'Ouvert', CLICKED: 'Cliqué',
-                                 REPLIED: 'Répondu', BOUNCED: 'Bounce', UNSUBSCRIBED: 'Désabonné' };
-                     return m[s] || s;
-                 },
-                 statusColor(s) {
-                     if (s === 'REPLIED') return 'var(--ok)';
-                     if (s === 'OPENED' || s === 'CLICKED') return 'var(--accent)';
-                     if (s === 'BOUNCED' || s === 'UNSUBSCRIBED') return 'var(--err)';
-                     return 'var(--text-secondary)';
-                 }
-             }">
+        <div class="card p-4" x-data="emeliaPanelComponent({{ $contact->id }})">
             <div class="mono-label mb-3">EMELIA</div>
 
             <div x-show="loading" class="text-xs text-secondary">Chargement…</div>
@@ -452,52 +428,7 @@
 
 {{-- Modal Emelia (écoute les events window) --}}
 @php $linkedEmeliaIds = $contact->emeliaCampaigns()->pluck('emelia_id')->toArray(); @endphp
-<div x-data="{
-    open: false,
-    campaigns: [],
-    loading: false,
-    error: '',
-    selectedIds: @json($linkedEmeliaIds),
-    submitting: false,
-    fetchCampaigns() {
-        this.loading = true;
-        this.error = '';
-        fetch('/emelia/campaigns', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
-            .then(r => r.json())
-            .then(data => {
-                this.campaigns = Array.isArray(data) ? data : [];
-                this.loading = false;
-                if (this.campaigns.length === 0) this.error = 'Aucune campagne trouvée dans Emelia.';
-            })
-            .catch(() => {
-                this.error = 'Impossible de charger les campagnes Emelia.';
-                this.loading = false;
-            });
-    },
-    submit() {
-        if (!this.selectedIds.length) return;
-        this.submitting = true;
-        fetch('/contacts/{{ $contact->id }}/emelia', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify({ campaign_ids: this.selectedIds }),
-        })
-        .then(r => r.json())
-        .then(d => {
-            if (d.error) { this.error = d.error; this.submitting = false; return; }
-            window.location.reload();
-        })
-        .catch(() => {
-            this.error = 'Une erreur est survenue.';
-            this.submitting = false;
-        });
-    }
-}"
+<div x-data="emeliaModalComponent({{ $contact->id }}, @json($linkedEmeliaIds))"
      @open-emelia-modal.window="open = true; if (!campaigns.length) fetchCampaigns()"
      x-show="open"
      x-cloak
@@ -758,5 +689,86 @@
 @endif
 
 <x-email-draft-modal entity-type="contact" :entity-id="$contact->id" />
+
+<script>
+window.emeliaPanelComponent = function(contactId) {
+    return {
+        status: null,
+        loading: true,
+        init() {
+            var self = this;
+            fetch('/contacts/' + contactId + '/emelia/status', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { self.status = d; self.loading = false; })
+            .catch(function() { self.loading = false; });
+        },
+        statusLabel(s) {
+            const m = { SENT: 'Envoyé', OPENED: 'Ouvert', CLICKED: 'Cliqué',
+                        REPLIED: 'Répondu', BOUNCED: 'Bounce', UNSUBSCRIBED: 'Désabonné' };
+            return m[s] || s;
+        },
+        statusColor(s) {
+            if (s === 'REPLIED') return 'var(--ok)';
+            if (s === 'OPENED' || s === 'CLICKED') return 'var(--accent)';
+            if (s === 'BOUNCED' || s === 'UNSUBSCRIBED') return 'var(--err)';
+            return 'var(--text-secondary)';
+        }
+    };
+};
+
+window.emeliaModalComponent = function(contactId, initialSelectedIds) {
+    return {
+        open: false,
+        campaigns: [],
+        loading: false,
+        error: '',
+        selectedIds: initialSelectedIds,
+        submitting: false,
+        fetchCampaigns() {
+            var self = this;
+            self.loading = true;
+            self.error = '';
+            fetch('/emelia/campaigns', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    self.campaigns = Array.isArray(data) ? data : [];
+                    self.loading = false;
+                    if (self.campaigns.length === 0) self.error = 'Aucune campagne trouvée dans Emelia.';
+                })
+                .catch(function() {
+                    self.error = 'Impossible de charger les campagnes Emelia.';
+                    self.loading = false;
+                });
+        },
+        submit() {
+            var self = this;
+            if (!self.selectedIds.length) return;
+            self.submitting = true;
+            fetch('/contacts/' + contactId + '/emelia', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ campaign_ids: self.selectedIds }),
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.error) { self.error = d.error; self.submitting = false; return; }
+                window.location.reload();
+            })
+            .catch(function() {
+                self.error = 'Une erreur est survenue.';
+                self.submitting = false;
+            });
+        }
+    };
+};
+</script>
 
 </x-app-shell>
