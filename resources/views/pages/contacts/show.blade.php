@@ -362,95 +362,60 @@
                 </div>
             </template>
 
-            {{-- Dans Emelia --}}
+            {{-- Dans Emelia — liste multi-campagnes --}}
             <template x-if="!loading && status && status.in_emelia">
                 <div>
-                    {{-- Campagne + statut live API --}}
-                    <div class="mb-3">
-                        <div class="text-[10px] text-tertiary font-mono mb-0.5">CAMPAGNE</div>
-                        <div class="text-[13px] font-medium leading-tight mb-1" x-text="status.campaign_name || '—'"></div>
-                        <template x-if="status.emelia_status">
-                            <div class="flex items-center gap-1.5">
-                                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                      :style="'background:' + statusColor(status.emelia_status)"></span>
-                                <span class="text-[11px] font-medium"
-                                      :style="'color:' + statusColor(status.emelia_status)"
-                                      x-text="statusLabel(status.emelia_status)"></span>
-                            </div>
-                        </template>
-                    </div>
-
-                    {{-- Dates clés live (depuis API Emelia, sans webhook) --}}
-                    <div class="flex flex-col gap-1.5 mb-3">
-                        <template x-if="status.last_contacted">
-                            <div class="flex items-center justify-between text-[11px]">
-                                <span class="text-tertiary">Dernier envoi</span>
-                                <span class="font-medium" x-text="status.last_contacted"></span>
-                            </div>
-                        </template>
-                        <template x-if="status.last_open">
-                            <div class="flex items-center justify-between text-[11px]">
-                                <span class="text-tertiary">Ouverture</span>
-                                <span class="font-medium" style="color:var(--accent)" x-text="status.last_open"></span>
-                            </div>
-                        </template>
-                        <template x-if="status.last_replied">
-                            <div class="flex items-center justify-between text-[11px]">
-                                <span class="text-tertiary">Réponse</span>
-                                <span class="font-medium" style="color:var(--ok)" x-text="status.last_replied"></span>
-                            </div>
-                        </template>
-                    </div>
-
-                    {{-- Séparateur --}}
-                    <div class="border-t border-default mb-2"></div>
-
-                    {{-- Compteurs webhook --}}
-                    <div class="text-[10px] text-tertiary font-mono mb-1.5 flex items-center gap-1.5">
-                        COMPTEURS
+                    <div class="text-[10px] text-tertiary font-mono mb-2 flex items-center gap-1.5">
+                        CAMPAGNES (<span x-text="(status.campaigns || []).length"></span>)
                         <template x-if="!status.webhook_active">
                             <span style="font-size:9px; padding:1px 5px; border-radius:4px; background:var(--surface-alt); color:var(--text-tertiary)">webhook OFF</span>
                         </template>
                     </div>
-                    <div class="grid grid-cols-3 gap-1 mb-1.5">
-                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
-                            <div class="text-sm font-mono font-semibold" x-text="status.stats.sent"></div>
-                            <div class="text-[9px] text-tertiary">Envois</div>
-                        </div>
-                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
-                            <div class="text-sm font-mono font-semibold" x-text="status.stats.opened"></div>
-                            <div class="text-[9px] text-tertiary">Ouvertures</div>
-                        </div>
-                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
-                            <div class="text-sm font-mono font-semibold" x-text="status.stats.clicked"></div>
-                            <div class="text-[9px] text-tertiary">Clics</div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1 mb-3">
-                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
-                            <div class="text-sm font-mono font-semibold" x-text="status.stats.replied"></div>
-                            <div class="text-[9px] text-tertiary">Réponses</div>
-                        </div>
-                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
-                            <div class="text-sm font-mono font-semibold" x-text="status.stats.bounced"></div>
-                            <div class="text-[9px] text-tertiary">Bounces</div>
-                        </div>
-                        <div class="rounded p-1.5 text-center" style="background:var(--surface-alt);">
-                            <div class="text-sm font-mono font-semibold" x-text="status.stats.unsubscribed"></div>
-                            <div class="text-[9px] text-tertiary">Désabonnés</div>
-                        </div>
+
+                    <div class="flex flex-col gap-2 mb-3">
+                        <template x-for="c in (status.campaigns || [])" :key="c.emelia_id || c.name">
+                            <div class="rounded p-2" style="background:var(--surface-alt);">
+                                <div class="flex items-center gap-1.5 mb-0.5">
+                                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                          :style="'background:' + statusColor(c.pivot_status || c.emelia_status)"></span>
+                                    <span class="text-[12px] font-medium leading-tight truncate" x-text="c.name"></span>
+                                </div>
+                                <div x-show="c.client_name" class="text-[10px] text-tertiary mb-1 pl-3" x-text="c.client_name"></div>
+                                <div x-show="c.last_event_at" class="text-[10px] text-tertiary pl-3 mb-1">
+                                    Dernier event : <span class="font-medium" x-text="c.last_event_at"></span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-1 pl-3 mt-1">
+                                    <div class="text-center">
+                                        <div class="text-[11px] font-mono font-semibold" x-text="(c.stats && c.stats.sent) || 0"></div>
+                                        <div class="text-[9px] text-tertiary">Envois</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-[11px] font-mono font-semibold"
+                                             :style="((c.stats && c.stats.opened) || 0) > 0 ? 'color:var(--accent)' : ''"
+                                             x-text="(c.stats && c.stats.opened) || 0"></div>
+                                        <div class="text-[9px] text-tertiary">Ouverts</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-[11px] font-mono font-semibold"
+                                             :style="((c.stats && c.stats.replied) || 0) > 0 ? 'color:var(--ok)' : ''"
+                                             x-text="(c.stats && c.stats.replied) || 0"></div>
+                                        <div class="text-[9px] text-tertiary">Réponses</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     <template x-if="!status.webhook_active">
                         <p class="text-[10px] text-tertiary mb-3 leading-relaxed">
-                            Webhook non disponible sur ce plan Emelia — utilisez le bouton Sync pour importer les événements manuellement.
+                            Webhook non disponible — utilisez Sync pour importer les événements manuellement.
                         </p>
                     </template>
 
                     <div class="flex gap-1.5" x-data="{ syncing: false, syncDone: false }">
                         <button class="btn ghost text-xs flex-1"
                                 @click="$dispatch('open-emelia-modal')">
-                            Changer
+                            Gérer
                         </button>
                         <button class="btn ghost text-xs"
                                 :disabled="syncing"
@@ -486,13 +451,13 @@
 </div>
 
 {{-- Modal Emelia (écoute les events window) --}}
+@php $linkedEmeliaIds = $contact->emeliaCampaigns()->pluck('emelia_id')->toArray(); @endphp
 <div x-data="{
     open: false,
     campaigns: [],
     loading: false,
     error: '',
-    selectedId: '',
-    selectedName: '',
+    selectedIds: @json($linkedEmeliaIds),
     submitting: false,
     fetchCampaigns() {
         this.loading = true;
@@ -510,7 +475,7 @@
             });
     },
     submit() {
-        if (!this.selectedId) return;
+        if (!this.selectedIds.length) return;
         this.submitting = true;
         fetch('/contacts/{{ $contact->id }}/emelia', {
             method: 'POST',
@@ -520,7 +485,7 @@
                 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
             },
             credentials: 'same-origin',
-            body: JSON.stringify({ campaign_id: this.selectedId, campaign_name: this.selectedName }),
+            body: JSON.stringify({ campaign_ids: this.selectedIds }),
         })
         .then(r => r.json())
         .then(d => {
@@ -541,7 +506,7 @@
      @keydown.escape.window="open = false">
     <div class="card p-6 w-full max-w-md" @click.stop>
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-base font-semibold">Ajouter à une campagne Emelia</h2>
+            <h2 class="text-base font-semibold">Campagnes Emelia</h2>
             <button @click="open = false" class="btn ghost icon">
                 <svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
@@ -551,13 +516,12 @@
         <div x-show="error && !loading" class="py-3 text-center text-sm" style="color:var(--err)" x-text="error"></div>
 
         <div x-show="!loading && !error">
-            <p class="text-xs text-secondary mb-3">Sélectionnez la campagne Emelia dans laquelle ajouter ce contact.</p>
+            <p class="text-xs text-secondary mb-3">Cochez les campagnes auxquelles associer ce contact. Les campagnes déjà liées sont pré-cochées.</p>
             <div class="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
                 <template x-for="c in campaigns" :key="c.id">
                     <label class="flex items-center gap-3 p-2.5 rounded cursor-pointer hover:bg-surface-alt"
-                           :class="{ 'ring-1 ring-accent': selectedId === c.id }"
-                           @click="selectedId = c.id; selectedName = c.name">
-                        <input type="radio" name="emelia_campaign" :value="c.id" x-model="selectedId" class="accent-accent">
+                           :class="{ 'ring-1 ring-accent': selectedIds.includes(c.id) }">
+                        <input type="checkbox" :value="c.id" x-model="selectedIds" class="accent-accent">
                         <div class="flex-1 min-w-0">
                             <div class="text-sm truncate" x-text="c.name"></div>
                             <div class="text-[10px] text-tertiary flex gap-2">
@@ -570,8 +534,8 @@
             </div>
             <div class="flex justify-end gap-2">
                 <button @click="open = false" class="btn ghost" :disabled="submitting">Annuler</button>
-                <button @click="submit()" class="btn primary" :disabled="!selectedId || submitting">
-                    <span x-show="!submitting">Ajouter à la campagne →</span>
+                <button @click="submit()" class="btn primary" :disabled="!selectedIds.length || submitting">
+                    <span x-show="!submitting">Enregistrer →</span>
                     <span x-show="submitting">Envoi…</span>
                 </button>
             </div>

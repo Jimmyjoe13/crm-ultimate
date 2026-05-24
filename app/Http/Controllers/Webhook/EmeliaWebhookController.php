@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Webhook;
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\Contact;
+use App\Models\EmeliaCampaign;
 use App\Support\EmeliaEventDispatcher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -46,13 +47,60 @@ class EmeliaWebhookController extends Controller
             }
 
             $contact = Contact::create([
-                'first_name'        => '',
+                'first_name'        => $request->input('first_name', ''),
+                'last_name'         => $request->input('last_name', ''),
                 'email'             => $email,
                 'lifecycle_stage'   => 'lead',
                 'emelia_contact_id' => $request->input('contact_id'),
             ]);
         } elseif ($request->input('contact_id') && ! $contact->emelia_contact_id) {
             $contact->update(['emelia_contact_id' => $request->input('contact_id')]);
+        }
+
+        // 4.bis — Parser le timestamp réel de l'event (nécessaire pour le pivot)
+        $rawDate    = $request->input('date') ?? $request->input('timestamp') ?? $request->input('created_at');
+        $occurredAt = $rawDate ? Carbon::parse($rawDate) : now();
+
+        // 4.ter — Résolution / création de la campagne + lien pivot N:N
+        $rawCampaignId = $request->input('campaign_id');
+        $campaignName  = $request->input('campaign_name');
+        $campaign      = null;
+
+        if ($rawCampaignId) {
+            $campaign = EmeliaCampaign::firstOrCreate(
+                ['emelia_id' => $rawCampaignId],
+                ['name' => $campaignName ?? $rawCampaignId],
+            );
+
+            // Mettre à jour le nom si Emelia l'a changé
+            if ($campaignName && $campaign->name !== $campaignName && ! $campaign->wasRecentlyCreated) {
+                $campaign->update(['name' => $campaignName]);
+            }
+
+            // Lier le contact à la campagne via le pivot (idempotent — ne détache pas les autres campagnes)
+            $pivotData = ['emelia_contact_id' => $request->input('contact_id')];
+
+            $existing = $contact->emeliaCampaigns()->whereKey($campaign->id)->first();
+
+            if ($existing) {
+                // Mettre à jour last_event_at et status si l'event est plus récent
+                if (! $existing->pivot->last_event_at || $occurredAt->gt($existing->pivot->last_event_at)) {
+                    $pivotData['last_event_at'] = $occurredAt;
+                    $pivotData['status']        = strtoupper($request->input('event', ''));
+                }
+                $contact->emeliaCampaigns()->updateExistingPivot($campaign->id, $pivotData);
+            } else {
+                $pivotData['first_event_at'] = $occurredAt;
+                $pivotData['last_event_at']  = $occurredAt;
+                $pivotData['status']         = strtoupper($request->input('event', ''));
+                $contact->emeliaCampaigns()->attach($campaign->id, $pivotData);
+            }
+
+            // Compat legacy — maintenir les colonnes plates avec la campagne courante
+            $contact->update([
+                'emelia_campaign_id'   => $rawCampaignId,
+                'emelia_campaign_name' => $campaignName,
+            ]);
         }
 
         // 5. Mapping événement → type Activity
@@ -64,19 +112,16 @@ class EmeliaWebhookController extends Controller
             return response()->json(['status' => 'ignored', 'reason' => 'unknown event']);
         }
 
-        // 6. Parser le timestamp réel de l'event depuis le payload Emelia
-        $rawDate    = $request->input('date') ?? $request->input('timestamp') ?? $request->input('created_at');
-        $occurredAt = $rawDate ? Carbon::parse($rawDate) : now();
-
-        // 7. Déléguer au dispatcher (création Activity + actions secondaires REPLIED)
+        // 6. Déléguer au dispatcher (création Activity + actions secondaires REPLIED)
         $activity = EmeliaEventDispatcher::dispatch(
-            contact:    $contact,
-            type:       $type,
-            payload:    $request->all(),
-            occurredAt: $occurredAt,
-            externalId: $eventId,
-            title:      $request->input('subject'),
-            body:       $request->input('preview', ''),
+            contact:          $contact,
+            type:             $type,
+            payload:          $request->all(),
+            occurredAt:       $occurredAt,
+            externalId:       $eventId,
+            title:            $request->input('subject'),
+            body:             $request->input('preview', ''),
+            emeliaCampaignId: $campaign?->id,
         );
 
         if ($activity === null) {

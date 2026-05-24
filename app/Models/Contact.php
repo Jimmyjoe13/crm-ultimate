@@ -76,4 +76,11 @@ class Contact extends Model
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
+
+    public function emeliaCampaigns(): BelongsToMany
+    {
+        return $this->belongsToMany(EmeliaCampaign::class, 'contact_emelia_campaign')
+            ->withPivot(['emelia_contact_id', 'status', 'first_event_at', 'last_event_at'])
+            ->withTimestamps();
+    }
 }

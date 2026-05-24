@@ -42,6 +42,7 @@ class Activity extends Model
         'due_at',
         'completed_at',
         'occurred_at',
+        'emelia_campaign_id',
         'subject_type',
         'subject_id',
         'owner_id',
@@ -65,5 +66,10 @@ class Activity extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function emeliaCampaign(): BelongsTo
+    {
+        return $this->belongsTo(EmeliaCampaign::class, 'emelia_campaign_id');
     }
 }

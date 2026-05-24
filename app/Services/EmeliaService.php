@@ -199,6 +199,35 @@ class EmeliaService
         return $events;
     }
 
+    /**
+     * Synchronise le registre local emelia_campaigns depuis l'API Emelia.
+     * Retourne le nombre de campagnes créées ou mises à jour.
+     */
+    public function syncCampaignRegistry(): int
+    {
+        $raw       = $this->listCampaigns();
+        $campaigns = $raw['campaigns'] ?? $raw;
+        $count     = 0;
+
+        foreach ($campaigns as $c) {
+            $emeliaid = $c['_id'] ?? $c['id'] ?? null;
+            $name     = $c['name'] ?? $c['title'] ?? $emeliaid;
+
+            if (! $emeliaid) {
+                continue;
+            }
+
+            \App\Models\EmeliaCampaign::updateOrCreate(
+                ['emelia_id' => $emeliaid],
+                ['name' => $name, 'status' => $c['status'] ?? null, 'last_synced_at' => now()],
+            );
+
+            $count++;
+        }
+
+        return $count;
+    }
+
     public function addContactToCampaign(string $campaignId, array $payload): array
     {
         $response = $this->http()

@@ -46,19 +46,21 @@ class EmeliaEventDispatcher
         ?string $externalId = null,
         ?string $title = null,
         ?string $body = null,
+        ?int $emeliaCampaignId = null,
     ): ?Activity {
         $occurred = $occurredAt ?? now();
 
         $data = [
-            'type'         => $type,
-            'source'       => 'emelia',
-            'external_id'  => $externalId,
-            'subject_type' => Contact::class,
-            'subject_id'   => $contact->id,
-            'title'        => $title ?? ucfirst(str_replace('_', ' ', $type)),
-            'body'         => $body ?? '',
-            'metadata'     => $payload,
-            'occurred_at'  => $occurred,
+            'type'                => $type,
+            'source'              => 'emelia',
+            'external_id'         => $externalId,
+            'emelia_campaign_id'  => $emeliaCampaignId,
+            'subject_type'        => Contact::class,
+            'subject_id'          => $contact->id,
+            'title'               => $title ?? ucfirst(str_replace('_', ' ', $type)),
+            'body'                => $body ?? '',
+            'metadata'            => $payload,
+            'occurred_at'         => $occurred,
         ];
 
         // Sans external_id, pas d'idempotence possible — on crée directement

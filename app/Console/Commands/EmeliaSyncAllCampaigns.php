@@ -18,6 +18,12 @@ class EmeliaSyncAllCampaigns extends Command
         $this->info('Récupération des campagnes Emelia...');
 
         try {
+            // Upsert dans le registre local emelia_campaigns
+            if (! $this->option('dry-run')) {
+                $synced = $emelia->syncCampaignRegistry();
+                $this->line("  Registre local : $synced campagne(s) synchronisée(s).");
+            }
+
             $raw = $emelia->listCampaigns();
         } catch (\RuntimeException $e) {
             $this->error('Emelia API : '.$e->getMessage());
