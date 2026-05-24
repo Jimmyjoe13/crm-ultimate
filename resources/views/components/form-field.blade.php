@@ -14,9 +14,10 @@
     @endif
 
     @if($type === 'boolean')
+        @php $boolTrue = ($value === true || $value === 1 || $value === '1' || $value === 'oui' || $value === 'yes'); @endphp
         <select name="{{ $name }}" class="select-arrow">
-            <option value="0" @selected(!$value)>Non</option>
-            <option value="1" @selected($value)>Oui</option>
+            <option value="0" @selected(!$boolTrue)>Non</option>
+            <option value="1" @selected($boolTrue)>Oui</option>
         </select>
     @elseif($type === 'select')
         <select name="{{ $name }}" class="select-arrow" @if($required) required @endif>

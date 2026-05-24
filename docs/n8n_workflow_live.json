@@ -1,0 +1,780 @@
+﻿{
+    "updatedAt":  "2026-05-24T14:37:41.617Z",
+    "createdAt":  "2026-05-23T17:02:30.810Z",
+    "id":  "q4GXMH5Qzjz9H6AZ",
+    "name":  "Emelia - CRM Ultimate",
+    "description":  null,
+    "active":  true,
+    "isArchived":  false,
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "campaignId":  "69eb1cca5033df0a8663a88e",
+                                         "events":  [
+                                                        "replied",
+                                                        "bounced",
+                                                        "opened",
+                                                        "sent",
+                                                        "unsubscribed"
+                                                    ]
+                                     },
+                      "type":  "n8n-nodes-base.emeliaTrigger",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -608,
+                                       -592
+                                   ],
+                      "id":  "e15b2cae-7e77-4d9c-91c0-066e1c5e24ed",
+                      "name":  "Emelia Trigger1",
+                      "webhookId":  "df41b070-7323-4ddf-b293-bf135c1018b6",
+                      "credentials":  {
+                                          "emeliaApi":  {
+                                                            "id":  "f3Q24MOVU6pk1vzC",
+                                                            "name":  "Emelia account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "campaignId":  "69ebb7281762b60a8169f625",
+                                         "events":  [
+                                                        "replied",
+                                                        "opened",
+                                                        "bounced",
+                                                        "sent",
+                                                        "unsubscribed"
+                                                    ]
+                                     },
+                      "type":  "n8n-nodes-base.emeliaTrigger",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -608,
+                                       -416
+                                   ],
+                      "id":  "bc71083e-4844-4794-a6ec-726889ae50d6",
+                      "name":  "Emelia Trigger",
+                      "webhookId":  "e96e1d8d-509a-4b5e-88b3-40ef0dd2fe0c",
+                      "credentials":  {
+                                          "emeliaApi":  {
+                                                            "id":  "f3Q24MOVU6pk1vzC",
+                                                            "name":  "Emelia account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const d = $input.first().json;\nconst email = d.contact?.email || d.email || \u0027\u0027;\nconst event = d.event || d.type || \u0027\u0027;\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || \u0027\u0027;\n\n// Mapping nom campagne -\u003e UUID\nconst campaignMap = {\n  \u0027conseiller-consultant-acquisition\u0027: \u002769ebb7281762b60a8169f625\u0027,\n  \u0027acquisition-agence-marketing\u0027:      \u002769eb1cca5033df0a8663a88e\u0027,\n};\nconst campaignName = d.campaign || \u0027\u0027;\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\n// event_id deterministe pour idempotence cote CRM\nconst eventId = (email \u0026\u0026 event \u0026\u0026 date)\n  ? (email + \u0027_\u0027 + event + \u0027_\u0027 + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -320,
+                                       -512
+                                   ],
+                      "id":  "f1e2d3c4-b5a6-9807-edcb-f21345678901",
+                      "name":  "Normalize Event"
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "http://crm-app:8080/api/webhooks/emelia",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "contentType":  "raw",
+                                         "rawContentType":  "application/json",
+                                         "body":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       -48,
+                                       -512
+                                   ],
+                      "id":  "d2e3f4a5-b6c7-8901-defa-123456789012",
+                      "name":  "Forward to CRM",
+                      "retryOnFail":  true,
+                      "maxTries":  3,
+                      "waitBetweenTries":  5000
+                  },
+                  {
+                      "parameters":  {
+                                         "rule":  {
+                                                      "interval":  [
+                                                                       {
+                                                                           "triggerAtHour":  8
+                                                                       },
+                                                                       {
+                                                                           "triggerAtHour":  12
+                                                                       },
+                                                                       {
+                                                                           "triggerAtHour":  16
+                                                                       },
+                                                                       {
+                                                                           "triggerAtHour":  20
+                                                                       }
+                                                                   ]
+                                                  }
+                                     },
+                      "type":  "n8n-nodes-base.scheduleTrigger",
+                      "typeVersion":  1.3,
+                      "position":  [
+                                       -720,
+                                       -160
+                                   ],
+                      "id":  "39f212df-5c8f-4556-9568-8bdac5d99fb4",
+                      "name":  "Schedule Trigger"
+                  },
+                  {
+                      "parameters":  {
+                                         "url":  "=https://api.emelia.io/emails/campaigns/{{ $json._id }}/activities",
+                                         "authentication":  "genericCredentialType",
+                                         "genericAuthType":  "httpBearerAuth",
+                                         "options":  {
+                                                         "redirect":  {
+                                                                          "redirect":  {
+
+                                                                                       }
+                                                                      }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.4,
+                      "position":  [
+                                       0,
+                                       -160
+                                   ],
+                      "id":  "f09f67fc-48af-4df7-a163-9dab5fc278f6",
+                      "name":  "get_activities",
+                      "credentials":  {
+                                          "httpBearerAuth":  {
+                                                                 "id":  "MRNhTkKpToQwLojz",
+                                                                 "name":  "emelia"
+                                                             }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "url":  "https://api.emelia.io/emails/campaigns",
+                                         "authentication":  "genericCredentialType",
+                                         "genericAuthType":  "httpBearerAuth",
+                                         "options":  {
+                                                         "redirect":  {
+                                                                          "redirect":  {
+
+                                                                                       }
+                                                                      }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.4,
+                      "position":  [
+                                       -512,
+                                       -160
+                                   ],
+                      "id":  "f7c1eda3-a912-4e1c-ad26-fecc8ffc4c2b",
+                      "name":  "get_campaignid",
+                      "credentials":  {
+                                          "httpBearerAuth":  {
+                                                                 "id":  "MRNhTkKpToQwLojz",
+                                                                 "name":  "emelia"
+                                                             }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "fieldToSplitOut":  "campaigns",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.splitOut",
+                      "typeVersion":  1,
+                      "position":  [
+                                       -304,
+                                       -160
+                                   ],
+                      "id":  "a0642334-cfdc-4d4c-9925-2784471e0a2a",
+                      "name":  "Split Out"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Aliases Emelia API REST -\u003e noms canoniques Emelia webhook\nconst EVENT_ALIASES = {\n  \u0027FIRST_OPEN\u0027:          \u0027OPENED\u0027,\n  \u0027OPEN\u0027:                \u0027OPENED\u0027,\n  \u0027REPLY\u0027:               \u0027REPLIED\u0027,\n  \u0027CLICK\u0027:               \u0027CLICKED\u0027,\n  \u0027UNSUBSCRIBE\u0027:         \u0027UNSUBSCRIBED\u0027,\n  \u0027CONTACT_UNSUBSCRIBED\u0027:\u0027UNSUBSCRIBED\u0027,\n  \u0027EMAIL_SENT\u0027:          \u0027SENT\u0027,\n  \u0027EMAIL_OPENED\u0027:        \u0027OPENED\u0027,\n  \u0027EMAIL_CLICKED\u0027:       \u0027CLICKED\u0027,\n  \u0027EMAIL_REPLIED\u0027:       \u0027REPLIED\u0027,\n  \u0027EMAIL_BOUNCED\u0027:       \u0027BOUNCED\u0027,\n  \u0027EMAIL_UNSUBSCRIBED\u0027:  \u0027UNSUBSCRIBED\u0027,\n};\n\nconst activitiesResp = $input.first().json;\nconst rawActivities = activitiesResp.activities || [];\n\nlet campaignId = null;\nlet campaignName = null;\ntry {\n  const campaign = $(\u0027Split Out\u0027).item.json;\n  campaignId   = campaign._id   || null;\n  campaignName = campaign.name  || null;\n} catch(e) {}\n\nconst activities = rawActivities.filter(\n  a =\u003e a \u0026\u0026 a._id \u0026\u0026 a.event \u0026\u0026 a.contact \u0026\u0026 a.contact.email\n);\nif (activities.length === 0) return [];\n\nreturn activities.map(a =\u003e {\n  const normalizedEvent = EVENT_ALIASES[a.event] || a.event;\n  return {\n    json: {\n      event:         normalizedEvent,\n      email:         a.contact.email,\n      // event_id identique a celui que le webhook Emelia aurait produit\n      event_id:      a.contact.email + \u0027_\u0027 + normalizedEvent + \u0027_\u0027 + (a.date || \u0027\u0027),\n      date:          a.date,\n      subject:       null,\n      preview:       null,\n      full_reply:    null,\n      campaign_id:   campaignId,\n      campaign_name: campaignName,\n      first_name:    a.contact.firstName || null,\n      last_name:     a.contact.lastName  || null,\n      step:          a.step !== undefined ? a.step : null,\n      contact_id:    a.contact._id || null,\n    }\n  };\n});"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       208,
+                                       -160
+                                   ],
+                      "id":  "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                      "name":  "Normalize Activities"
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "http://crm-app:8080/api/webhooks/emelia",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "contentType":  "raw",
+                                         "rawContentType":  "application/json",
+                                         "body":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       416,
+                                       -160
+                                   ],
+                      "id":  "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                      "name":  "Forward Activities to CRM",
+                      "retryOnFail":  true,
+                      "maxTries":  3,
+                      "waitBetweenTries":  5000
+                  }
+              ],
+    "connections":  {
+                        "Emelia Trigger1":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "Normalize Event",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ]
+                                                         ]
+                                            },
+                        "Emelia Trigger":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Normalize Event",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           },
+                        "Normalize Event":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "Forward to CRM",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ]
+                                                         ]
+                                            },
+                        "Schedule Trigger":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "get_campaignid",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "get_campaignid":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Split Out",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           },
+                        "Split Out":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "get_activities",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+                        "get_activities":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Normalize Activities",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           },
+                        "Normalize Activities":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "Forward Activities to CRM",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 }
+                    },
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "binaryMode":  "separate",
+                     "callerPolicy":  "workflowsFromSameOwner",
+                     "availableInMCP":  false
+                 },
+    "staticData":  {
+                       "node:Emelia Trigger1":  {
+                                                    "webhookId":  "6a130d4ab725a80b4d342a0c"
+                                                },
+                       "node:Emelia Trigger":  {
+                                                   "webhookId":  "6a130d4aabf0390b58cc694d"
+                                               },
+                       "node:Schedule Trigger":  {
+                                                     "recurrenceRules":  [
+
+                                                                         ]
+                                                 }
+                   },
+    "meta":  {
+                 "templateCredsSetupCompleted":  true
+             },
+    "pinData":  {
+
+                },
+    "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+    "activeVersionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+    "versionCounter":  149,
+    "triggerCount":  3,
+    "shared":  [
+                   {
+                       "updatedAt":  "2026-05-23T17:02:30.817Z",
+                       "createdAt":  "2026-05-23T17:02:30.817Z",
+                       "role":  "workflow:owner",
+                       "workflowId":  "q4GXMH5Qzjz9H6AZ",
+                       "projectId":  "UhDFLqVZjIDHS1ZZ",
+                       "project":  {
+                                       "updatedAt":  "2026-05-14T12:25:48.927Z",
+                                       "createdAt":  "2026-03-28T23:52:08.708Z",
+                                       "id":  "UhDFLqVZjIDHS1ZZ",
+                                       "name":  "Jimmy Gay \u003cjimmygay13180@gmail.com\u003e",
+                                       "type":  "personal",
+                                       "icon":  null,
+                                       "description":  null,
+                                       "creatorId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
+                                   }
+                   }
+               ],
+    "tags":  [
+
+             ],
+    "activeVersion":  {
+                          "updatedAt":  "2026-05-24T14:37:41.621Z",
+                          "createdAt":  "2026-05-24T14:37:41.621Z",
+                          "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+                          "workflowId":  "q4GXMH5Qzjz9H6AZ",
+                          "nodes":  [
+                                        {
+                                            "parameters":  {
+                                                               "campaignId":  "69eb1cca5033df0a8663a88e",
+                                                               "events":  [
+                                                                              "replied",
+                                                                              "bounced",
+                                                                              "opened",
+                                                                              "sent",
+                                                                              "unsubscribed"
+                                                                          ]
+                                                           },
+                                            "type":  "n8n-nodes-base.emeliaTrigger",
+                                            "typeVersion":  1,
+                                            "position":  [
+                                                             -608,
+                                                             -592
+                                                         ],
+                                            "id":  "e15b2cae-7e77-4d9c-91c0-066e1c5e24ed",
+                                            "name":  "Emelia Trigger1",
+                                            "webhookId":  "df41b070-7323-4ddf-b293-bf135c1018b6",
+                                            "credentials":  {
+                                                                "emeliaApi":  {
+                                                                                  "id":  "f3Q24MOVU6pk1vzC",
+                                                                                  "name":  "Emelia account"
+                                                                              }
+                                                            }
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "campaignId":  "69ebb7281762b60a8169f625",
+                                                               "events":  [
+                                                                              "replied",
+                                                                              "opened",
+                                                                              "bounced",
+                                                                              "sent",
+                                                                              "unsubscribed"
+                                                                          ]
+                                                           },
+                                            "type":  "n8n-nodes-base.emeliaTrigger",
+                                            "typeVersion":  1,
+                                            "position":  [
+                                                             -608,
+                                                             -416
+                                                         ],
+                                            "id":  "bc71083e-4844-4794-a6ec-726889ae50d6",
+                                            "name":  "Emelia Trigger",
+                                            "webhookId":  "e96e1d8d-509a-4b5e-88b3-40ef0dd2fe0c",
+                                            "credentials":  {
+                                                                "emeliaApi":  {
+                                                                                  "id":  "f3Q24MOVU6pk1vzC",
+                                                                                  "name":  "Emelia account"
+                                                                              }
+                                                            }
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "const d = $input.first().json;\nconst email = d.contact?.email || d.email || \u0027\u0027;\nconst event = d.event || d.type || \u0027\u0027;\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || \u0027\u0027;\n\n// Mapping nom campagne -\u003e UUID\nconst campaignMap = {\n  \u0027conseiller-consultant-acquisition\u0027: \u002769ebb7281762b60a8169f625\u0027,\n  \u0027acquisition-agence-marketing\u0027:      \u002769eb1cca5033df0a8663a88e\u0027,\n};\nconst campaignName = d.campaign || \u0027\u0027;\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\n// event_id deterministe pour idempotence cote CRM\nconst eventId = (email \u0026\u0026 event \u0026\u0026 date)\n  ? (email + \u0027_\u0027 + event + \u0027_\u0027 + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             -320,
+                                                             -512
+                                                         ],
+                                            "id":  "f1e2d3c4-b5a6-9807-edcb-f21345678901",
+                                            "name":  "Normalize Event"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "method":  "POST",
+                                                               "url":  "http://crm-app:8080/api/webhooks/emelia",
+                                                               "sendHeaders":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "name":  "Content-Type",
+                                                                                                               "value":  "application/json"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "sendBody":  true,
+                                                               "contentType":  "raw",
+                                                               "rawContentType":  "application/json",
+                                                               "body":  "={{ JSON.stringify($json) }}",
+                                                               "options":  {
+
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.2,
+                                            "position":  [
+                                                             -48,
+                                                             -512
+                                                         ],
+                                            "id":  "d2e3f4a5-b6c7-8901-defa-123456789012",
+                                            "name":  "Forward to CRM",
+                                            "retryOnFail":  true,
+                                            "maxTries":  3,
+                                            "waitBetweenTries":  5000
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "rule":  {
+                                                                            "interval":  [
+                                                                                             {
+                                                                                                 "triggerAtHour":  8
+                                                                                             },
+                                                                                             {
+                                                                                                 "triggerAtHour":  12
+                                                                                             },
+                                                                                             {
+                                                                                                 "triggerAtHour":  16
+                                                                                             },
+                                                                                             {
+                                                                                                 "triggerAtHour":  20
+                                                                                             }
+                                                                                         ]
+                                                                        }
+                                                           },
+                                            "type":  "n8n-nodes-base.scheduleTrigger",
+                                            "typeVersion":  1.3,
+                                            "position":  [
+                                                             -720,
+                                                             -160
+                                                         ],
+                                            "id":  "39f212df-5c8f-4556-9568-8bdac5d99fb4",
+                                            "name":  "Schedule Trigger"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "url":  "=https://api.emelia.io/emails/campaigns/{{ $json._id }}/activities",
+                                                               "authentication":  "genericCredentialType",
+                                                               "genericAuthType":  "httpBearerAuth",
+                                                               "options":  {
+                                                                               "redirect":  {
+                                                                                                "redirect":  {
+
+                                                                                                             }
+                                                                                            }
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.4,
+                                            "position":  [
+                                                             0,
+                                                             -160
+                                                         ],
+                                            "id":  "f09f67fc-48af-4df7-a163-9dab5fc278f6",
+                                            "name":  "get_activities",
+                                            "credentials":  {
+                                                                "httpBearerAuth":  {
+                                                                                       "id":  "MRNhTkKpToQwLojz",
+                                                                                       "name":  "emelia"
+                                                                                   }
+                                                            }
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "url":  "https://api.emelia.io/emails/campaigns",
+                                                               "authentication":  "genericCredentialType",
+                                                               "genericAuthType":  "httpBearerAuth",
+                                                               "options":  {
+                                                                               "redirect":  {
+                                                                                                "redirect":  {
+
+                                                                                                             }
+                                                                                            }
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.4,
+                                            "position":  [
+                                                             -512,
+                                                             -160
+                                                         ],
+                                            "id":  "f7c1eda3-a912-4e1c-ad26-fecc8ffc4c2b",
+                                            "name":  "get_campaignid",
+                                            "credentials":  {
+                                                                "httpBearerAuth":  {
+                                                                                       "id":  "MRNhTkKpToQwLojz",
+                                                                                       "name":  "emelia"
+                                                                                   }
+                                                            }
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "fieldToSplitOut":  "campaigns",
+                                                               "options":  {
+
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.splitOut",
+                                            "typeVersion":  1,
+                                            "position":  [
+                                                             -304,
+                                                             -160
+                                                         ],
+                                            "id":  "a0642334-cfdc-4d4c-9925-2784471e0a2a",
+                                            "name":  "Split Out"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "// Aliases Emelia API REST -\u003e noms canoniques Emelia webhook\nconst EVENT_ALIASES = {\n  \u0027FIRST_OPEN\u0027:          \u0027OPENED\u0027,\n  \u0027OPEN\u0027:                \u0027OPENED\u0027,\n  \u0027REPLY\u0027:               \u0027REPLIED\u0027,\n  \u0027CLICK\u0027:               \u0027CLICKED\u0027,\n  \u0027UNSUBSCRIBE\u0027:         \u0027UNSUBSCRIBED\u0027,\n  \u0027CONTACT_UNSUBSCRIBED\u0027:\u0027UNSUBSCRIBED\u0027,\n  \u0027EMAIL_SENT\u0027:          \u0027SENT\u0027,\n  \u0027EMAIL_OPENED\u0027:        \u0027OPENED\u0027,\n  \u0027EMAIL_CLICKED\u0027:       \u0027CLICKED\u0027,\n  \u0027EMAIL_REPLIED\u0027:       \u0027REPLIED\u0027,\n  \u0027EMAIL_BOUNCED\u0027:       \u0027BOUNCED\u0027,\n  \u0027EMAIL_UNSUBSCRIBED\u0027:  \u0027UNSUBSCRIBED\u0027,\n};\n\nconst activitiesResp = $input.first().json;\nconst rawActivities = activitiesResp.activities || [];\n\nlet campaignId = null;\nlet campaignName = null;\ntry {\n  const campaign = $(\u0027Split Out\u0027).item.json;\n  campaignId   = campaign._id   || null;\n  campaignName = campaign.name  || null;\n} catch(e) {}\n\nconst activities = rawActivities.filter(\n  a =\u003e a \u0026\u0026 a._id \u0026\u0026 a.event \u0026\u0026 a.contact \u0026\u0026 a.contact.email\n);\nif (activities.length === 0) return [];\n\nreturn activities.map(a =\u003e {\n  const normalizedEvent = EVENT_ALIASES[a.event] || a.event;\n  return {\n    json: {\n      event:         normalizedEvent,\n      email:         a.contact.email,\n      // event_id identique a celui que le webhook Emelia aurait produit\n      event_id:      a.contact.email + \u0027_\u0027 + normalizedEvent + \u0027_\u0027 + (a.date || \u0027\u0027),\n      date:          a.date,\n      subject:       null,\n      preview:       null,\n      full_reply:    null,\n      campaign_id:   campaignId,\n      campaign_name: campaignName,\n      first_name:    a.contact.firstName || null,\n      last_name:     a.contact.lastName  || null,\n      step:          a.step !== undefined ? a.step : null,\n      contact_id:    a.contact._id || null,\n    }\n  };\n});"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             208,
+                                                             -160
+                                                         ],
+                                            "id":  "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                                            "name":  "Normalize Activities"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "method":  "POST",
+                                                               "url":  "http://crm-app:8080/api/webhooks/emelia",
+                                                               "sendHeaders":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "name":  "Content-Type",
+                                                                                                               "value":  "application/json"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "sendBody":  true,
+                                                               "contentType":  "raw",
+                                                               "rawContentType":  "application/json",
+                                                               "body":  "={{ JSON.stringify($json) }}",
+                                                               "options":  {
+
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.2,
+                                            "position":  [
+                                                             416,
+                                                             -160
+                                                         ],
+                                            "id":  "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                                            "name":  "Forward Activities to CRM",
+                                            "retryOnFail":  true,
+                                            "maxTries":  3,
+                                            "waitBetweenTries":  5000
+                                        }
+                                    ],
+                          "connections":  {
+                                              "Emelia Trigger1":  {
+                                                                      "main":  [
+                                                                                   [
+                                                                                       {
+                                                                                           "node":  "Normalize Event",
+                                                                                           "type":  "main",
+                                                                                           "index":  0
+                                                                                       }
+                                                                                   ]
+                                                                               ]
+                                                                  },
+                                              "Emelia Trigger":  {
+                                                                     "main":  [
+                                                                                  [
+                                                                                      {
+                                                                                          "node":  "Normalize Event",
+                                                                                          "type":  "main",
+                                                                                          "index":  0
+                                                                                      }
+                                                                                  ]
+                                                                              ]
+                                                                 },
+                                              "Normalize Event":  {
+                                                                      "main":  [
+                                                                                   [
+                                                                                       {
+                                                                                           "node":  "Forward to CRM",
+                                                                                           "type":  "main",
+                                                                                           "index":  0
+                                                                                       }
+                                                                                   ]
+                                                                               ]
+                                                                  },
+                                              "Schedule Trigger":  {
+                                                                       "main":  [
+                                                                                    [
+                                                                                        {
+                                                                                            "node":  "get_campaignid",
+                                                                                            "type":  "main",
+                                                                                            "index":  0
+                                                                                        }
+                                                                                    ]
+                                                                                ]
+                                                                   },
+                                              "get_campaignid":  {
+                                                                     "main":  [
+                                                                                  [
+                                                                                      {
+                                                                                          "node":  "Split Out",
+                                                                                          "type":  "main",
+                                                                                          "index":  0
+                                                                                      }
+                                                                                  ]
+                                                                              ]
+                                                                 },
+                                              "Split Out":  {
+                                                                "main":  [
+                                                                             [
+                                                                                 {
+                                                                                     "node":  "get_activities",
+                                                                                     "type":  "main",
+                                                                                     "index":  0
+                                                                                 }
+                                                                             ]
+                                                                         ]
+                                                            },
+                                              "get_activities":  {
+                                                                     "main":  [
+                                                                                  [
+                                                                                      {
+                                                                                          "node":  "Normalize Activities",
+                                                                                          "type":  "main",
+                                                                                          "index":  0
+                                                                                      }
+                                                                                  ]
+                                                                              ]
+                                                                 },
+                                              "Normalize Activities":  {
+                                                                           "main":  [
+                                                                                        [
+                                                                                            {
+                                                                                                "node":  "Forward Activities to CRM",
+                                                                                                "type":  "main",
+                                                                                                "index":  0
+                                                                                            }
+                                                                                        ]
+                                                                                    ]
+                                                                       }
+                                          },
+                          "authors":  "Jimmy Gay",
+                          "name":  null,
+                          "description":  null,
+                          "autosaved":  false,
+                          "workflowPublishHistory":  [
+                                                         {
+                                                             "createdAt":  "2026-05-24T14:37:42.584Z",
+                                                             "id":  30,
+                                                             "workflowId":  "q4GXMH5Qzjz9H6AZ",
+                                                             "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+                                                             "event":  "activated",
+                                                             "userId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
+                                                         },
+                                                         {
+                                                             "createdAt":  "2026-05-24T14:38:02.429Z",
+                                                             "id":  32,
+                                                             "workflowId":  "q4GXMH5Qzjz9H6AZ",
+                                                             "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+                                                             "event":  "activated",
+                                                             "userId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
+                                                         },
+                                                         {
+                                                             "createdAt":  "2026-05-24T14:37:42.052Z",
+                                                             "id":  29,
+                                                             "workflowId":  "q4GXMH5Qzjz9H6AZ",
+                                                             "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+                                                             "event":  "deactivated",
+                                                             "userId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
+                                                         },
+                                                         {
+                                                             "createdAt":  "2026-05-24T14:38:01.880Z",
+                                                             "id":  31,
+                                                             "workflowId":  "q4GXMH5Qzjz9H6AZ",
+                                                             "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+                                                             "event":  "deactivated",
+                                                             "userId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
+                                                         }
+                                                     ]
+                      }
+}

@@ -13,10 +13,10 @@ class CustomValueValidator
     public static function validationRules(string $entityType): array
     {
         $fields = CustomFieldRenderer::forEntity($entityType);
-        $rules  = ['custom_values' => ['nullable', 'array']];
+        $rules  = ['custom_values' => ['sometimes', 'nullable', 'array']];
 
         foreach ($fields as $field) {
-            $base = $field->is_required ? ['required'] : ['nullable'];
+            $base = $field->is_required ? ['required'] : ['sometimes', 'nullable'];
 
             $typeRules = match ($field->field_type) {
                 'number'  => ['numeric'],
@@ -55,7 +55,7 @@ class CustomValueValidator
             $result[$key] = match ($field->field_type) {
                 'number'  => (float) $raw,
                 'date'    => date('Y-m-d', strtotime((string) $raw)),
-                'boolean' => (bool) (int) $raw,
+                'boolean' => is_bool($raw) ? $raw : in_array(strtolower((string) $raw), ['1', 'true', 'oui', 'yes', 'on'], true),
                 default   => trim((string) $raw),
             };
         }

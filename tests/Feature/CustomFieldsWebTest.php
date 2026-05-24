@@ -167,4 +167,34 @@ class CustomFieldsWebTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseMissing('custom_fields', ['id' => $field->id]);
     }
+
+    public function test_boolean_custom_value_can_be_updated(): void
+    {
+        $admin = $this->makeAdmin();
+        $field = CustomField::create([
+            'entity_type' => 'contact',
+            'label'       => 'Blacklist',
+            'key'         => 'blacklist',
+            'field_type'  => 'boolean',
+            'is_required' => false,
+            'position'    => 0,
+        ]);
+        Cache::forget('custom_fields.contact');
+
+        $contact = Contact::create([
+            'first_name'    => 'Test',
+            'email'         => 'cfboolean@example.com',
+            'custom_values' => ['blacklist' => true],
+        ]);
+
+        $response = $this->withAuth($admin)->put('/contacts/' . $contact->id, [
+            'first_name'    => 'Test',
+            'custom_values' => ['blacklist' => '0'],
+            '_token'        => 'test',
+        ]);
+
+        $response->assertRedirect();
+        $contact->refresh();
+        $this->assertFalse($contact->custom_values['blacklist'] ?? null);
+    }
 }

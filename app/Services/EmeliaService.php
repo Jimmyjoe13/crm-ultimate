@@ -228,6 +228,61 @@ class EmeliaService
         return $count;
     }
 
+    /**
+     * Retire un contact d'une campagne Emelia via GraphQL.
+     * Les mutations Emelia pour cette opération ne sont pas documentées — on essaie
+     * les noms les plus probables. Retourne true si retiré, false si introuvable/déjà retiré.
+     */
+    public function removeFromCampaign(string $campaignId, string $emeliaContactId): bool
+    {
+        // Essai 1 : removeContactFromCampaignHook (symétrique à addContactToCampaignHook)
+        $mutations = [
+            'mutation($id: ID!, $cid: ID!) { removeContactFromCampaignHook(id: $cid, contactId: $id) }',
+            'mutation($id: ID!, $cid: ID!) { unsubscribeContact(contactId: $id, campaignId: $cid) }',
+            'mutation($id: ID!, $cid: ID!) { pauseContact(contactId: $id, campaignId: $cid) }',
+        ];
+
+        foreach ($mutations as $gql) {
+            try {
+                $response = $this->http()
+                    ->timeout(15)
+                    ->post($this->url('/graphql'), [
+                        'query'     => $gql,
+                        'variables' => ['id' => $emeliaContactId, 'cid' => $campaignId],
+                    ]);
+
+                $json = $response->json();
+
+                // Si pas d'erreur GraphQL → mutation a réussi
+                if (empty($json['errors'])) {
+                    return true;
+                }
+
+                $errMsg = $json['errors'][0]['message'] ?? '';
+
+                // Mutation existante mais contact déjà retiré
+                if (str_contains($errMsg, 'not found') || str_contains($errMsg, 'not in campaign')) {
+                    return false;
+                }
+
+                // Mutation inconnue → on essaie la suivante
+                if (str_contains($errMsg, 'Cannot query field') || str_contains($errMsg, 'did you mean')) {
+                    continue;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        // Aucune mutation n'a fonctionné — on loggue mais on ne lève pas d'exception
+        // Le contact reste blacklisté côté CRM ; Emelia continuera sa séquence jusqu'à expiration
+        \Illuminate\Support\Facades\Log::warning(
+            "EmeliaService::removeFromCampaign: no working mutation found for contact {$emeliaContactId} in campaign {$campaignId}"
+        );
+
+        return false;
+    }
+
     public function addContactToCampaign(string $campaignId, array $payload): array
     {
         $response = $this->http()

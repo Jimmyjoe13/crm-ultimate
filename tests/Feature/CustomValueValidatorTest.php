@@ -101,6 +101,24 @@ class CustomValueValidatorTest extends TestCase
         $this->assertFalse($result['vip']);
     }
 
+    public function test_cast_boolean_legacy_oui_to_true(): void
+    {
+        $this->makeField(['entity_type' => 'contact', 'key' => 'vip', 'label' => 'VIP', 'field_type' => 'boolean']);
+
+        $result = CustomValueValidator::cast('contact', ['vip' => 'oui']);
+
+        $this->assertTrue($result['vip']);
+    }
+
+    public function test_cast_boolean_legacy_non_to_false(): void
+    {
+        $this->makeField(['entity_type' => 'contact', 'key' => 'vip', 'label' => 'VIP', 'field_type' => 'boolean']);
+
+        $result = CustomValueValidator::cast('contact', ['vip' => 'non']);
+
+        $this->assertFalse($result['vip']);
+    }
+
     // ── cast: text ───────────────────────────────────────────────────────────
 
     public function test_cast_text_trims_whitespace(): void
@@ -248,5 +266,61 @@ class CustomValueValidatorTest extends TestCase
         ]);
 
         $this->assertEquals(250.0, $company->fresh()->custom_values['employees']);
+    }
+
+    public function test_boolean_true_persists_on_contact_update(): void
+    {
+        $admin = $this->makeAdmin();
+        $this->makeField(['entity_type' => 'contact', 'key' => 'blacklist', 'label' => 'Blacklist', 'field_type' => 'boolean']);
+
+        $contact = Contact::create(['first_name' => 'Test', 'email' => 'bl@test.com']);
+
+        $this->withAuth($admin)->put('/contacts/' . $contact->id, [
+            'first_name'    => 'Test',
+            'custom_values' => ['blacklist' => '1'],
+            '_token'        => 'test',
+        ]);
+
+        $this->assertTrue($contact->fresh()->custom_values['blacklist']);
+    }
+
+    public function test_boolean_false_persists_on_contact_update(): void
+    {
+        $admin = $this->makeAdmin();
+        $this->makeField(['entity_type' => 'contact', 'key' => 'blacklist', 'label' => 'Blacklist', 'field_type' => 'boolean']);
+
+        $contact = Contact::create([
+            'first_name'    => 'Test',
+            'email'         => 'bl2@test.com',
+            'custom_values' => ['blacklist' => true],
+        ]);
+
+        $this->withAuth($admin)->put('/contacts/' . $contact->id, [
+            'first_name'    => 'Test',
+            'custom_values' => ['blacklist' => '0'],
+            '_token'        => 'test',
+        ]);
+
+        $this->assertFalse($contact->fresh()->custom_values['blacklist']);
+    }
+
+    public function test_partial_update_preserves_existing_custom_values(): void
+    {
+        $admin = $this->makeAdmin();
+        $this->makeField(['entity_type' => 'contact', 'key' => 'blacklist', 'label' => 'Blacklist', 'field_type' => 'boolean']);
+
+        $contact = Contact::create([
+            'first_name'    => 'Test',
+            'email'         => 'bl3@test.com',
+            'custom_values' => ['blacklist' => true],
+        ]);
+
+        // Mise à jour partielle sans custom_values (ex: dropdown lifecycle_stage)
+        $this->withAuth($admin)->put('/contacts/' . $contact->id, [
+            'lifecycle_stage' => 'customer',
+            '_token'          => 'test',
+        ]);
+
+        $this->assertTrue($contact->fresh()->custom_values['blacklist']);
     }
 }

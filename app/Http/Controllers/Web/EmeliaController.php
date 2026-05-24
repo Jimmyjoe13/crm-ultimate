@@ -226,6 +226,15 @@ class EmeliaController extends Controller
             return response()->json(['error' => 'Au moins une campagne est requise.'], 422);
         }
 
+        // Bloquer les contacts blacklistés
+        if ($contact->blacklisted_at !== null) {
+            $msg = 'Ce contact est blacklisté — il ne peut pas être ajouté à une campagne Emelia.';
+            if ($request->expectsJson()) {
+                return response()->json(['error' => $msg], 422);
+            }
+            return back()->with('flash_toast', ['type' => 'error', 'message' => $msg]);
+        }
+
         // Lister les campagnes Emelia pour résoudre les noms
         try {
             $raw = $emelia->listCampaigns();

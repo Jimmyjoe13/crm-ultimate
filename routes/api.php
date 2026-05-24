@@ -19,11 +19,14 @@ use App\Http\Controllers\Api\SegmentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Webhook\EmeliaWebhookController;
+use App\Http\Controllers\Webhook\EmeliaIntentWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Webhooks (sans JWT, sans CSRF) ──────────────────────────────────────────
 Route::post('/webhooks/emelia', [EmeliaWebhookController::class, 'handle'])
     ->name('webhooks.emelia');
+Route::post('/webhooks/emelia-intent', [EmeliaIntentWebhookController::class, 'handle'])
+    ->name('webhooks.emelia-intent');
 
 Route::prefix('v1')->name('api.')->group(function (): void {
     Route::get('/', [InfoController::class, 'index']);

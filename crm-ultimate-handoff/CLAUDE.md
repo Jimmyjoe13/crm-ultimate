@@ -1,6 +1,8 @@
 # CRM Ultimate — Instructions Claude Code
 
-> **Ce fichier est ta source de vérité.** Lis-le en entier avant de toucher au code.
+> **IMPORTANT — Règles de cohabitation :** Lis d'abord [`collaboration.md`](../collaboration.md) à la racine du projet. Ce fichier définit la séparation stricte des responsabilités entre Gemini (vues) et Claude Code (backend PHP). Ne dépasse pas ton périmètre.
+
+> **Ce fichier est ta source de vérité UI.** Lis-le en entier avant de toucher aux vues.
 
 Tu travailles sur le frontend de **CRM Ultimate**, un CRM personnel/freelance. Le backend Laravel existe déjà — tu construis l'UI par-dessus selon le design fourni dans ce dossier.
 

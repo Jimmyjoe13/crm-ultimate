@@ -105,6 +105,14 @@ class ContactController extends Controller
 
     public function update(Request $request, Contact $contact)
     {
+        \Log::info('[Contact.update] input', [
+            'contact_id'    => $contact->id,
+            'raw_input'     => $request->except('_token', '_method', 'password'),
+            'has_cv'        => $request->has('custom_values'),
+            'cv_input'      => $request->input('custom_values'),
+            'existing_cv'   => $contact->custom_values,
+        ]);
+
         $data = $request->validate(array_merge([
             'first_name'      => ['sometimes', 'required', 'string', 'max:255'],
             'last_name'       => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -115,16 +123,26 @@ class ContactController extends Controller
             'lead_status'     => ['sometimes', 'nullable', 'in:new,open,in_progress,connected,unqualified,bad_fit'],
         ], CustomValueValidator::validationRules('contact')));
 
-        if ($request->has('custom_values')) {
+        \Log::info('[Contact.update] after validate', [
+            'contact_id'      => $contact->id,
+            'data_keys'       => array_keys($data),
+            'cv_in_data'      => array_key_exists('custom_values', $data),
+            'validated_cv'    => $data['custom_values'] ?? 'NOT_PRESENT',
+        ]);
+
+        if (array_key_exists('custom_values', $data)) {
+            $cast = CustomValueValidator::cast('contact', is_array($data['custom_values']) ? $data['custom_values'] : []);
+            \Log::info('[Contact.update] cast result', ['contact_id' => $contact->id, 'cast' => $cast]);
             $data['custom_values'] = array_merge(
                 $contact->custom_values ?? [],
-                CustomValueValidator::cast('contact', $data['custom_values'] ?? [])
+                $cast
             );
-        } else {
-            unset($data['custom_values']);
+            \Log::info('[Contact.update] final cv', ['contact_id' => $contact->id, 'final_cv' => $data['custom_values']]);
         }
 
         $contact->update($data);
+
+        \Log::info('[Contact.update] saved', ['contact_id' => $contact->id, 'fresh_cv' => $contact->fresh()->custom_values]);
 
         return redirect('/contacts/' . $contact->id)->with('flash_toast', [
             'message' => 'Contact mis à jour.',

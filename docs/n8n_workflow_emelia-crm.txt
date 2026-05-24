@@ -56,7 +56,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst email = d.contact?.email || d.email || '';\nconst event = d.event || d.type || '';\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || '';\n\n// Mapping nom campagne -> UUID\nconst campaignMap = {\n  'conseiller-consultant-acquisition': '69ebb7281762b60a8169f625',\n  'acquisition-agence-marketing':      '69eb1cca5033df0a8663a88e',\n};\nconst campaignName = d.campaign || '';\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\n// event_id deterministe pour idempotence cote CRM\nconst eventId = (email && event && date)\n  ? (email + '_' + event + '_' + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  full_reply:    d.body || d.content || d.text || d.replyContent || d.replyText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
+        "jsCode": "const d = $input.first().json;\nconst email = d.contact?.email || d.email || '';\nconst event = d.event || d.type || '';\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || '';\n\n// Mapping nom campagne -> UUID\nconst campaignMap = {\n  'conseiller-consultant-acquisition': '69ebb7281762b60a8169f625',\n  'acquisition-agence-marketing':      '69eb1cca5033df0a8663a88e',\n};\nconst campaignName = d.campaign || '';\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\n// event_id deterministe pour idempotence cote CRM\nconst eventId = (email && event && date)\n  ? (email + '_' + event + '_' + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -70,7 +70,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://crm.nana-intelligence.fr/api/webhooks/emelia",
+        "url": "http://crm-app:8080/api/webhooks/emelia",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -93,7 +93,10 @@
         -512
       ],
       "id": "d2e3f4a5-b6c7-8901-defa-123456789012",
-      "name": "Forward to CRM"
+      "name": "Forward to CRM",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     }
   ],
   "connections": {
@@ -131,48 +134,7 @@
       ]
     }
   },
-  "pinData": {
-    "Emelia Trigger": [
-      {
-        "event": "OPENED",
-        "campaign": "conseiller-consultant-acquisition",
-        "sender": "jimmy@first-lead.fr",
-        "contact": {
-          "title": "Directrice",
-          "company": "OpenCommunities Consulting",
-          "sector": "Services et conseil aux entreprises",
-          "city": "Paris",
-          "companyWebsite": "",
-          "domainemelia": "opencommunities-consulting.fr",
-          "firstName": "Marion",
-          "lastName": "Hajdenberg",
-          "email": "mhajdenberg@opencommunities-consulting.fr"
-        },
-        "date": "2026-05-24T05:52:57.858Z",
-        "step": 0
-      }
-    ],
-    "Normalize Event": [
-      {
-        "event": "OPENED",
-        "email": "mhajdenberg@opencommunities-consulting.fr",
-        "event_id": "mhajdenberg@opencommunities-consulting.fr_OPENED_2026-05-24T05:52:57.858Z",
-        "date": "2026-05-24T05:52:57.858Z",
-        "subject": null,
-        "preview": null,
-        "campaign_id": "69ebb7281762b60a8169f625",
-        "campaign_name": "conseiller-consultant-acquisition",
-        "first_name": "Marion",
-        "last_name": "Hajdenberg",
-        "step": null
-      }
-    ],
-    "Forward to CRM": [
-      {
-        "status": "duplicate"
-      }
-    ]
-  },
+  "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "9ad06fe87d18e2a86240b98a36512cd9e6db26e7d5f188d7c9968c835dfe9f0c"

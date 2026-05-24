@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\Contact;
+use App\Models\Deal;
+use App\Models\Pipeline;
 use App\Models\Segment;
 use App\Models\User;
 use App\Services\JwtService;
@@ -180,5 +183,89 @@ class WebSegmentControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonStructure(['count', 'sample']);
         $response->assertJsonPath('count', 1);
+    }
+
+    public function test_export_contact_segment_returns_csv(): void
+    {
+        $admin = $this->createAdmin();
+
+        Contact::create([
+            'first_name' => 'Export',
+            'last_name'  => 'Test',
+            'email'      => 'export@test.com',
+            'phone'      => '0600000000',
+            'owner_id'   => $admin->id,
+        ]);
+
+        $segment = Segment::create([
+            'name'        => 'Export contacts',
+            'entity_type' => 'contact',
+            'rules'       => ['op' => 'AND', 'rules' => [
+                ['field' => 'email', 'operator' => 'is_not_null', 'value' => null],
+            ]],
+            'created_by'  => $admin->id,
+        ]);
+
+        $response = $this->withAuth($admin)->get('/segments/' . $segment->id . '/export');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $this->assertStringContainsString('export@test.com', $response->streamedContent());
+    }
+
+    public function test_export_company_segment_returns_csv(): void
+    {
+        $admin = $this->createAdmin();
+
+        Company::create([
+            'name'     => 'Acme Corp',
+            'domain'   => 'acme.com',
+            'industry' => 'Tech',
+            'owner_id' => $admin->id,
+        ]);
+
+        $segment = Segment::create([
+            'name'        => 'All companies',
+            'entity_type' => 'company',
+            'rules'       => ['op' => 'AND', 'rules' => []],
+            'created_by'  => $admin->id,
+        ]);
+
+        $response = $this->withAuth($admin)->get('/segments/' . $segment->id . '/export');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $this->assertStringContainsString('Acme Corp', $response->streamedContent());
+    }
+
+    public function test_export_deal_segment_returns_csv(): void
+    {
+        $admin    = $this->createAdmin();
+        $pipeline = Pipeline::create(['name' => 'Test Pipeline', 'is_default' => true]);
+        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+
+        Deal::create([
+            'name'              => 'Big Deal',
+            'amount'            => 5000,
+            'status'            => 'open',
+            'pipeline_id'       => $pipeline->id,
+            'pipeline_stage_id' => $stage->id,
+            'owner_id'          => $admin->id,
+        ]);
+
+        $segment = Segment::create([
+            'name'        => 'Open deals',
+            'entity_type' => 'deal',
+            'rules'       => ['op' => 'AND', 'rules' => [
+                ['field' => 'status', 'operator' => 'eq', 'value' => 'open'],
+            ]],
+            'created_by'  => $admin->id,
+        ]);
+
+        $response = $this->withAuth($admin)->get('/segments/' . $segment->id . '/export');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $this->assertStringContainsString('Big Deal', $response->streamedContent());
     }
 }

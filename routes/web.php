@@ -15,7 +15,9 @@ use App\Http\Controllers\Web\SegmentController;
 use App\Http\Controllers\Web\TrashController;
 use App\Http\Controllers\Web\Settings\StageController;
 use App\Http\Controllers\Web\Settings\CustomFieldController;
+use App\Http\Controllers\Web\Settings\ConsoleController;
 use App\Http\Controllers\Web\NotificationController;
+use App\Http\Controllers\Web\ReportController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Auth (public) ───────────────────────────────────────────────────────────
@@ -69,6 +71,7 @@ Route::middleware('web.auth')->group(function () {
         Route::post('/web/ai/company/{id}/summarize',   [AiController::class, 'companyInsight']);
         Route::post('/web/ai/dashboard/suggestions',    [AiController::class, 'dashboardSuggestions']);
         Route::post('/web/ai/draft-email',              [AiController::class, 'draftEmail']);
+        Route::post('/web/ai/report-insights',          [AiController::class, 'reportInsights'])->middleware('role:admin,manager');
     });
 
     Route::get('/search',       [SearchController::class, 'index'])->name('search');
@@ -91,6 +94,8 @@ Route::middleware('web.auth')->group(function () {
 
     // ─── Admin + Manager uniquement ──────────────────────────────────────────
     Route::middleware('role:admin,manager')->group(function () {
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
         Route::post('/contacts/{contact}/emelia', [EmeliaController::class, 'addContact'])->name('contacts.emelia.add');
         Route::delete('/contacts/{contact}',  [ContactController::class, 'destroy']);
         Route::post('/contacts/bulk-destroy', [ContactController::class, 'bulkDestroy']);
@@ -116,6 +121,13 @@ Route::middleware('web.auth')->group(function () {
         Route::delete('/settings/fields/{field}', [CustomFieldController::class, 'destroy']);
 
         Route::post('/settings/emelia/sync', [EmeliaController::class, 'syncNow'])->name('emelia.sync-now');
+
+        // Console admin — admin uniquement
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/settings/console',          [ConsoleController::class, 'index'])->name('console.index');
+            Route::post('/settings/console/run',     [ConsoleController::class, 'run'])->name('console.run');
+            Route::get('/settings/console/run/{run}',[ConsoleController::class, 'status'])->name('console.status');
+        });
         Route::post('/notifications/emelia-replies/seen', [NotificationController::class, 'markEmeliaRepliesSeen'])->name('notifications.emelia-replies.seen');
 
         Route::get('/trash', [TrashController::class, 'index'])->name('trash.index');

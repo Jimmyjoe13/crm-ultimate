@@ -22,6 +22,7 @@ class Deal extends Model
         $flush = function () {
             Cache::tags(['deals.index'])->flush();
             Cache::forget('dashboard.data');
+            Cache::forget('reports.data');
         };
         static::saved($flush);
         static::deleted($flush);

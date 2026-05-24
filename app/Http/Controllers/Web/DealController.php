@@ -158,13 +158,11 @@ class DealController extends Controller
         $stage = PipelineStage::findOrFail($data['pipeline_stage_id']);
         $data['pipeline_id']    = $stage->pipeline_id;
         
-        if ($request->has('custom_values')) {
+        if (array_key_exists('custom_values', $data)) {
             $data['custom_values'] = array_merge(
                 $deal->custom_values ?? [],
-                CustomValueValidator::cast('deal', $data['custom_values'] ?? [])
+                CustomValueValidator::cast('deal', is_array($data['custom_values']) ? $data['custom_values'] : [])
             );
-        } else {
-            unset($data['custom_values']);
         }
 
         $deal->update($data);

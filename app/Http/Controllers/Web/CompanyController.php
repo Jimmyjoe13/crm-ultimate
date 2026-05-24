@@ -99,13 +99,11 @@ class CompanyController extends Controller
             'country'  => ['nullable', 'string', 'max:255'],
         ], CustomValueValidator::validationRules('company')));
 
-        if ($request->has('custom_values')) {
+        if (array_key_exists('custom_values', $data)) {
             $data['custom_values'] = array_merge(
                 $company->custom_values ?? [],
-                CustomValueValidator::cast('company', $data['custom_values'] ?? [])
+                CustomValueValidator::cast('company', is_array($data['custom_values']) ? $data['custom_values'] : [])
             );
-        } else {
-            unset($data['custom_values']);
         }
 
         $company->update($data);

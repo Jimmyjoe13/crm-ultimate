@@ -37,6 +37,8 @@ class Contact extends Model
         'job_title',
         'lifecycle_stage',
         'lead_status',
+        'blacklisted_at',
+        'blacklist_reason',
         'owner_id',
         'custom_values',
         'ai_score',
@@ -47,7 +49,30 @@ class Contact extends Model
     {
         return [
             'custom_values' => 'array',
+            'blacklisted_at' => 'datetime',
         ];
+    }
+
+    public function scopeBlacklisted($query): mixed
+    {
+        return $query->whereNotNull('blacklisted_at');
+    }
+
+    public function scopeContactable($query): mixed
+    {
+        return $query->whereNull('blacklisted_at');
+    }
+
+    /**
+     * Marque le contact en blacklist. Idempotent : retourne false si déjà blacklisté.
+     */
+    public function blacklist(string $reason): bool
+    {
+        if ($this->blacklisted_at !== null) {
+            return false;
+        }
+        $this->forceFill(['blacklisted_at' => now(), 'blacklist_reason' => $reason])->save();
+        return true;
     }
 
     public function companies(): BelongsToMany

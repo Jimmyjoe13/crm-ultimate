@@ -4,7 +4,40 @@
 
 Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pages de détails (Contacts, Sociétés, Deals) en mettant en place un layout modernisé, équilibré et à trois colonnes, inspiré des meilleures pratiques des CRM modernes (type HubSpot).
 
-**v3.5 (Cette Session - Courante) :**
+**v3.8 (Cette Session - Courante) — Terminé :**
+
+- **Lien "Console Admin" dans la sidebar** : Ajout du lien vers `route('console.index')` dans la section Settings de `app-shell.blade.php`, visible uniquement pour les administrateurs via `@if(auth()->user()?->isAdmin())`. L'icône de terminal (`>_`) est parfaitement intégrée et alignée avec les autres options Settings.
+- **Export CSV dans le module Segments** : Ajustement de la classe du bouton d'export dans la toolbar de `segments/show.blade.php` pour utiliser la classe `.btn` (style bouton secondaire blanc standard du CRM) au lieu de `btn sm ghost`.
+- **Rapports & Insights IA interactifs** :
+  - Modification de la carte d'insights IA (`reports/index.blade.php`) pour s'initialiser dans un état d'attente (non chargé automatiquement).
+  - Ajout d'un bouton d'action "**Analyser avec l'IA**" déclenchant l'appel `POST` au clic.
+  - Remplacement de la structure d'affichage des analyses par des listes à puces `<ul>` / `<li>` distinctes par colonne.
+  - Gestion visuelle du cache en ajoutant un badge "**En cache**" (avec la classe `.chip.accent` orange doux) quand `cached` est égal à `true`.
+  - Déploiement en production et validation fonctionnelle par test E2E.
+
+**v3.7 :**
+
+- **Export CSV dans le module Segments** : Utilisation du helper de route Laravel `{{ route('segments.export', $segment) }}` sur le bouton d'export dans la barre d'outils de `segments/show.blade.php` pour remplacer l'URL codée en dur.
+- **Tableau de bord d'insights IA** :
+  - Création d'un module d'analyses prédictives en bas de la page `/reports` (restreint aux rôles admin/manager via vérification Blade).
+  - Implémentation asynchrone avec Alpine.js effectuant un appel `POST` vers `/web/ai/report-insights` avec transmission du token CSRF.
+  - Gestion des états : animation de chargement via un spinner Tailwind, résilience réseau (message d'erreur et bouton de réessai) et mention du statut de cache de l'API.
+  - Design premium en 3 colonnes segmentées : Alertes (risques en rouge), Analyses (tendances en bleu/gris) et Recommandations (actions à mener en vert).
+  - Déploiement en production sur le VPS et validation visuelle complète via subagent de navigation.
+
+**v3.6 :**
+
+- **Lien Rapports dans la sidebar** : Ajout d'un bouton d'accès direct "/reports" dans la barre latérale (`app-shell.blade.php`), accessible uniquement aux profils admin et manager via une condition Blade et une icône `chart-bar` SVG épurée.
+- **Refonte UI de la page `/reports`** : 
+  - Restructuration moderne des cartes analytiques avec transitions fluides (`transition-all`) et ombrages au survol.
+  - Résolution d'un bug structurel : suppression des directives `@push('scripts')` car les layouts parents ne possédaient pas la directive correspondante `@stack('scripts')`. Les scripts et le chargement de Chart.js sont désormais inclus proprement en ligne dans le slot.
+  - Dynamisation esthétique de Chart.js en récupérant les variables CSS de thème (`--accent`, `--ok`, `--text2`, etc.) et application d'une typographie monospace soignée.
+  - Amélioration de l'entonnoir (badges de taux de conversion, barres de progression) et du classement des commerciaux (podium Or/Argent/Bronze).
+  - Déploiement réussi sur le VPS de production et validation E2E via subagent de navigation (chargement 100% fonctionnel, code HTTP 200).
+
+> **Important** : ne pas toucher à `ReportController.php`, `routes/web.php`, `Deal.php` — périmètre Claude Code (respecté).
+
+**v3.5 (Session précédente) :**
 
 - **Micro-animations Interactives sur les Cartes KPI du Dashboard :**
   - Ajout d'effets de survol interactifs et subtils sur les 6 cartes principales du Dashboard.
@@ -90,17 +123,38 @@ Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pa
 
 ### Dernière action effectuée
 
-Déploiement et activation réussis de la version **v3.5** sur le VPS de production (`51.38.99.226`). Les fichiers locaux modifiés ont été poussés sur Git et transférés sur le serveur, les images Docker reconstruites, et le cache Laravel rechargé.
+**Claude Code — v3.1 Rapports (2026-05-24) :** Backend livré et déployé en prod. Fichiers créés/modifiés :
+- `app/Http/Controllers/Web/ReportController.php` (nouveau)
+- `routes/web.php` (route `/reports` ajoutée)
+- `app/Models/Deal.php` (invalidation cache `reports.data`)
+- `resources/views/pages/reports/index.blade.php` (vue structurelle — **à enrichir par Gemini**)
+
+**Gemini — v3.5 (session précédente) :** Déploiement et activation réussis sur le VPS de production (`51.38.99.226`). Les fichiers locaux modifiés ont été poussés sur Git et transférés sur le serveur, les images Docker reconstruites, et le cache Laravel rechargé.
 
 ---
 
-## 3. Fichiers concernés (v3.5)
+## 3. Fichiers concernés (v3.5 + v3.1 Claude Code)
 
 ### Logique & Vues
 
 | Fichier                                         | Rôle                                                                              |
 | ----------------------------------------------- | --------------------------------------------------------------------------------- |
 | `resources/views/pages/dashboard.blade.php`     | Ajout des classes de transition, de survol et de groupes interactifs sur les 6 KPI. |
+
+### Fichiers v3.1 (Claude Code — backend, ne pas modifier)
+
+| Fichier | Rôle |
+|---------|------|
+| `app/Http/Controllers/Web/ReportController.php` | 4 datasets rapports — cache Redis 30 min |
+| `routes/web.php` | Route `GET /reports` sous `role:admin,manager` |
+| `app/Models/Deal.php` | Invalidation `Cache::forget('reports.data')` dans `boot()` |
+
+### Fichiers v3.1 (périmètre Gemini — à modifier)
+
+| Fichier | Action requise |
+|---------|----------------|
+| `resources/views/pages/reports/index.blade.php` | **Enrichir le design** — structure HTML + Chart.js déjà en place, améliorer la présentation visuelle |
+| `resources/views/components/app-shell.blade.php` | **Ajouter le lien "Rapports"** dans la sidebar (visible admin/manager, actif sur `active="reports"`, icône chart-bar) |
 
 ---
 
@@ -120,6 +174,12 @@ Déploiement et activation réussis de la version **v3.5** sur le VPS de product
 ---
 
 ## 6. Backlog de la prochaine session
+
+### Priorité immédiate
+
+- Aucune tâche immédiate en attente (v3.6 entièrement validée et déployée).
+
+### Backlog long terme
 
 - **Optimisation de la performance de rendu de la Timeline**
   - *Description* : Optimiser le chargement différé et la pagination à l'infini pour les longs fils d'activités des fiches contacts et entreprises.

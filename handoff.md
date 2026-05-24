@@ -27,6 +27,10 @@ et intégration d'outils tiers (Emelia emailing).
 **v2.8 (B2) :** Rédaction email IA — `AiInsightService::draftEmail(?contactId, ?dealId, intent)` → prompt contextualisé → JSON `{subject, body}`. Endpoint `POST /web/ai/draft-email`. Composant `<x-email-draft-modal>` Alpine : sélecteur d'intent (5 presets), génération, champs éditables subject+body, copie individuelle + "Tout copier". Bouton "Rédiger un email" dans la fiche contact (barre d'action) et la fiche deal (panneau IA).
 **v2.8 (A3) :** Préchargement cache IA — commande `ai:precompute {--limit=50} {--contacts} {--dry-run}` : pré-calcule en nuit `summarizeDeal + scoreDeal + nextActionDeal` pour tous les deals ouverts (order by amount DESC), optionnellement `summarizeContact` pour contacts Emelia. Scheduler `dailyAt('03:00')` avant le score-contacts (04:00). Tests unitaires écrits (`tests/Feature/AiPrecomputeTest.php`, 9 tests). **Validé T1-T4 en prod (2026-05-23)** : commande listée, 3 options, dry-run exit 0, schedule 0 3 * * * confirmé.
 **v2.8 (B3) :** Analyse sentiment replies Emelia — `AiInsightService::analyzeSentiment(text)` → LLM → JSON `{sentiment, score, summary}`. Job `AnalyzeReplySentiment` (ShouldQueue, tries=2) dispatché automatiquement par `EmeliaEventDispatcher` sur chaque `TYPE_EMAIL_REPLIED`. Icône sentiment (😊/😐/😟) dans `activity-timeline.blade.php` sur les activités `email_replied` ayant `metadata.sentiment`. Tests unitaires `tests/Feature/AnalyzeReplySentimentTest.php` (8 tests). **Validé T1-T6 prod (2026-05-23)**.
+**v3.1 :** Page Rapports & Analytics — `ReportController` (4 datasets : CA mensuel 12 mois, entonnoir conversion, classement commerciaux, activité hebdo 8 semaines), cache Redis 30 min, route `GET /reports` admin/manager, invalidation `Deal::boot()`, vue Blade structurelle + Chart.js (rendu UI délégué à Gemini). **7/7 tests locaux + 11/11 tests prod PASS. Déployé et validé (2026-05-24).**
+**v3.2 :** Export CSV segments — refonte complète de `SegmentController::export()` : colonnes enrichies (contact : 11 cols + custom fields ; company : 12 cols + custom fields ; deal : 11 cols + custom fields), `chunk(200)` pour éviter les OOM, eager loading partiel par type d'entité, BOM UTF-8, même qualité que `ContactController::export()`. **11/11 tests locaux + 10/10 tests prod PASS. Déployé et validé (2026-05-24).**
+**v3.3 :** IA Rapports — `AiInsightService::analyzeReports()` : analyse les 4 datasets déjà en cache Redis (aucune requête SQL), génère 3-5 insights actionnables `{insights, alerts, recommendations}`, cache 1h `ai:report-insights`. Endpoint `POST /web/ai/report-insights` (admin/manager, throttle existant). **9/9 tests locaux + 10/10 tests prod PASS. Déployé et validé (2026-05-24).**
+**v3.4 :** Console Artisan admin — `ConsoleController` (whitelist stricte 5 commandes : emelia-sync, ai-score, ai-precompute, queue-restart, cache-clear), `RunConsoleCommandJob` (async/sync selon commande, timeout 600s), table `console_runs` (log complet : user, commande, output, exit_code, durée), routes admin-only, Vue Alpine (polling 2s, terminal output, historique). **9/9 tests locaux + 10/10 tests prod PASS. Déployé et validé (2026-05-24).**
 
 ---
 
@@ -165,9 +169,19 @@ et intégration d'outils tiers (Emelia emailing).
 
 ### Dernière action effectuée
 
-**v2.9 — Fix webhook n8n (2026-05-23)** : Nœud "Normalize Event" du workflow `q4GXMH5Qzjz9H6AZ` corrigé via PUT API n8n. `d.contact?.email`, mapping campagne nom→UUID, `event_id` déterministe par concaténation. Idempotence testée et confirmée en prod. Webhook Emelia → n8n → CRM opérationnel.
+**v3.1 — Page Rapports & Analytics (2026-05-24)** — livré, déployé et validé **11/11 tests PASS** en prod :
+- `ReportController` : 4 datasets (CA mensuel 12 mois, entonnoir conversion, classement commerciaux, activité hebdo 8 semaines), cache Redis 30 min
+- Route `GET /reports` sous `middleware('role:admin,manager')` dans `routes/web.php`
+- `Deal::boot()` : invalidation `Cache::forget('reports.data')` ajoutée
+- Vue `resources/views/pages/reports/index.blade.php` : structure Blade + Chart.js (lien sidebar délégué à Gemini)
+- `tests/Feature/ReportControllerTest.php` : T1 admin 200, T1b manager 200, T1c commercial 403, T2 vue OK, T3 entonnoir valide, T4 cache peuplé, T5 invalidation Deal
 
-**Bug prod résolu (2026-05-23)** : 500 sur toutes les pages après redéploiement — `Vite manifest not found`. Cause : `public/build/` copié avec permissions `drwx------` (uid 1001) → PHP-FPM (`www-data`) ne pouvait pas entrer le répertoire. Fix permanent : `chmod -R 755 /var/www/html/public/build` ajouté au `CMD` de `Dockerfile.prod` + rebuild complet → permissions `www-data:www-data drwxr-xr-x` confirmées. Site opérationnel HTTP 200.
+**v3.0 — Optimisations performances backend (2026-05-24)** — 7 lots livrés, déployés et validés **28/28 tests PASS** en prod :
+- **P0** : Backup pg_dump quotidien (`scripts/backup_db.sh` + cron 3h, `/opt/backups/crm/`, rotation 7j, premier backup 4.6 MB ✓)
+- **P1** : 6 indexes DB (`contacts.first_name/last_name/ai_score`, `pipeline_stages.is_won/is_lost`, composite `activities(subject_type,subject_id)`) + index GIN trigram PostgreSQL sur contacts
+- **P1** : `DashboardController` : cache Redis 5 min + N+1 supprimé (1 requête openDeals groupée PHP) + `Deal::boot()` invalide `dashboard.data`
+- **P2** : `DealController` : 4 helpers cachés `activeStages/allStages/wonStage/lostStage` (1h/24h) + `PipelineStage::boot()` invalidation + dropdown contacts/companies cachés (60s)
+- **P2** : `ProcessCsvImport` : `loadExistingKeys()` (toute la table) → `buildBatchLookup()` ciblé par chunk + `$seenKeys` pour dédup intra-run
 
 ---
 
@@ -525,6 +539,7 @@ Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête)
 
 - ✅ **Deal → Company auto-link** (corrigé v2.5, déployé v2.6) : `DealController::attachContact()` n'auto-associait pas la company du contact.
 - ✅ **500 Vite manifest permissions** (résolu 2026-05-23) : `chmod -R 755 /var/www/html/public/build` ajouté au `CMD` de `Dockerfile.prod`.
+- ✅ **Webhook Emelia race condition** (corrigé v3.4+, déployé 2026-05-24) : `EmeliaWebhookController::attach()` levait `UniqueConstraintViolationException` quand un webhook Emelia arrivait juste après une sync — remplacé par try/catch + `updateExistingPivot()`.
 
 ### Features livrées (v2.6–v2.7)
 
@@ -553,6 +568,85 @@ Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête)
 - **Sélection globale companies/deals** : même pattern que contacts (toolbar "Tout sélectionner")
 - ✅ **Webhook Emelia via n8n** : Livré 2026-05-23 — voir §9 ci-dessous.
 - **Optimisations performances backend v3.0** : 7 lots identifiés et documentés — **voir §11**
+
+---
+
+### Roadmap v3.2+ — Nouvelles fonctionnalités (prochaines sessions)
+
+#### ✅ v3.2 — Export CSV des segments (LIVRÉ 2026-05-24)
+
+**Ce qui a été fait :**
+- Refonte complète de `SegmentController::export()` : colonnes enrichies pour les 3 types d'entité, custom fields via `CustomFieldRenderer`, `chunk(200)`, BOM UTF-8
+- 3 nouveaux tests dans `WebSegmentControllerTest` (contact, company, deal) — 11/11 PASS
+- Bouton "Exporter CSV" sur `segments/show.blade.php` (périmètre Gemini, à ajouter)
+
+---
+
+#### ✅ v3.3 — Insights IA dans les Rapports (LIVRÉ 2026-05-24)
+
+**Concept :** Pas une carte IA générique — un endpoint dédié qui analyse les 4 datasets déjà calculés par `ReportController` (aucune requête SQL supplémentaire) et retourne 3-5 insights actionnables.
+
+**Exemples d'insights générés :**
+- *"Taux de conversion en baisse de 8% ce mois — 3 deals sont bloqués en 'Proposition' depuis 14+ jours"*
+- *"Jonathan a 0 deal gagné ce mois, 4 tâches en retard — relance recommandée"*
+- *"CA mai (+23% vs avril) — pic d'activité email_replied semaine du 19/05"*
+
+**Architecture :**
+- Endpoint `POST /web/ai/report-insights` dans `AiController`
+- `AiInsightService::analyzeReports(array $reportData)` : passe les 4 datasets au LLM → JSON `{insights[], alerts[], recommendations[]}`
+- Cache Redis **1h** clé `ai.report_insights` — invalidé sur `Deal::boot()` (déjà câblé)
+- Chargement **async** côté client (Alpine fetch au montage, spinner pendant le chargement) pour ne pas bloquer l'affichage des graphiques
+
+**Fichiers livrés :**
+- `app/Services/AiInsightService.php` : méthode `analyzeReports(array $data, bool $fresh)` ✅
+- `app/Http/Controllers/Web/AiController.php` : endpoint `reportInsights()` ✅
+- `routes/web.php` : `POST /web/ai/report-insights` sous `role:admin,manager` ✅
+- `resources/views/pages/reports/index.blade.php` : section insights async (Gemini pour le rendu)
+- 2 nouveaux tests dans `ReportControllerTest` (T6 admin 200, T7 commercial 403) — 9/9 PASS ✅
+
+---
+
+#### v3.4 — Console Artisan Admin (PRIORITÉ 3 — ~3h)
+
+**Concept :** Interface admin dans les Settings permettant d'exécuter des commandes Artisan prédéfinies (liste blanche stricte) sans SSH. Utile pour déclencher manuellement un import, une sync Emelia, un score IA, un backup.
+
+**Sécurité :** liste blanche explicite de commandes autorisées — aucune commande libre. Admin uniquement.
+
+**Commandes disponibles (liste blanche) :**
+```php
+const ALLOWED_COMMANDS = [
+    'emelia:sync-all-campaigns --only-linked',
+    'ai:score-contacts --limit=50',
+    'ai:precompute --limit=50',
+    'queue:restart',
+    'cache:clear',
+    // backup via script shell externe (pas artisan)
+];
+```
+
+**Architecture :**
+- `POST /settings/console` → `ConsoleController::run(string $command)` : vérifie whitelist → `Artisan::call()` → capture output → retourne JSON `{output, exit_code}`
+- Streaming de l'output via Server-Sent Events ou polling (option simple : polling 500ms sur un job)
+- Page `settings/console.blade.php` : liste des commandes disponibles en boutons, terminal output stylisé (Gemini pour l'UI)
+- Logs de chaque exécution : qui a lancé quoi, quand, exit code (table `console_logs` ou simple fichier log)
+
+**Fichiers à créer :**
+- `app/Http/Controllers/Web/Settings/ConsoleController.php`
+- `resources/views/pages/settings/console.blade.php` (Gemini pour l'UI)
+- Migration `console_logs` (optionnel)
+- Route `POST /settings/console` sous `role:admin`
+
+> **Note :** Un shell libre ou terminal web n'est **pas** implémenté (risque sécurité prod). Claude Code CLI est **déjà connecté au VPS** — aucune installation requise.
+
+---
+
+### Ordre d'implémentation recommandé
+
+| # | Feature | Effort | Valeur | Session | Statut |
+|---|---------|--------|--------|---------|--------|
+| 1 | Export CSV segments | ~1h | Haute | v3.2 | ✅ LIVRÉ 2026-05-24 |
+| 2 | IA Rapports insights | ~2h | Haute | v3.3 | ✅ LIVRÉ 2026-05-24 |
+| 3 | Console Artisan admin | ~3h | Moyenne | v3.4 | ✅ LIVRÉ 2026-05-24 |
 
 ---
 
@@ -1146,34 +1240,348 @@ find "$BACKUP_DIR" -name "*.sql.gz" -mtime +7 -delete
 | 6 | CSV import batch lookup | 1h | **P2** | Import 50K+ sans OOM | ✅ `ProcessCsvImport` — `processChunk` + `buildBatchLookup` |
 | 5 | GIN trigram index | 20 min | **P3** | Recherche instantanée | ✅ migration `2026_05_24_100002` |
 
-**v3.0 backend performance — LIVRÉ 2026-05-24. Reste : déployer sur VPS + créer le cron backup.**
+**v3.0 backend performance — LIVRÉ 2026-05-24. Déployé et validé prod 28/28 tests PASS.**
 
-### Déploiement v3.0 — à faire sur VPS
+---
 
-```bash
-# 1. SCP fichiers modifiés
-# Périmètre backend (Claude Code) :
-#   app/Http/Controllers/Web/DashboardController.php
-#   app/Http/Controllers/Web/DealController.php
-#   app/Models/Deal.php
-#   app/Models/PipelineStage.php
-#   app/Jobs/ProcessCsvImport.php
-#   database/migrations/2026_05_24_100001_add_performance_indexes.php
-#   database/migrations/2026_05_24_100002_add_gin_trgm_index_contacts.php
+## 12. v3.1 — Page Rapports & Analytics (LIVRÉ 2026-05-24)
 
-# 2. Rebuild + migrate + cache clear
-cd ~/crm-ultimate
-docker compose -f docker-compose.prod.yml build app queue
-docker compose -f docker-compose.prod.yml up -d app queue
-docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
-docker compose -f docker-compose.prod.yml exec -T app php artisan config:clear
-docker compose -f docker-compose.prod.yml exec -T app php artisan view:clear
-docker compose -f docker-compose.prod.yml exec -T app php artisan cache:clear
-docker compose -f docker-compose.prod.yml exec -T app php artisan route:cache
+> Objectif : donner aux managers une vue consolidée des performances commerciales à partir des données déjà présentes en base (deals, contacts, activités, Emelia).
 
-# 3. Script backup + cron
-mkdir -p /home/jimmy/scripts /home/jimmy/logs
-# SCP scripts/backup_db.sh → /home/jimmy/scripts/backup_db.sh
-chmod +x /home/jimmy/scripts/backup_db.sh
-crontab -l | { cat; echo "0 3 * * * /home/jimmy/scripts/backup_db.sh >> /home/jimmy/logs/backup.log 2>&1"; } | crontab -
+### Ce que ça fait
+
+Page `/reports` accessible admin/manager. Quatre blocs :
+
+1. **CA mensuel** — graphique barres sur 12 mois glissants (CA gagné vs pipeline ouvert)
+2. **Entonnoir de conversion** — nombre de deals par stage + taux de passage stage → stage suivant
+3. **Classement commerciaux** — deals gagnés + CA ce mois, par `owner_id`
+4. **Activité hebdomadaire** — emails/appels/tâches créés sur les 8 dernières semaines
+
+Cache Redis **30 min** par graphique — invalidé sur `Deal::saved/deleted`.
+
+---
+
+### Fichiers à créer
+
+| Fichier | Rôle |
+|---------|------|
+| `app/Http/Controllers/Web/ReportController.php` | Calcule et retourne les 4 datasets |
+| `resources/views/pages/reports/index.blade.php` | Vue Blade + Chart.js CDN (périmètre Gemini pour le rendu) |
+| `routes/web.php` | Ajouter `GET /reports` → `ReportController@index` (admin/manager) |
+
+> **Note cohabitation :** `ReportController.php` et la route sont périmètre Claude Code. La vue `reports/index.blade.php` est périmètre Gemini.
+
+---
+
+### Implémentation — `ReportController`
+
+```php
+namespace App\Http\Controllers\Web;
+
+use App\Models\Deal;
+use App\Models\Activity;
+use App\Models\PipelineStage;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
+class ReportController extends Controller
+{
+    public function index()
+    {
+        $this->authorize('viewReports'); // admin/manager via RequireRole
+
+        $data = Cache::remember('reports.data', 1800, function () {
+            return [
+                'ca_mensuel'     => $this->caMensuel(),
+                'entonnoir'      => $this->entonnoir(),
+                'classement'     => $this->classementCommerciaux(),
+                'activite_hebdo' => $this->activiteHebdomadaire(),
+            ];
+        });
+
+        return view('pages.reports.index', $data);
+    }
+
+    private function caMensuel(): array
+    {
+        // 12 mois glissants — CA gagné + pipeline ouvert par mois
+        $rows = Deal::selectRaw("
+            to_char(date_trunc('month', updated_at), 'YYYY-MM') AS mois,
+            SUM(CASE WHEN status = 'won'  THEN amount ELSE 0 END) AS ca_gagne,
+            SUM(CASE WHEN status = 'open' THEN amount ELSE 0 END) AS pipeline
+        ")
+        ->where('updated_at', '>=', now()->subMonths(12)->startOfMonth())
+        ->groupByRaw("date_trunc('month', updated_at)")
+        ->orderByRaw("date_trunc('month', updated_at)")
+        ->get();
+
+        return $rows->map(fn($r) => [
+            'mois'     => $r->mois,
+            'ca_gagne' => (float) $r->ca_gagne,
+            'pipeline' => (float) $r->pipeline,
+        ])->values()->all();
+    }
+
+    private function entonnoir(): array
+    {
+        // Nombre de deals ouverts par stage + taux de conversion
+        $stages = PipelineStage::where('is_won', false)->where('is_lost', false)
+            ->orderBy('position')->get();
+
+        $counts = Deal::where('status', 'open')
+            ->selectRaw('pipeline_stage_id, COUNT(*) as total')
+            ->groupBy('pipeline_stage_id')
+            ->pluck('total', 'pipeline_stage_id');
+
+        $won   = Deal::where('status', 'won')->count();
+        $total = Deal::count() ?: 1;
+
+        return [
+            'stages'     => $stages->map(fn($s) => [
+                'name'  => $s->name,
+                'count' => (int) ($counts[$s->id] ?? 0),
+            ])->values()->all(),
+            'taux_conversion_global' => round($won / $total * 100, 1),
+        ];
+    }
+
+    private function classementCommerciaux(): array
+    {
+        $debut = now()->startOfMonth();
+
+        return Deal::where('status', 'won')
+            ->where('updated_at', '>=', $debut)
+            ->selectRaw('owner_id, COUNT(*) as nb_deals, SUM(amount) as ca')
+            ->with('owner:id,name')
+            ->groupBy('owner_id')
+            ->orderByDesc('ca')
+            ->limit(10)
+            ->get()
+            ->map(fn($r) => [
+                'commercial' => $r->owner?->name ?? 'N/A',
+                'nb_deals'   => (int) $r->nb_deals,
+                'ca'         => (float) $r->ca,
+            ])->values()->all();
+    }
+
+    private function activiteHebdomadaire(): array
+    {
+        // Nombre d'activités par semaine sur 8 semaines
+        $rows = Activity::selectRaw("
+            to_char(date_trunc('week', created_at), 'YYYY-MM-DD') AS semaine,
+            type,
+            COUNT(*) AS total
+        ")
+        ->where('created_at', '>=', now()->subWeeks(8)->startOfWeek())
+        ->whereIn('type', ['call', 'email', 'task', 'note',
+                           'email_sent', 'email_opened', 'email_replied'])
+        ->groupByRaw("date_trunc('week', created_at), type")
+        ->orderByRaw("date_trunc('week', created_at)")
+        ->get();
+
+        // Grouper par semaine pour la vue
+        return $rows->groupBy('semaine')->map(fn($items, $sem) => [
+            'semaine' => $sem,
+            'detail'  => $items->pluck('total', 'type')->all(),
+            'total'   => $items->sum('total'),
+        ])->values()->all();
+    }
+}
 ```
+
+### ✅ Invalidation cache — LIVRÉ
+
+`Deal::boot()` invalide `reports.data` sur `saved`/`deleted`.
+
+### ✅ Route — LIVRÉE
+
+`GET /reports` dans `routes/web.php` sous `middleware('role:admin,manager')`.
+
+### Lien sidebar
+
+Dans `app-shell.blade.php` (périmètre Gemini), ajouter un lien "Rapports" visible admin/manager uniquement.
+
+---
+
+### Données transmises à la vue
+
+La vue reçoit 4 variables JSON-encodables (pour Chart.js) :
+
+| Variable | Type | Utilisée par |
+|----------|------|-------------|
+| `$ca_mensuel` | `array[{mois, ca_gagne, pipeline}]` | Graphique barres groupées |
+| `$entonnoir` | `array{stages[], taux_conversion_global}` | Graphique barres horizontales |
+| `$classement` | `array[{commercial, nb_deals, ca}]` | Tableau + barres |
+| `$activite_hebdo` | `array[{semaine, detail{}, total}]` | Graphique courbes empilées |
+
+### ✅ Tests — LIVRÉS (7/7 locaux + 11/11 prod PASS 2026-05-24)
+
+`tests/Feature/ReportControllerTest.php` (local) :
+- T1 — admin `GET /reports` → 200 ✅
+- T1b — manager `GET /reports` → 200 ✅
+- T1c — commercial `GET /reports` → 403 ✅
+- T2 — vue s'affiche sans erreur (`$ca_mensuel`) ✅
+- T3 — entonnoir taux conversion valide ✅
+- T4 — cache Redis `reports.data` peuplé après le premier appel ✅
+- T5 — `Deal::save()` invalide `reports.data` ✅
+
+Tests prod (`_test_v31.php`) :
+- T1 — ReportController autoloadé ✅
+- T2 — Route `reports.index` enregistrée ✅
+- T3 — Middleware `role` présent ✅
+- T4 — `Deal::touch()` invalide `reports.data` ✅
+- T5a–T5d — 4 méthodes de dataset s'exécutent sans erreur ✅
+- T6 — `Cache::remember('reports.data')` fonctionne ✅
+- T7 — Vue Blade présente ✅
+- T8 — `GET /reports` → HTTP 200 (admin) ✅
+
+---
+
+## 13. v4.0 — Intégrations tierces : Calendrier, Email & Apps (Prochaine session)
+
+> **Objectif :** Connecter le CRM aux outils du quotidien des commerciaux — agenda, boîte mail, messagerie — pour éliminer la double saisie et centraliser l'historique.
+
+---
+
+### Apps proposées — classées par valeur métier
+
+| Priorité | App | Valeur CRM | Effort | Complexité |
+|---|---|---|---|---|
+| ⭐⭐⭐ | **Google Calendar** | Réunions liées aux deals/contacts, rappels, création d'événements depuis le CRM | ~4h | OAuth2 + API Google |
+| ⭐⭐⭐ | **Gmail** | Sync emails entrants/sortants sur fiches contacts, tracking conversations | ~5h | OAuth2 + Gmail API |
+| ⭐⭐ | **Outlook / Microsoft 365** | Alternative Microsoft (Calendar + Mail) pour les équipes MS | ~3h | MSAL OAuth2 (même pattern) |
+| ⭐⭐ | **Calendly** | Lien prise de RDV sur fiche contact → activité créée auto | ~2h | Webhook entrant |
+| ⭐ | **Stripe** | CA réel vs CA estimé sur les deals | ~3h | API REST Stripe |
+| ⭐ | **Zapier / Make** | Webhooks sortants génériques pour intégrations custom | ~2h | Endpoint `POST /webhooks/outgoing` |
+
+---
+
+### Phase 1 — Google Calendar (recommandé pour démarrer)
+
+**Ce que ça fait :**
+- Connecter son compte Google depuis les Settings (`/settings/integrations`)
+- Toute activité de type `call` ou `meeting` créée dans le CRM peut générer un événement Google Calendar
+- Les événements Google Calendar avec un contact CRM apparaissent dans la timeline du contact
+- Bouton "Planifier une réunion" sur la fiche deal → ouvre un formulaire → crée un event Calendar + une activité CRM
+
+**Architecture backend :**
+
+```
+users
+  └─ google_access_token  (text, encrypted)
+  └─ google_refresh_token (text, encrypted)
+  └─ google_token_expires_at (timestamp)
+
+GoogleCalendarService
+  ├── redirectToGoogle()    → OAuth2 authorize URL (scopes: calendar, userinfo.email)
+  ├── handleCallback()      → échange code → tokens → stocke sur User
+  ├── refreshTokenIfNeeded()
+  ├── createEvent(User, title, startAt, endAt, description, attendeeEmail?)
+  └── listUpcomingEvents(User, Contact)  → array d'events Google
+
+GoogleCalendarController (Settings)
+  ├── GET  /settings/integrations/google/connect  → redirect OAuth2
+  ├── GET  /settings/integrations/google/callback → handleCallback + redirect Settings
+  └── DELETE /settings/integrations/google        → révoque + efface tokens
+```
+
+**Fichiers à créer :**
+- Migration : `google_access_token`, `google_refresh_token`, `google_token_expires_at` sur `users`
+- `app/Services/GoogleCalendarService.php`
+- `app/Http/Controllers/Web/Settings/IntegrationController.php`
+- `resources/views/pages/settings/integrations.blade.php` (Gemini pour l'UI)
+- `config/services.php` : clé `google.client_id`, `google.client_secret`, `google.redirect_uri`
+- Variables `.env` : `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+- Package : `google/apiclient` via Composer
+
+**Variables `.env` VPS à ajouter :**
+```
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=https://crm.nana-intelligence.fr/settings/integrations/google/callback
+```
+
+---
+
+### Phase 2 — Gmail (sync conversations)
+
+**Ce que ça fait :**
+- OAuth2 Google étendu (ajouter scope `gmail.readonly` au token Google Calendar)
+- Commande `gmail:sync-contact {contactId}` : recherche les emails envoyés/reçus par l'adresse email du contact → crée des activités `email_sent` / `email_replied` avec `source=gmail`
+- Bouton "Sync Gmail" sur fiche contact (même pattern que le bouton "Sync Emelia")
+
+**Architecture :**
+```
+GmailService
+  ├── searchByEmail(User, string $email, int $maxResults = 20) → array de messages
+  └── messageToActivity(User, Contact, array $message) → Activity|null
+
+Commande : gmail:sync-contact {contact_id} {--limit=20} {--dry-run}
+Job : SyncGmailContactJob (ShouldQueue, timeout=120)
+```
+
+---
+
+### Phase 3 — Calendly (webhook entrant)
+
+**Ce que ça fait :**
+- Ajouter un lien "Prendre RDV" sur chaque fiche contact → lien Calendly personnalisé avec l'email du contact pré-rempli
+- Webhook Calendly `invitee.created` → créer une activité `meeting` dans le CRM avec la date/heure de l'event
+- Badge "RDV planifié" sur la fiche contact si un event Calendly à venir est trouvé
+
+**Architecture :**
+```
+POST /api/webhooks/calendly  → CalendlyWebhookController
+  ├── Vérifie signature HMAC (header X-Calendly-Webhook-Subscription-Uri)
+  ├── Cherche le contact par invitee.email
+  └── Crée Activity(type='meeting', title=event_name, due_date=event_start)
+```
+
+Config : `CALENDLY_WEBHOOK_SECRET` dans `.env`
+
+---
+
+### Phase 4 — Webhooks sortants génériques (Zapier / Make)
+
+**Ce que ça fait :**
+- Dans les Settings, l'admin peut configurer des "webhooks sortants" (URL + événements déclencheurs)
+- Événements : `deal.won`, `contact.created`, `email.replied`, `ai.alert`
+- Le CRM envoie un `POST` JSON à l'URL configurée à chaque événement → Zapier/Make prend le relais pour intégrer avec 1000+ autres apps
+
+**Architecture :**
+```
+outgoing_webhooks
+  ├── id
+  ├── user_id
+  ├── url
+  ├── events (json array)
+  ├── secret (pour HMAC côté destinataire)
+  └── is_active
+
+OutgoingWebhookService::dispatch(string $event, array $payload)
+  → OutgoingWebhook::where('is_active', true)->whereJsonContains('events', $event)->get()
+  → foreach → Http::post($webhook->url, $payload)
+```
+
+---
+
+### Ordre d'implémentation recommandé pour v4.0
+
+| # | Feature | Effort | Valeur | Session |
+|---|---------|--------|--------|---------|
+| 1 | Google Calendar | ~4h | ⭐⭐⭐ Priorité haute | v4.1 |
+| 2 | Gmail sync | ~5h | ⭐⭐⭐ (réutilise OAuth2 Calendar) | v4.2 |
+| 3 | Calendly webhook | ~2h | ⭐⭐ | v4.3 |
+| 4 | Webhooks sortants | ~3h | ⭐⭐ | v4.4 |
+| 5 | Outlook / MS365 | ~3h | ⭐⭐ (si besoin) | v4.5 |
+
+> **Note architecture :** Google Calendar et Gmail partagent le même OAuth2 et les mêmes tokens → implémenter Calendar en premier, Gmail se greffe dessus sans nouveau OAuth.
+
+---
+
+### Prérequis avant de démarrer v4.0
+
+1. **Google Cloud Console** : créer un projet, activer Calendar API + Gmail API, créer des credentials OAuth2 (Web application), ajouter `https://crm.nana-intelligence.fr/settings/integrations/google/callback` comme URI de redirection autorisée.
+2. **Calendly** (si Phase 3) : compte Calendly Pro minimum (webhooks disponibles à partir de Pro), créer une subscription webhook sur `https://crm.nana-intelligence.fr/api/webhooks/calendly`.
+3. **Composer** : `composer require google/apiclient:^2.0` pour les phases Google (à faire localement avant le déploiement).

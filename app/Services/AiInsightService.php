@@ -248,6 +248,85 @@ class AiInsightService
         return ['data' => $data, 'cached' => false];
     }
 
+    public function analyzeReports(array $reportData, bool $fresh = false): array
+    {
+        $cacheKey = 'ai:report-insights';
+
+        if (!$fresh && Cache::has($cacheKey)) {
+            return ['data' => Cache::get($cacheKey), 'cached' => true];
+        }
+
+        $lines = [];
+
+        // CA mensuel — dernier mois vs mois précédent
+        $caMensuel = $reportData['ca_mensuel'] ?? [];
+        if (count($caMensuel) >= 2) {
+            $last    = end($caMensuel);
+            $prev    = $caMensuel[count($caMensuel) - 2];
+            $delta   = $prev['ca_gagne'] > 0 ? round(($last['ca_gagne'] - $prev['ca_gagne']) / $prev['ca_gagne'] * 100, 1) : null;
+            $lines[] = "CA gagné ce mois ({$last['mois']}) : " . number_format($last['ca_gagne'], 0, ',', ' ') . ' €'
+                       . ($delta !== null ? " ({$delta}% vs mois précédent)" : '');
+            $lines[] = "Pipeline ouvert ce mois : " . number_format($last['pipeline'], 0, ',', ' ') . ' €';
+        }
+
+        // Entonnoir
+        $entonnoir = $reportData['entonnoir'] ?? [];
+        if (!empty($entonnoir['stages'])) {
+            $lines[] = "Taux de conversion global : " . ($entonnoir['taux_conversion_global'] ?? '?') . '%';
+            $stagesStr = collect($entonnoir['stages'])->map(fn($s) => "{$s['name']} : {$s['count']} deal(s)")->join(', ');
+            $lines[] = "Entonnoir : {$stagesStr}";
+        }
+
+        // Classement commerciaux
+        $classement = $reportData['classement'] ?? [];
+        if (!empty($classement)) {
+            $top = $classement[0];
+            $lines[] = "Top commercial ce mois : {$top['commercial']} — {$top['nb_deals']} deal(s), " . number_format($top['ca'], 0, ',', ' ') . ' €';
+            if (count($classement) > 1) {
+                $bottom = end($classement);
+                $lines[] = "Dernier classé : {$bottom['commercial']} — {$bottom['nb_deals']} deal(s)";
+            }
+        }
+
+        // Activité hebdo
+        $activiteHebdo = $reportData['activite_hebdo'] ?? [];
+        if (!empty($activiteHebdo)) {
+            $lastWeek = end($activiteHebdo);
+            $lines[]  = "Activité semaine du {$lastWeek['semaine']} : {$lastWeek['total']} action(s) enregistrée(s)";
+        }
+
+        if (empty($lines)) {
+            $data = ['insights' => ['Pas encore de données suffisantes pour générer des insights.'], 'alerts' => [], 'recommendations' => []];
+            Cache::put($cacheKey, $data, now()->addHour());
+            return ['data' => $data, 'cached' => false];
+        }
+
+        $context = implode("\n", $lines);
+        $prompt  = "Tu es un analyste commercial CRM B2B. Voici les métriques clés du CRM :\n\n{$context}\n\n"
+                   . "Génère 3 à 5 insights actionnables basés sur ces données. Détecte les tendances, anomalies et opportunités. "
+                   . "Réponds UNIQUEMENT en JSON valide : {\"insights\": [\"insight 1\"], \"alerts\": [\"alerte urgente 1\"], \"recommendations\": [\"recommandation 1\"]}";
+
+        try {
+            $raw = $this->llm->complete(
+                'Tu es un analyste CRM expert. Réponds en français, de façon concise et actionnable.',
+                $prompt,
+                ['max_tokens' => 700]
+            );
+        } catch (RuntimeException $e) {
+            throw $e;
+        }
+
+        $parsed = null;
+        if (preg_match('/\{.*\}/s', $raw, $matches)) {
+            $parsed = json_decode($matches[0], true);
+        }
+        $data = $parsed ?? ['insights' => [$raw], 'alerts' => [], 'recommendations' => []];
+
+        Cache::put($cacheKey, $data, now()->addHour());
+
+        return ['data' => $data, 'cached' => false];
+    }
+
     private function resolve(string $endpoint, string $type, int $id, bool $fresh, callable $builder): array
     {
         $built    = $builder();

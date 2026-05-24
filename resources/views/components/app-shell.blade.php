@@ -44,6 +44,11 @@
         <x-rail-icon href="/activities" :active="$active === 'activities'" tooltip="Activités">
             <svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         </x-rail-icon>
+        @if(in_array(auth()->user()?->role, ['admin','manager']))
+        <x-rail-icon href="/reports" :active="$active === 'reports'" tooltip="Rapports">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        </x-rail-icon>
+        @endif
 
         <div class="my-2 h-px w-6" style="background: var(--border);"></div>
 
@@ -59,6 +64,11 @@
         @if(in_array(auth()->user()?->role, ['admin','manager']))
         <x-rail-icon route="trash.index" :active="$active === 'trash'" tooltip="Corbeille">
             <svg class="ic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </x-rail-icon>
+        @endif
+        @if(auth()->user()?->isAdmin())
+        <x-rail-icon route="console.index" :active="$active === 'console'" tooltip="Console Admin">
+            <svg class="ic" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
         </x-rail-icon>
         @endif
 

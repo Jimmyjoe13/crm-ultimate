@@ -42,8 +42,8 @@ class EmeliaSyncCampaign extends Command
             $this->warn('[DRY-RUN] Aucune modification ne sera effectuée.');
         }
 
-        // 2. Requête contacts CRM
-        $query = Contact::whereNotNull('email');
+        // 2. Requête contacts CRM (exclut les blacklistés)
+        $query = Contact::whereNotNull('email')->contactable();
         if ($onlyLinked) {
             $query->whereNotNull('emelia_contact_id');
         }

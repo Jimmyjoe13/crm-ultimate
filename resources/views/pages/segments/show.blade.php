@@ -17,7 +17,7 @@
         </div>
     </div>
     <div class="flex items-center gap-2">
-        <a href="/segments/{{ $segment->id }}/export" class="btn sm ghost">
+        <a href="{{ route('segments.export', $segment) }}" class="btn">
             <svg class="ic" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Exporter CSV
         </a>

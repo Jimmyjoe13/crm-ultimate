@@ -25,7 +25,7 @@ class CustomFieldRenderer
         }
 
         return match ($field->field_type) {
-            'boolean' => $rawValue ? 'Oui' : 'Non',
+            'boolean' => (is_bool($rawValue) ? $rawValue : in_array(strtolower((string) $rawValue), ['1', 'true', 'oui', 'yes', 'on'], true)) ? 'Oui' : 'Non',
             'date'    => $rawValue ? date('d/m/Y', strtotime($rawValue)) : '—',
             'select'  => is_array($rawValue) ? implode(', ', $rawValue) : (string) $rawValue,
             'number'  => is_numeric($rawValue) ? number_format((float) $rawValue, 2, ',', "\xc2\xa0") : (string) $rawValue,

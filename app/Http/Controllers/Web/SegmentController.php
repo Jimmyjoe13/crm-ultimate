@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Segment;
 use App\Services\SegmentQueryEngine;
+use App\Support\CustomFieldRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -159,47 +160,94 @@ class SegmentController extends Controller
 
     public function export(Segment $segment): StreamedResponse
     {
-        $slug = Str::slug($segment->name);
-        $date = now()->format('Y-m-d');
-        $filename = "segment-{$slug}-{$date}.csv";
+        $slug         = Str::slug($segment->name);
+        $date         = now()->format('Y-m-d');
+        $filename     = "segment-{$slug}-{$date}.csv";
+        $entityType   = $segment->entity_type;
+        $customFields = CustomFieldRenderer::forEntity($entityType);
 
-        $members = $this->engine->buildQuery($segment)->with(
-            $segment->entity_type === 'contact' ? ['companies'] : []
-        )->get();
+        $relations = match($entityType) {
+            'contact' => ['companies:id,name', 'owner:id,name'],
+            'company' => ['owner:id,name'],
+            'deal'    => ['stage:id,name', 'companies:id,name', 'contacts:id,first_name,last_name', 'owner:id,name'],
+            default   => [],
+        };
 
-        return response()->streamDownload(function () use ($members, $segment) {
-            $handle = fopen('php://output', 'w');
+        $standardHeaders = match($entityType) {
+            'contact' => ['id', 'prénom', 'nom', 'email', 'téléphone', 'poste', 'étape_lifecycle', 'statut_lead', 'propriétaire', 'entreprises', 'créé_le'],
+            'company' => ['id', 'nom', 'domaine', 'secteur', 'téléphone', 'site_web', 'ville', 'pays', 'étape_lifecycle', 'statut_lead', 'propriétaire', 'créé_le'],
+            'deal'    => ['id', 'nom', 'montant', 'devise', 'statut', 'étape', 'date_clôture', 'propriétaire', 'entreprises', 'contacts', 'créé_le'],
+            default   => ['id', 'créé_le'],
+        };
 
-            // UTF-8 BOM for Excel
-            fwrite($handle, "\xEF\xBB\xBF");
+        $headers = array_merge($standardHeaders, $customFields->pluck('label')->toArray());
 
-            if ($segment->entity_type === 'contact') {
-                fputcsv($handle, ['id', 'first_name', 'last_name', 'email', 'company', 'created_at']);
-                foreach ($members as $m) {
-                    fputcsv($handle, [
-                        $m->id,
-                        $m->first_name,
-                        $m->last_name,
-                        $m->email,
-                        $m->companies->first()?->name ?? '',
-                        $m->created_at?->toDateString(),
-                    ]);
-                }
-            } elseif ($segment->entity_type === 'company') {
-                fputcsv($handle, ['id', 'name', 'domain', 'industry', 'city', 'created_at']);
-                foreach ($members as $m) {
-                    fputcsv($handle, [$m->id, $m->name, $m->domain, $m->industry, $m->city, $m->created_at?->toDateString()]);
-                }
-            } else {
-                fputcsv($handle, ['id', 'name', 'amount', 'status', 'stage', 'created_at']);
-                foreach ($members as $m) {
-                    fputcsv($handle, [$m->id, $m->name, $m->amount, $m->status, $m->stage?->name ?? '', $m->created_at?->toDateString()]);
-                }
-            }
+        return response()->streamDownload(function () use ($segment, $entityType, $relations, $headers, $customFields) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, $headers);
 
-            fclose($handle);
+            $this->engine->buildQuery($segment)
+                ->with($relations)
+                ->chunk(200, function ($members) use ($out, $entityType, $customFields) {
+                    foreach ($members as $m) {
+                        $row = match($entityType) {
+                            'contact' => [
+                                $m->id,
+                                $m->first_name,
+                                $m->last_name,
+                                $m->email,
+                                $m->phone,
+                                $m->job_title,
+                                $m->lifecycle_stage,
+                                $m->lead_status,
+                                $m->owner?->name,
+                                $m->companies->pluck('name')->implode(', '),
+                                $m->created_at?->format('d/m/Y'),
+                            ],
+                            'company' => [
+                                $m->id,
+                                $m->name,
+                                $m->domain,
+                                $m->industry,
+                                $m->phone,
+                                $m->website,
+                                $m->city,
+                                $m->country,
+                                $m->lifecycle_stage,
+                                $m->lead_status,
+                                $m->owner?->name,
+                                $m->created_at?->format('d/m/Y'),
+                            ],
+                            'deal' => [
+                                $m->id,
+                                $m->name,
+                                $m->amount,
+                                $m->currency,
+                                $m->status,
+                                $m->stage?->name,
+                                $m->close_date?->format('d/m/Y'),
+                                $m->owner?->name,
+                                $m->companies->pluck('name')->implode(', '),
+                                $m->contacts->map(fn($c) => $c->first_name . ' ' . $c->last_name)->implode(', '),
+                                $m->created_at?->format('d/m/Y'),
+                            ],
+                            default => [$m->id, $m->created_at?->format('d/m/Y')],
+                        };
+
+                        foreach ($customFields as $field) {
+                            $raw   = $m->custom_values[$field->key] ?? null;
+                            $display = CustomFieldRenderer::displayValue($field, $raw);
+                            $row[] = $display === '—' ? '' : $display;
+                        }
+
+                        fputcsv($out, $row);
+                    }
+                });
+
+            fclose($out);
         }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Type'        => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
     }

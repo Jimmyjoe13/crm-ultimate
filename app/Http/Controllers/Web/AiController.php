@@ -7,6 +7,7 @@ use App\Services\AiInsightService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 
 class AiController extends Controller
@@ -104,6 +105,22 @@ class AiController extends Controller
 
         try {
             $result = $this->ai->dailySuggestions(auth()->user(), $fresh);
+        } catch (RuntimeException $e) {
+            $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+            return response()->json(['message' => $e->getMessage()], $status);
+        }
+
+        return response()->json(array_merge($result, ['generated_at' => now()->toIso8601String()]));
+    }
+
+    public function reportInsights(Request $request): JsonResponse
+    {
+        $fresh = $request->boolean('fresh') && in_array(auth()->user()?->role, ['admin', 'manager']);
+
+        $reportData = Cache::get('reports.data', []);
+
+        try {
+            $result = $this->ai->analyzeReports($reportData, $fresh);
         } catch (RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
             return response()->json(['message' => $e->getMessage()], $status);
