@@ -428,7 +428,7 @@
 
 {{-- Modal Emelia (écoute les events window) --}}
 @php $linkedEmeliaIds = $contact->emeliaCampaigns()->pluck('emelia_id')->toArray(); @endphp
-<div x-data="emeliaModalComponent({{ $contact->id }}, @json($linkedEmeliaIds))"
+<div x-data='emeliaModalComponent({{ $contact->id }}, @json($linkedEmeliaIds))'
      @open-emelia-modal.window="open = true; if (!campaigns.length) fetchCampaigns()"
      x-show="open"
      x-cloak
