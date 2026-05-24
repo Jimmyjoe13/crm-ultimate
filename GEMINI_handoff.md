@@ -4,10 +4,18 @@
 
 Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pages de détails (Contacts, Sociétés, Deals) en mettant en place un layout modernisé, équilibré et à trois colonnes, inspiré des meilleures pratiques des CRM modernes (type HubSpot).
 
-**v3.4 (Cette Session - Courante) :**
+**v3.5 (Cette Session - Courante) :**
+
+- **Micro-animations Interactives sur les Cartes KPI du Dashboard :**
+  - Ajout d'effets de survol interactifs et subtils sur les 6 cartes principales du Dashboard.
+  - Survol des cartes Hero : élévation (`hover:-translate-y-1`), augmentation de l'ombre portée avec une lueur colorée adaptée (`hover:shadow-...`), et transition fluide de l'opacité des graphiques SVG de tendance de 70% à 100% via des classes Tailwind CSS combinées avec `group` et `group-hover`.
+  - Survol des cartes Performance (Conversion, Gagnés, Perdus) : élévation (`hover:-translate-y-1`) et ombre portée enrichie (`hover:shadow-lg`).
+  - Validation du build CSS avec Vite en local et déploiement réussi sur le VPS de production.
+
+**v3.4 :**
 
 - **Correction de la fuite de JS et des erreurs de parseur Alpine sur la fiche Contact :**
-  - Extraction de la logique Alpine.js complexe (du panneau d'information Emelia et de la modale de gestion des campagnes) hors des attributs HTML `x-data="..."` vers des fonctions globales `window.emeliaPanelComponent` et `window.emeliaModalComponent` au sein d'une balise `<script>`.
+  - Extraction de la logique Alpine.js complexe (du panneau d'information Emelia et de la modale de gestion des campagnes) hors des attributs HTML `x-data="..."` vers des fonctions globales `window.emeliaPanelComponent` and `window.emeliaModalComponent` au sein d'une balise `<script>`.
   - Résolution définitive du conflit de guillemets doubles provoqués par `@json($linkedEmeliaIds)` en utilisant des guillemets simples pour encapsuler l'expression d'initialisation.
   - Nettoyage et refactoring complet de la logique du bouton **Sync** pour éliminer les fonctions fléchées `=>` en ligne dans l'attribut `@click` en les déportant dans la méthode `syncCampaigns` du composant.
   - Re-déploiement complet en production via le rebuild Docker et validation des fonctionnalités par subagent navigateur.
@@ -75,25 +83,30 @@ Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pa
 - Formulaire réactif avec Alpine.js s'adaptant dynamiquement au type de champ de la règle (Dropdowns pour les ids/relations et enums, calendriers natifs, inputs numériques simples/doubles pour les plages).
 - Plus aucun bug de type ou d'injection SQL lors de l'aperçu ou de la création des segments.
 
+**Dashboard Interactif**
+
+- Les 6 cartes KPI principales possèdent désormais un effet d'élévation et d'ombrage interactif avec transitions CSS fluides.
+- L'opacité des graphiques SVG de tendance s'anime élégamment lors du survol.
+
 ### Dernière action effectuée
 
-Déploiement et activation réussis de la version **v3.4** sur le VPS de production (`51.38.99.226`). Les fichiers locaux modifiés ont été poussés sur Git et transférés sur le serveur, les images Docker reconstruites, et le cache Laravel rechargé. La validation par subagent navigateur a confirmé le fonctionnement parfait des boutons de modale et de synchronisation Emelia sans aucune fuite ou erreur de code.
+Déploiement et activation réussis de la version **v3.5** sur le VPS de production (`51.38.99.226`). Les fichiers locaux modifiés ont été poussés sur Git et transférés sur le serveur, les images Docker reconstruites, et le cache Laravel rechargé.
 
 ---
 
-## 3. Fichiers concernés (v3.4)
+## 3. Fichiers concernés (v3.5)
 
 ### Logique & Vues
 
 | Fichier                                         | Rôle                                                                              |
 | ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| `resources/views/pages/contacts/show.blade.php` | Refactoring des composants Alpine Emelia (panel, modal, bouton Sync) pour éviter les fuites de JS. |
+| `resources/views/pages/dashboard.blade.php`     | Ajout des classes de transition, de survol et de groupes interactifs sur les 6 KPI. |
 
 ---
 
 ## 4. Ce qui a échoué / Points d'attention
 
-- Aucun échec rencontré sur la version v3.4.
+- Aucun échec rencontré sur la version v3.5.
 - **Rappel de cohabitation** : Le middleware `JwtMiddleware` déchiffre désormais proprement les cookies sécurisés de la partie Web pour l'API sans casser les en-têtes standard de l'application.
 
 ---
@@ -108,8 +121,6 @@ Déploiement et activation réussis de la version **v3.4** sur le VPS de product
 
 ## 6. Backlog de la prochaine session
 
-- **Micro-animations Interactives sur les Cartes KPI du Dashboard**
-  - *Description* : Ajouter un effet de survol dynamique et subtil sur les 6 cartes principales du Dashboard.
-  - *Bénéfice* : Rend le tableau de bord vivant et engageant. Lors du survol, la carte s'élève légèrement, augmente son ombre portée et accentue l'opacité de son graphique SVG de tendance.
-  - *Mise en œuvre* : Dans `dashboard.blade.php`, ajouter des classes de transition et de transformation Tailwind natives sur les conteneurs de cartes :
-    `class="card p-5 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer"`
+- **Optimisation de la performance de rendu de la Timeline**
+  - *Description* : Optimiser le chargement différé et la pagination à l'infini pour les longs fils d'activités des fiches contacts et entreprises.
+  - *Bénéfice* : Maintient un niveau de fluidité maximal lors de la navigation sur les fiches historiques volumineuses.
