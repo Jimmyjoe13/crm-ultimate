@@ -388,7 +388,7 @@
                         </p>
                     </template>
 
-                    <div class="flex gap-1.5" x-data="{ syncing: false, syncDone: false }">
+                    <div class="flex gap-1.5">
                         <button class="btn ghost text-xs flex-1"
                                 @click="$dispatch('open-emelia-modal')">
                             Gérer
@@ -396,20 +396,7 @@
                         <button class="btn ghost text-xs"
                                 :disabled="syncing"
                                 :class="{ 'opacity-50': syncing }"
-                                @click="
-                                    syncing = true; syncDone = false;
-                                    fetch('{{ route('contacts.emelia.sync', $contact) }}', {
-                                        method: 'POST',
-                                        headers: {
-                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                            'Accept': 'application/json',
-                                        },
-                                        credentials: 'same-origin',
-                                    })
-                                    .then(r => r.json())
-                                    .then(d => { syncing = false; syncDone = true; if (d.created > 0) window.location.reload(); })
-                                    .catch(() => { syncing = false; });
-                                ">
+                                @click="syncCampaigns('{{ route('contacts.emelia.sync', $contact) }}')">
                             <span x-show="!syncing && !syncDone">Sync</span>
                             <span x-show="syncing">…</span>
                             <span x-show="syncDone">OK</span>
@@ -695,6 +682,8 @@ window.emeliaPanelComponent = function(contactId) {
     return {
         status: null,
         loading: true,
+        syncing: false,
+        syncDone: false,
         init() {
             var self = this;
             fetch('/contacts/' + contactId + '/emelia/status', {
@@ -715,6 +704,30 @@ window.emeliaPanelComponent = function(contactId) {
             if (s === 'OPENED' || s === 'CLICKED') return 'var(--accent)';
             if (s === 'BOUNCED' || s === 'UNSUBSCRIBED') return 'var(--err)';
             return 'var(--text-secondary)';
+        },
+        syncCampaigns(syncUrl) {
+            var self = this;
+            self.syncing = true;
+            self.syncDone = false;
+            fetch(syncUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                self.syncing = false;
+                self.syncDone = true;
+                if (d.created > 0) {
+                    window.location.reload();
+                }
+            })
+            .catch(function() {
+                self.syncing = false;
+            });
         }
     };
 };
