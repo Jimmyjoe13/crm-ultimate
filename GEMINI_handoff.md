@@ -10,7 +10,8 @@ Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pa
   - Modification du script SortableJS front-end pour appeler l'endpoint API dédié de déplacement (`POST /api/v1/deals/{id}/move`).
   - Implémentation d'une synchronisation automatique au niveau du modèle `Deal` dans son événement de sauvegarde (`saving`) pour garantir que tout changement de `pipeline_stage_id` met à jour de façon cohérente le statut en base de données.
   - Ajustement de `PipelineController` pour charger tous les deals associés au pipeline (y compris ceux gagnés et perdus dans leurs colonnes correspondantes) afin de correspondre aux données réelles de l'API.
-  - Modification de `JwtMiddleware` pour accepter le token depuis le cookie `crm_jwt` en fallback de l'en-tête `Authorization` (nécessaire car le cookie est HttpOnly et inaccessible en JS).
+  - Modification de `JwtMiddleware` pour extraire et déchiffrer manuellement le token depuis le cookie `crm_jwt` si l'en-tête `Authorization` est absent (requis car le cookie est chiffré par Laravel sur la partie Web mais n'est pas déchiffré automatiquement sur l'API car le middleware `EncryptCookies` n'appartient pas au groupe `api`).
+  - Suppression de l'en-tête `Authorization` de la requête AJAX du Kanban pour laisser le navigateur transmettre le cookie `crm_jwt` de manière transparente et sécurisée.
 
 **v3.1 (Cette Session - Courante) :**
 

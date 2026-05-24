@@ -7,6 +7,7 @@ use App\Services\JwtService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Symfony\Component\HttpFoundation\Response;
 
 class JwtMiddleware
@@ -15,7 +16,18 @@ class JwtMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        $token = $request->bearerToken() ?? $request->cookie('crm_jwt');
+        $token = $request->bearerToken();
+
+        if (! $token) {
+            $cookie = $request->cookie('crm_jwt');
+            if ($cookie) {
+                try {
+                    $token = Crypt::decrypt($cookie, false);
+                } catch (\Throwable) {
+                    // Fail gracefully if decryption fails
+                }
+            }
+        }
 
         if (! $token) {
             return response()->json(['message' => 'Missing bearer token.'], 401);

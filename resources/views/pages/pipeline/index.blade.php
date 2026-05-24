@@ -86,7 +86,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Authorization': 'Bearer ' + (document.cookie.match(/crm_jwt=([^;]+)/)?.[1] ?? ''),
                     },
                     body: JSON.stringify({ pipeline_stage_id: parseInt(stageId) }),
                 });
