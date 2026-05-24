@@ -21,39 +21,39 @@
     {{-- Principaux indicateurs --}}
     <div class="grid grid-cols-3 gap-3 mb-3">
         {{-- Hero Pipeline Actuel --}}
-        <div class="kpi-hero rounded-xl p-5 relative overflow-hidden">
+        <div class="kpi-hero rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(239,106,42,0.4)] cursor-pointer group">
             <div class="mono-label" style="color: rgba(255,255,255,0.75);">Pipeline actif</div>
             <div class="num text-4xl mt-2">{{ number_format($kpis['pipeline_total'], 0, ',', "\xc2\xa0") }} €</div>
             <div class="flex items-center gap-2 mt-3 text-[12px]" style="color: rgba(255,255,255,0.9);">
                 <span class="text-white opacity-80">Valeur totale des deals en cours</span>
             </div>
-            <svg class="absolute bottom-3 right-4" width="120" height="40" viewBox="0 0 120 40" fill="none">
+            <svg class="absolute bottom-3 right-4 opacity-70 transition-opacity duration-300 group-hover:opacity-100" width="120" height="40" viewBox="0 0 120 40" fill="none">
                 <polyline points="0,32 15,28 30,30 45,22 60,24 75,16 90,18 105,8 120,12" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
                 <polyline points="0,32 15,28 30,30 45,22 60,24 75,16 90,18 105,8 120,12 120,40 0,40" fill="rgba(255,255,255,0.12)"/>
             </svg>
         </div>
 
         {{-- Hero Chiffre d'Affaires (CA) --}}
-        <div class="kpi-ok rounded-xl p-5 relative overflow-hidden">
+        <div class="kpi-ok rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(47,138,95,0.4)] cursor-pointer group">
             <div class="mono-label" style="color: rgba(255,255,255,0.75);">Chiffre d'Affaires (CA)</div>
             <div class="num text-4xl mt-2">{{ number_format($kpis['ca_total'], 0, ',', "\xc2\xa0") }} €</div>
             <div class="flex items-center gap-2 mt-3 text-[12px]" style="color: rgba(255,255,255,0.9);">
                 <span class="text-white opacity-80">Cumul des opportunités gagnées</span>
             </div>
-            <svg class="absolute bottom-3 right-4" width="120" height="40" viewBox="0 0 120 40" fill="none">
+            <svg class="absolute bottom-3 right-4 opacity-70 transition-opacity duration-300 group-hover:opacity-100" width="120" height="40" viewBox="0 0 120 40" fill="none">
                 <polyline points="0,35 20,30 40,25 60,18 80,22 100,10 120,5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
                 <polyline points="0,35 20,30 40,25 60,18 80,22 100,10 120,5 120,40 0,40" fill="rgba(255,255,255,0.12)"/>
             </svg>
         </div>
 
         {{-- Hero CA Perdu --}}
-        <div class="kpi-err rounded-xl p-5 relative overflow-hidden">
+        <div class="kpi-err rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(198,61,47,0.4)] cursor-pointer group">
             <div class="mono-label" style="color: rgba(255,255,255,0.75);">Chiffre d'Affaires Perdu</div>
             <div class="num text-4xl mt-2">{{ number_format($kpis['ca_lost'], 0, ',', "\xc2\xa0") }} €</div>
             <div class="flex items-center gap-2 mt-3 text-[12px]" style="color: rgba(255,255,255,0.9);">
                 <span class="text-white opacity-80">Cumul des opportunités perdues</span>
             </div>
-            <svg class="absolute bottom-3 right-4" width="120" height="40" viewBox="0 0 120 40" fill="none">
+            <svg class="absolute bottom-3 right-4 opacity-70 transition-opacity duration-300 group-hover:opacity-100" width="120" height="40" viewBox="0 0 120 40" fill="none">
                 <polyline points="0,15 20,20 40,18 60,25 80,30 100,32 120,38" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
                 <polyline points="0,15 20,20 40,18 60,25 80,30 100,32 120,38 120,40 0,40" fill="rgba(255,255,255,0.12)"/>
             </svg>
@@ -63,7 +63,7 @@
     {{-- Performance et mensuel --}}
     <div class="grid grid-cols-3 gap-3">
         {{-- Conversion --}}
-        <div class="card p-5">
+        <div class="card p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer">
             <div class="mono-label">Conversion · 30j</div>
             <div class="num text-3xl mt-2">{{ $kpis['conversion'] }}<span class="text-xl text-tertiary">%</span></div>
             <div class="flex items-center gap-2 mt-3 text-[12px]">
@@ -74,7 +74,7 @@
         </div>
 
         {{-- Gagnés --}}
-        <div class="card p-5">
+        <div class="card p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer">
             <div class="mono-label">Gagnés · ce mois</div>
             <div class="num text-3xl mt-2" style="color: var(--ok);">{{ $kpis['won_count'] }}</div>
             <div class="num-mono text-[12px] mt-3" style="color: var(--text2);">{{ number_format($kpis['won_amount'], 0, ',', "\xc2\xa0") }} €</div>
@@ -85,7 +85,7 @@
         </div>
 
         {{-- Perdus --}}
-        <div class="card p-5">
+        <div class="card p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer">
             <div class="mono-label">Perdus · ce mois</div>
             <div class="num text-3xl mt-2" style="color: var(--err);">{{ $kpis['lost_count'] }}</div>
             <div class="num-mono text-[12px] mt-3" style="color: var(--text2);">{{ number_format($kpis['lost_amount'], 0, ',', "\xc2\xa0") }} €</div>
