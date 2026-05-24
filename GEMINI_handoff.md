@@ -4,7 +4,16 @@
 
 Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pages de détails (Contacts, Sociétés, Deals) en mettant en place un layout modernisé, équilibré et à trois colonnes, inspiré des meilleures pratiques des CRM modernes (type HubSpot).
 
-**v3.2 (En cours) :**
+**v3.3 (Cette Session - Courante) :**
+
+- **Indicateurs financiers cumulés sur le Dashboard (Chiffre d'Affaires Gagné et Perdu) :**
+  - Ajout des calculs de somme cumulée historique pour tous les deals gagnés (`ca_total`) et tous les deals perdus (`ca_lost`) dans `DashboardController.php`.
+  - Intégration des classes `.kpi-ok` (dégradé vert) et `.kpi-err` (dégradé rouge) dans `app.css`.
+  - Réorganisation de la grille de KPI sur le tableau de bord (`dashboard.blade.php`) en 3 colonnes sur 2 lignes pour un design moderne, aéré et extrêmement premium.
+  - Ajout de graphiques de tendances miniaturisés (SVG) sous forme de courbes d'évolution vectorielles positives et négatives adaptées.
+  - Déploiement et validation réussis en production.
+
+**v3.2 :**
 
 - **Correction des fonctionnalités du Kanban :** Rétablissement de la mise à jour automatique du statut des deals (`open`, `won`, `lost`) lors du drag-drop entre colonnes :
   - Modification du script SortableJS front-end pour appeler l'endpoint API dédié de déplacement (`POST /api/v1/deals/{id}/move`).
@@ -78,36 +87,34 @@ Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pa
 
 ### Dernière action effectuée
 
-Déploiement et activation réussis de la version **v3.0** sur le VPS de production (`51.38.99.226`). Les fichiers ont été synchronisés par SFTP, le projet a été reconstruit (`npm run build`), les fichiers copiés dans le conteneur de prod `crm-app`, les caches Laravel rechargés et les permissions du dossier `public/build` corrigées à `755` pour corriger une erreur 500 liée au manifest Vite. Validation QA automatisée 100% réussie en prod.
+Déploiement et activation réussis de la version **v3.3** sur le VPS de production (`51.38.99.226`). Les fichiers locaux modifiés ont été poussés sur Git et transférés sur le serveur, les images Docker reconstruites, et le cache Laravel rechargé. La validation par subagent navigateur a confirmé le rendu correct des nouvelles cartes de CA cumulé.
 
 ---
 
-## 3. Fichiers concernés (v3.1)
+## 3. Fichiers concernés (v3.3)
 
 ### Logique & Vues
 
 | Fichier                                         | Rôle                                                                              |
 | ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| `resources/views/pages/deals/show.blade.php`    | Étape de pipeline interactive et sélecteur rapide de statut de Deal               |
-| `resources/views/pages/contacts/show.blade.php`   | Sélecteurs de Lifecycle stage & Lead status, bouton toujours visible "+ Créer un deal" |
-| `resources/views/pages/contacts/edit.blade.php`   | Formulaire de modification standard avec champ `lead_status`                       |
-| `app/Http/Controllers/Web/ContactController.php` | Validation pour `lead_status` et `lifecycle_stage`                                 |
-| `app/Http/Controllers/Web/DealController.php`    | Validation pour le statut du Deal                                                 |
-| `tests/e2e/helpers.ts`                           | Correction de l'adresse email de connexion admin pour les tests Playwright         |
+| `app/Http/Controllers/Web/DashboardController.php` | Calculs du CA global (won) et du CA perdu global (lost)                         |
+| `resources/views/pages/dashboard.blade.php`    | Réorganisation de la grille de KPI (3 colonnes x 2 lignes) et intégration des cartes |
+| `resources/css/app.css`                        | Définitions des classes de dégradé `.kpi-ok` et `.kpi-err`                        |
 
 ### Assets Compilés
 
 | Fichier                                | Rôle                                                         |
 | -------------------------------------- | ------------------------------------------------------------ |
-| `public/build/assets/app-B_badhOe.css` | Styles CSS d'application compilés                            |
+| `public/build/assets/app-Byvue6_Q.css` | Styles CSS d'application compilés                            |
+| `public/build/assets/app-C67st75E.js`  | Scripts JS d'application compilés                             |
 | `public/build/manifest.json`           | Manifeste Vite mis à jour                                    |
 
 ---
 
 ## 4. Ce qui a échoué / Points d'attention
 
-- **Accès aux constantes de trait en PHP :** L'accès direct à `HasLifecycle::LEAD_STATUSES` provoquait une erreur PHP fatale. Il a été corrigé en accédant à la constante via la classe modèle `Contact` qui utilise le trait.
-- **Identifiant de test E2E admin :** L'email d'administration utilisé dans les tests Playwright (`admin@demo.com`) différait de l'email généré par le seeder local (`admin@example.com`), provoquant le timeout du login. L'email a été harmonisé.
+- Aucun échec rencontré sur la version v3.3.
+- **Rappel de cohabitation** : Le middleware `JwtMiddleware` déchiffre désormais proprement les cookies sécurisés de la partie Web pour l'API sans casser les en-têtes standard de l'application (v3.2).
 
 ---
 
@@ -115,11 +122,11 @@ Déploiement et activation réussis de la version **v3.0** sur le VPS de product
 
 ### Production — URL : https://crm.nana-intelligence.fr
 
-- **Prochaine étape** : Committer et pousser les modifications sur GitHub pour permettre le déploiement sur la production via le script `deploy.sh`.
+- Le déploiement est **actif et validé** à 100% sur le serveur.
 
 ---
 
 ## 6. Backlog de la prochaine session
 
-- **Supervision & Maintenance** : Surveiller les retours utilisateur sur les raccourcis d'édition rapides et s'assurer que toutes les interactions restent fluides et sans bug.
+- **Supervision & Maintenance** : Surveiller les retours utilisateur sur les nouveaux indicateurs financiers globaux du Dashboard et le comportement de synchronisation du Kanban.
 
