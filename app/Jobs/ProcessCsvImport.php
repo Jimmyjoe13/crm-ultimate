@@ -18,6 +18,9 @@ class ProcessCsvImport implements ShouldQueue
 
     public int $timeout = 600;
 
+    /** Keys created or detected as existing during this import run (for intra-CSV dedup). */
+    private array $seenKeys = [];
+
     /**
      * Maps common/French CSV header names to DB column names, per entity type.
      * Keys are lowercase+trimmed.
@@ -100,30 +103,29 @@ class ProcessCsvImport implements ShouldQueue
         $handle = fopen(Storage::path($this->path), 'rb');
         $rawHeaders = fgetcsv($handle) ?: [];
 
-        $model = $this->modelFor($job->entity_type);
-        $fillable = array_flip((new $model)->getFillable());
+        $model      = $this->modelFor($job->entity_type);
+        $fillable   = array_flip((new $model)->getFillable());
+        $entityType = $job->entity_type;
+        $userId     = $job->user_id;
 
         // Keys of custom fields for this entity type, used to route values into custom_values
         $customFieldKeys = CustomField::query()
-            ->where('entity_type', $job->entity_type)
+            ->where('entity_type', $entityType)
             ->pluck('key')
             ->flip()
             ->toArray();
 
-        if (! empty($job->mapping)) {
-            $headers = $this->applyUserMapping($rawHeaders, $job->mapping);
-        } else {
-            $headers = $this->normalizeHeaders($rawHeaders, $job->entity_type);
-        }
+        $headers = ! empty($job->mapping)
+            ? $this->applyUserMapping($rawHeaders, $job->mapping)
+            : $this->normalizeHeaders($rawHeaders, $entityType);
 
-        $existing = $this->loadExistingKeys($job->entity_type);
         $strategy = $job->duplicate_strategy ?? 'skip';
 
-        $errors = [];
-        $processed = 0;
-        $failed = 0;
+        $errors           = [];
+        $processed        = 0;
+        $failed           = 0;
         $duplicatesSkipped = 0;
-        $buffer = [];
+        $chunk            = [];
 
         while (($row = fgetcsv($handle)) !== false) {
             $processed++;
@@ -133,7 +135,6 @@ class ProcessCsvImport implements ShouldQueue
                 if (count($errors) < 100) {
                     $errors[] = ['row' => $processed, 'message' => 'Nombre de colonnes incorrect.'];
                 }
-
                 continue;
             }
 
@@ -149,7 +150,7 @@ class ProcessCsvImport implements ShouldQueue
 
             // Partition custom field keys out of combined before fillable filter
             $customRaw = array_intersect_key($combined, $customFieldKeys);
-            $combined = array_diff_key($combined, $customFieldKeys);
+            $combined  = array_diff_key($combined, $customFieldKeys);
 
             $payload = $this->truncateStrings(array_filter(
                 array_intersect_key($combined, $fillable),
@@ -158,7 +159,7 @@ class ProcessCsvImport implements ShouldQueue
 
             // Cast and attach custom field values
             if (! empty($customRaw)) {
-                $castedCustom = CustomValueValidator::cast($job->entity_type, $customRaw);
+                $castedCustom = CustomValueValidator::cast($entityType, $customRaw);
                 if (! empty($castedCustom)) {
                     $payload['custom_values'] = $castedCustom;
                 }
@@ -169,24 +170,71 @@ class ProcessCsvImport implements ShouldQueue
                 if (count($errors) < 100) {
                     $errors[] = ['row' => $processed, 'message' => 'Aucun champ reconnu — vérifiez les en-têtes CSV.'];
                 }
-
                 continue;
             }
 
             if (! isset($payload['owner_id']) && isset($fillable['owner_id'])) {
-                $payload['owner_id'] = $job->user_id;
+                $payload['owner_id'] = $userId;
             }
 
-            // Resolve __company_* → company record, then attach via pivot
+            $chunk[] = [
+                'row'            => $processed,
+                'payload'        => $payload,
+                'companyPayload' => $companyPayload,
+            ];
+
+            // Lot 6 — P2 : flush par tranche de 500 avec lookup ciblé (plus de chargement de toute la table)
+            if (count($chunk) >= 500) {
+                $this->processChunk($chunk, $model, $entityType, $strategy, $failed, $errors, $duplicatesSkipped);
+                $chunk = [];
+            }
+        }
+
+        if (! empty($chunk)) {
+            $this->processChunk($chunk, $model, $entityType, $strategy, $failed, $errors, $duplicatesSkipped);
+        }
+
+        fclose($handle);
+
+        $job->update([
+            'status'             => $failed > 0 ? 'completed_with_errors' : 'completed',
+            'total_rows'         => $processed,
+            'processed_rows'     => $processed - $failed - $duplicatesSkipped,
+            'failed_rows'        => $failed,
+            'duplicates_skipped' => $duplicatesSkipped,
+            'errors'             => $errors,
+        ]);
+    }
+
+    private function processChunk(
+        array $chunk,
+        string $model,
+        string $entityType,
+        string $strategy,
+        int &$failed,
+        array &$errors,
+        int &$duplicatesSkipped,
+    ): void {
+        // Batch DB lookup — seulement les clés présentes dans ce chunk
+        $chunkKeys  = array_values(array_filter(array_unique(
+            array_map(fn($item) => $this->duplicateKey($item['payload'], $entityType), $chunk)
+        )));
+        $dbExisting = $this->buildBatchLookup($chunkKeys, $entityType);
+
+        $buffer = [];
+        foreach ($chunk as $item) {
+            $dupeKey = $this->duplicateKey($item['payload'], $entityType);
+
+            // Resolve __company_* → company record
             $attachCompanyId = null;
-            if (! empty($companyPayload) && $job->entity_type === 'contact') {
-                $attachCompanyId = $this->resolveCompany($companyPayload);
+            if (! empty($item['companyPayload']) && $entityType === 'contact') {
+                $attachCompanyId = $this->resolveCompany($item['companyPayload']);
             }
 
-            // Duplicate detection + strategy branching
-            $dupeKey = $this->duplicateKey($payload, $job->entity_type);
+            $isDupe = $dupeKey !== null
+                && (isset($dbExisting[$dupeKey]) || isset($this->seenKeys[$dupeKey]));
 
-            if ($dupeKey !== null && isset($existing[$dupeKey])) {
+            if ($isDupe) {
                 if ($strategy === 'skip') {
                     $duplicatesSkipped++;
                     continue;
@@ -194,48 +242,44 @@ class ProcessCsvImport implements ShouldQueue
 
                 if ($strategy === 'update') {
                     $buffer[] = [
-                        'action' => 'update',
-                        'row' => $processed,
-                        'dupeKey' => $dupeKey,
-                        'payload' => $payload,
+                        'action'          => 'update',
+                        'row'             => $item['row'],
+                        'dupeKey'         => $dupeKey,
+                        'payload'         => $item['payload'],
                         'attachCompanyId' => $attachCompanyId,
                     ];
                     continue;
                 }
-                // 'create' falls through to normal insert
+                // 'create' falls through
             }
 
             $buffer[] = [
-                'action' => 'create',
-                'row' => $processed,
-                'payload' => $payload,
+                'action'          => 'create',
+                'row'             => $item['row'],
+                'payload'         => $item['payload'],
                 'attachCompanyId' => $attachCompanyId,
             ];
 
             if ($dupeKey !== null) {
-                $existing[$dupeKey] = true;
-            }
-
-            if (count($buffer) >= 500) {
-                $this->flushBuffer($buffer, $model, $job->entity_type, $failed, $errors);
-                $buffer = [];
+                $this->seenKeys[$dupeKey] = true;
             }
         }
 
-        if (! empty($buffer)) {
-            $this->flushBuffer($buffer, $model, $job->entity_type, $failed, $errors);
+        $this->flushBuffer($buffer, $model, $entityType, $failed, $errors);
+    }
+
+    private function buildBatchLookup(array $keys, string $entityType): array
+    {
+        if (empty($keys)) {
+            return [];
         }
 
-        fclose($handle);
-
-        $job->update([
-            'status' => $failed > 0 ? 'completed_with_errors' : 'completed',
-            'total_rows' => $processed,
-            'processed_rows' => $processed - $failed - $duplicatesSkipped,
-            'failed_rows' => $failed,
-            'duplicates_skipped' => $duplicatesSkipped,
-            'errors' => $errors,
-        ]);
+        return match ($entityType) {
+            'contact' => Contact::query()->whereIn('email', $keys)->pluck('email')->flip()->toArray(),
+            'company' => Company::query()->whereIn('domain', $keys)->pluck('domain')->flip()->toArray(),
+            'deal'    => Deal::query()->whereIn('name', $keys)->pluck('name')->flip()->toArray(),
+            default   => [],
+        };
     }
 
     private function resolveCompany(array $companyPayload): int
@@ -319,16 +363,6 @@ class ProcessCsvImport implements ShouldQueue
                 }
             }
         }
-    }
-
-    private function loadExistingKeys(string $entityType): array
-    {
-        return match ($entityType) {
-            'contact' => Contact::query()->whereNotNull('email')->pluck('email')->flip()->toArray(),
-            'company' => Company::query()->whereNotNull('domain')->pluck('domain')->flip()->toArray(),
-            'deal' => Deal::query()->pluck('name')->flip()->toArray(),
-            default => [],
-        };
     }
 
     private function duplicateKey(array $payload, string $entityType): ?string

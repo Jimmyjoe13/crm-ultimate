@@ -59,7 +59,7 @@ class DealController extends Controller
         $allCount = $cached['allCount'];
         $total    = $cached['amount'];
 
-        $stages = PipelineStage::orderBy('position')->get();
+        $stages = $this->allStages();
 
         return view('pages.deals.index', compact('deals', 'filter', 'sort', 'dir', 'search', 'allCount', 'total', 'stages'));
     }
@@ -112,10 +112,7 @@ class DealController extends Controller
     {
         $deal->load('stage', 'companies', 'contacts', 'owner');
 
-        $stages = PipelineStage::orderBy('position')
-            ->where('is_won', false)
-            ->where('is_lost', false)
-            ->get();
+        $stages = $this->activeStages();
 
         $activities = Activity::where('subject_type', Deal::class)
             ->where('subject_id', $deal->id)
@@ -131,15 +128,19 @@ class DealController extends Controller
             ->limit(10)
             ->get();
 
-        $allContacts = \App\Models\Contact::orderBy('last_name')->get();
-        $allCompanies = \App\Models\Company::orderBy('name')->get();
+        $allContacts = Cache::tags(['contacts.index'])->remember('contacts.dropdown', 60, fn() =>
+            \App\Models\Contact::select('id', 'first_name', 'last_name')->orderBy('last_name')->get()
+        );
+        $allCompanies = Cache::tags(['companies.index'])->remember('companies.dropdown', 60, fn() =>
+            \App\Models\Company::select('id', 'name')->orderBy('name')->get()
+        );
 
         return view('pages.deals.show', compact('deal', 'stages', 'activities', 'bgDeals', 'allContacts', 'allCompanies'));
     }
 
     public function edit(Deal $deal)
     {
-        $stages = PipelineStage::where('is_won', false)->where('is_lost', false)->orderBy('position')->get();
+        $stages = $this->activeStages();
 
         return view('pages.deals.edit', compact('deal', 'stages'));
     }
@@ -201,7 +202,7 @@ class DealController extends Controller
 
     public function markWon(Deal $deal)
     {
-        $wonStage = PipelineStage::where('is_won', true)->first();
+        $wonStage = $this->wonStage();
         $deal->update([
             'status'            => 'won',
             'pipeline_stage_id' => $wonStage?->id ?? $deal->pipeline_stage_id,
@@ -213,7 +214,7 @@ class DealController extends Controller
 
     public function markLost(Deal $deal)
     {
-        $lostStage = PipelineStage::where('is_lost', true)->first();
+        $lostStage = $this->lostStage();
         $deal->update([
             'status'            => 'lost',
             'pipeline_stage_id' => $lostStage?->id ?? $deal->pipeline_stage_id,
@@ -289,5 +290,34 @@ class DealController extends Controller
 
         return redirect('/deals/' . $deal->id)
             ->with('flash_toast', ['message' => 'Entreprise dissociée.', 'type' => 'warning']);
+    }
+
+    // Lot 4 — P2 : cache 1h sur les stages quasi-statiques
+    private function activeStages(): \Illuminate\Support\Collection
+    {
+        return Cache::remember('pipeline.stages.active', 3600,
+            fn() => PipelineStage::where('is_won', false)->where('is_lost', false)->orderBy('position')->get()
+        );
+    }
+
+    private function allStages(): \Illuminate\Support\Collection
+    {
+        return Cache::remember('pipeline.stages.all', 3600,
+            fn() => PipelineStage::orderBy('position')->get()
+        );
+    }
+
+    private function wonStage(): ?PipelineStage
+    {
+        return Cache::remember('pipeline.stage.won', 86400,
+            fn() => PipelineStage::where('is_won', true)->first()
+        );
+    }
+
+    private function lostStage(): ?PipelineStage
+    {
+        return Cache::remember('pipeline.stage.lost', 86400,
+            fn() => PipelineStage::where('is_lost', true)->first()
+        );
     }
 }

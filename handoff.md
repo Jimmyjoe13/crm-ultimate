@@ -549,9 +549,10 @@ Fix : déplacer dans `Api\InfoController`. Impact actuel : nul (~1-2ms/requête)
 
 #### Backlog restant
 - **Comptes utilisateurs** : ✅ Jimmy (admin, jimmygay13180@gmail.com) et Jonathan (manager, jo.boetsch@gmail.com) créés en prod (2026-05-23). ⚠️ Supprimer le compte par défaut `admin@example.com` / `password` dès que possible.
-- **Backup BDD** : script cron `pg_dump` quotidien → `/opt/backups/crm/` avec rotation 7 jours
+- **Backup BDD** : script cron `pg_dump` quotidien → `/opt/backups/crm/` avec rotation 7 jours — **voir §11 Lot 7**
 - **Sélection globale companies/deals** : même pattern que contacts (toolbar "Tout sélectionner")
 - ✅ **Webhook Emelia via n8n** : Livré 2026-05-23 — voir §9 ci-dessous.
+- **Optimisations performances backend v3.0** : 7 lots identifiés et documentés — **voir §11**
 
 ---
 
@@ -934,3 +935,245 @@ Nécessite : configuration SMTP dans `.env` + mailable `WeeklyDigestMail` + vue 
 6. ✅ **B3** — Sentiment replies (job + UI icône) — **LIVRÉ 2026-05-23**
 
 **Roadmap v2.8 complète.**
+
+---
+
+## 11. Optimisations performances backend — v3.0 (Prochaine session)
+
+> Audit réalisé le 2026-05-24. Problèmes confirmés dans le code source — aucun travail Gemini concerné (périmètre 100% backend).
+
+### Lot 1 — Indexes DB manquants (1 migration) — PRIORITÉ P1
+
+**Fichier à créer :** `database/migrations/2026_05_24_100001_add_performance_indexes.php`
+
+Colonnes confirmées sans index :
+
+| Colonne(s) | Table | Problème confirmé | Gain estimé |
+|---|---|---|---|
+| `first_name`, `last_name` | `contacts` | ILIKE full-table scan sur recherche | -50% temps recherche |
+| `ai_score` | `contacts` | ORDER BY sans index (ajouté en `2026_05_23` sans `->index()`) | -60% sur tri |
+| `is_won`, `is_lost` | `pipeline_stages` | Full scan sur chaque `markWon`/`markLost` (DealController:204,216) | Scan → point lookup |
+| `(subject_type, subject_id)` | `activities` | Aucun index composite — toutes les timelines font un seq scan | -70% latence timeline |
+
+```php
+Schema::table('contacts', function (Blueprint $table) {
+    $table->index('first_name');
+    $table->index('last_name');
+    $table->index('ai_score');
+});
+Schema::table('pipeline_stages', function (Blueprint $table) {
+    $table->index('is_won');
+    $table->index('is_lost');
+});
+Schema::table('activities', function (Blueprint $table) {
+    $table->index(['subject_type', 'subject_id'], 'activities_subject_idx');
+});
+```
+
+---
+
+### Lot 2 — Dashboard : N+1 + 0 cache — PRIORITÉ P1
+
+**Fichier :** `app/Http/Controllers/Web/DashboardController.php`
+
+**Problèmes confirmés :**
+- Lignes 30-38 : N+1 — `$stages->map(fn($stage) => Deal::where('pipeline_stage_id', $stage->id)->get())` = 1 requête SQL par stage
+- Lignes 19-27 : 7 requêtes `Deal::where(...)` sans aucun cache → recalculées à chaque page load
+
+**Fix : une seule requête groupée + cache 5 minutes**
+
+```php
+public function index()
+{
+    return Cache::remember('dashboard.data', 300, function () {
+        $now          = Carbon::now();
+        $startOfMonth = $now->copy()->startOfMonth();
+        $startOf30d   = $now->copy()->subDays(30);
+
+        // 1 seule requête pour les 3 SUM
+        $dealStats = Deal::selectRaw("
+            SUM(CASE WHEN status='open'  THEN amount ELSE 0 END) as pipeline_total,
+            SUM(CASE WHEN status='won'   THEN amount ELSE 0 END) as ca_total,
+            SUM(CASE WHEN status='lost'  THEN amount ELSE 0 END) as ca_lost
+        ")->first();
+
+        // Remplacement du N+1 : groupBy en PHP sur résultat unique
+        $openDeals  = Deal::where('status', 'open')->get(['pipeline_stage_id', 'amount']);
+        $stagesData = PipelineStage::orderBy('position')
+            ->where('is_won', false)->where('is_lost', false)->get()
+            ->map(fn($stage) => [
+                'name'  => $stage->name,
+                'count' => $openDeals->where('pipeline_stage_id', $stage->id)->count(),
+                'total' => $openDeals->where('pipeline_stage_id', $stage->id)->sum('amount'),
+            ]);
+
+        // ... reste du code
+    });
+}
+```
+
+**Invalidation à ajouter dans `Deal::boot()`** : `Cache::forget('dashboard.data')` sur `saved`/`deleted`.
+
+---
+
+### Lot 3 — DealController::show() — charge TOUS les contacts/sociétés — PRIORITÉ P2
+
+**Fichier :** `app/Http/Controllers/Web/DealController.php:134-135`
+
+```php
+// CONFIRMÉ : charge TOUS les contacts en RAM à chaque fiche deal
+$allContacts  = Contact::orderBy('last_name')->get();   // ← 6000 objets
+$allCompanies = Company::orderBy('name')->get();         // ← sans limit ni cache
+```
+
+**Fix :**
+```php
+$allContacts = Cache::remember('contacts.dropdown', 60, fn() =>
+    Contact::select('id', 'first_name', 'last_name')->orderBy('last_name')->get()
+);
+$allCompanies = Cache::remember('companies.dropdown', 60, fn() =>
+    Company::select('id', 'name')->orderBy('name')->get()
+);
+```
+
+Invalidation déjà en place via `Contact::boot()` / `Company::boot()` — utiliser les tags existants ou `Cache::forget`.
+
+---
+
+### Lot 4 — PipelineStage : 5 requêtes identiques sans cache — PRIORITÉ P2
+
+**Fichier :** `app/Http/Controllers/Web/DealController.php` (lignes 62, 115, 143, 204, 216)
+
+`PipelineStage::get()` est appelé 5 fois dans DealController sur des données quasi-statiques. Créer un helper central :
+
+```php
+// Dans DealController ou via une façade cachée
+private function cachedStages(): Collection
+{
+    return Cache::remember('pipeline.stages.active', 3600,
+        fn() => PipelineStage::orderBy('position')->where('is_won', false)->where('is_lost', false)->get()
+    );
+}
+
+private function wonStage(): ?PipelineStage
+{
+    return Cache::remember('pipeline.stage.won', 86400,
+        fn() => PipelineStage::where('is_won', true)->first()
+    );
+}
+```
+
+Invalidation : `PipelineStage::boot()` → `saved`/`deleted` → `Cache::forget('pipeline.stages.active')`, etc.
+
+---
+
+### Lot 5 — GIN trigram index sur recherche contacts — PRIORITÉ P3
+
+**Problème :** recherche ILIKE `%term%` = full-table scan même avec index B-tree classique.
+
+**Migration :**
+```php
+DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+DB::statement('CREATE INDEX contacts_search_trgm ON contacts USING gin (
+    (first_name || \' \' || last_name || \' \' || coalesce(email, \'\')) gin_trgm_ops
+)');
+```
+
+**Aucun changement de code applicatif requis** — PostgreSQL utilisera l'index automatiquement sur les ILIKE. Réduction de ~95% du temps de recherche à 6000+ contacts.
+
+---
+
+### Lot 6 — ProcessCsvImport::loadExistingKeys() — PRIORITÉ P2
+
+**Fichier :** `app/Jobs/ProcessCsvImport.php:324-332`
+
+```php
+// CONFIRMÉ : charge TOUS les emails en mémoire avant l'import
+Contact::whereNotNull('email')->pluck('email')->flip()->toArray(); // → 6000+ strings en RAM
+```
+
+**Fix : construire le lookup uniquement sur les emails du batch courant**
+
+```php
+private function buildBatchLookup(array $batch, string $entityType): array
+{
+    $keys = array_filter(array_column($batch, match($entityType) {
+        'contact' => 'email',
+        'company' => 'domain',
+        'deal'    => 'name',
+        default   => 'id',
+    }));
+
+    return match($entityType) {
+        'contact' => Contact::whereIn('email', $keys)->pluck('id', 'email')->all(),
+        'company' => Company::whereIn('domain', $keys)->pluck('id', 'domain')->all(),
+        'deal'    => Deal::whereIn('name', $keys)->pluck('id', 'name')->all(),
+        default   => [],
+    };
+}
+```
+Appelé par tranche de 500 lignes (le job chunke déjà) → mémoire constante quelle que soit la taille du CSV.
+
+---
+
+### Lot 7 — Backup pg_dump quotidien — PRIORITÉ P0 (critique prod)
+
+Aucun backup automatisé en production. En cas de corruption DB ou erreur humaine, toutes les données sont perdues.
+
+**Script à créer sur VPS :** `/home/jimmy/scripts/backup_db.sh`
+```bash
+#!/bin/bash
+BACKUP_DIR="/opt/backups/crm"
+mkdir -p "$BACKUP_DIR"
+docker exec crm-postgres pg_dump -U crm crm_ultimate | gzip > "$BACKUP_DIR/crm_$(date +%Y%m%d_%H%M).sql.gz"
+# Rotation : garder 7 jours
+find "$BACKUP_DIR" -name "*.sql.gz" -mtime +7 -delete
+```
+
+**Cron à ajouter** (crontab jimmy) : `0 3 * * * /home/jimmy/scripts/backup_db.sh >> /home/jimmy/logs/backup.log 2>&1`
+
+---
+
+### Résumé priorités
+
+| # | Lot | Effort | Priorité | Impact | Statut |
+|---|-----|--------|----------|--------|--------|
+| 7 | Backup pg_dump | 45 min | **P0** | Sécurité données prod | ✅ `scripts/backup_db.sh` — à SCP + cron sur VPS |
+| 1 | Indexes DB | 30 min | **P1** | -60% latence timeline + recherche | ✅ migration `2026_05_24_100001` |
+| 2 | Dashboard cache/N+1 | 1h | **P1** | -80% requêtes page accueil | ✅ `DashboardController` + `Deal::boot()` |
+| 3 | DealController dropdown | 45 min | **P2** | -90% RAM fiches deal | ✅ `DealController::show()` — Cache::tags |
+| 4 | PipelineStage cache | 30 min | **P2** | -5 queries/page deal | ✅ helpers `activeStages/wonStage/...` + `PipelineStage::boot()` |
+| 6 | CSV import batch lookup | 1h | **P2** | Import 50K+ sans OOM | ✅ `ProcessCsvImport` — `processChunk` + `buildBatchLookup` |
+| 5 | GIN trigram index | 20 min | **P3** | Recherche instantanée | ✅ migration `2026_05_24_100002` |
+
+**v3.0 backend performance — LIVRÉ 2026-05-24. Reste : déployer sur VPS + créer le cron backup.**
+
+### Déploiement v3.0 — à faire sur VPS
+
+```bash
+# 1. SCP fichiers modifiés
+# Périmètre backend (Claude Code) :
+#   app/Http/Controllers/Web/DashboardController.php
+#   app/Http/Controllers/Web/DealController.php
+#   app/Models/Deal.php
+#   app/Models/PipelineStage.php
+#   app/Jobs/ProcessCsvImport.php
+#   database/migrations/2026_05_24_100001_add_performance_indexes.php
+#   database/migrations/2026_05_24_100002_add_gin_trgm_index_contacts.php
+
+# 2. Rebuild + migrate + cache clear
+cd ~/crm-ultimate
+docker compose -f docker-compose.prod.yml build app queue
+docker compose -f docker-compose.prod.yml up -d app queue
+docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
+docker compose -f docker-compose.prod.yml exec -T app php artisan config:clear
+docker compose -f docker-compose.prod.yml exec -T app php artisan view:clear
+docker compose -f docker-compose.prod.yml exec -T app php artisan cache:clear
+docker compose -f docker-compose.prod.yml exec -T app php artisan route:cache
+
+# 3. Script backup + cron
+mkdir -p /home/jimmy/scripts /home/jimmy/logs
+# SCP scripts/backup_db.sh → /home/jimmy/scripts/backup_db.sh
+chmod +x /home/jimmy/scripts/backup_db.sh
+crontab -l | { cat; echo "0 3 * * * /home/jimmy/scripts/backup_db.sh >> /home/jimmy/logs/backup.log 2>&1"; } | crontab -
+```

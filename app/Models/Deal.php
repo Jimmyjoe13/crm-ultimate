@@ -19,7 +19,10 @@ class Deal extends Model
     protected static function boot(): void
     {
         parent::boot();
-        $flush = fn() => Cache::tags(['deals.index'])->flush();
+        $flush = function () {
+            Cache::tags(['deals.index'])->flush();
+            Cache::forget('dashboard.data');
+        };
         static::saved($flush);
         static::deleted($flush);
 
