@@ -113,6 +113,14 @@ class EmeliaWebhookController extends Controller
         }
 
         // 6. Déléguer au dispatcher (création Activity + actions secondaires REPLIED)
+        // Pour email_replied : privilégier le corps complet, sinon le preview
+        $replyBody = $request->input('full_reply')
+            ?? $request->input('body')
+            ?? $request->input('content')
+            ?? $request->input('replyContent')
+            ?? $request->input('text')
+            ?? $request->input('preview', '');
+
         $activity = EmeliaEventDispatcher::dispatch(
             contact:          $contact,
             type:             $type,
@@ -120,7 +128,7 @@ class EmeliaWebhookController extends Controller
             occurredAt:       $occurredAt,
             externalId:       $eventId,
             title:            $request->input('subject'),
-            body:             $request->input('preview', ''),
+            body:             $replyBody,
             emeliaCampaignId: $campaign?->id,
         );
 

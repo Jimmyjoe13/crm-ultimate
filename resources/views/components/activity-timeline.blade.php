@@ -240,8 +240,32 @@
                 </form>
                 @endif
             </div>
-            @if($activity->body)
-            <div class="ts">{{ Str::limit($activity->body, 100) }}</div>
+            @if($activity->type === 'email_replied')
+            @php
+                $replyBody = $activity->body ?? '';
+                $isLong    = mb_strlen($replyBody) > 220;
+                $isSynth   = $activity->metadata['synthetic'] ?? false;
+            @endphp
+            @if($replyBody)
+            <div x-data="{ expanded: false }" class="mt-1.5">
+                <div class="ts leading-relaxed"
+                     style="white-space: pre-wrap; word-break: break-word;"
+                     :class="expanded ? '' : 'line-clamp-4'">{{ $replyBody }}</div>
+                @if($isLong)
+                <button type="button"
+                        @click="expanded = !expanded"
+                        class="text-[10px] mt-1 hover:underline"
+                        style="color: var(--accent);">
+                    <span x-show="!expanded">↓ Voir la réponse complète</span>
+                    <span x-show="expanded">↑ Réduire</span>
+                </button>
+                @endif
+            </div>
+            @elseif($isSynth)
+            <div class="ts text-tertiary italic mt-1" style="font-size:10px;">Corps de la réponse non disponible (importé via sync)</div>
+            @endif
+            @elseif($activity->body)
+            <div class="ts">{{ Str::limit($activity->body, 120) }}</div>
             @endif
         </div>
     </div>
