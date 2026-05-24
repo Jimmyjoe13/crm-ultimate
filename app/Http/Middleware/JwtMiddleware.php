@@ -15,7 +15,7 @@ class JwtMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        $token = $request->bearerToken();
+        $token = $request->bearerToken() ?? $request->cookie('crm_jwt');
 
         if (! $token) {
             return response()->json(['message' => 'Missing bearer token.'], 401);
