@@ -18,7 +18,7 @@ class PipelineController extends Controller
             ->orderBy('position')
             ->get();
 
-        $dealsByStage = Deal::where('status', 'open')
+        $dealsByStage = Deal::where('pipeline_id', $pipeline?->id)
             ->with('companies', 'owner')
             ->get()
             ->groupBy('pipeline_stage_id');
@@ -28,7 +28,9 @@ class PipelineController extends Controller
             'deals'  => $dealsByStage->get($stage->id, collect()),
         ]);
 
-        $total = Deal::where('status', 'open')->sum('amount');
+        $total = Deal::where('pipeline_id', $pipeline?->id)
+            ->where('status', 'open')
+            ->sum('amount');
 
         return view('pages.pipeline.index', compact('stagesWithDeals', 'total', 'pipeline'));
     }

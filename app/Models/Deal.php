@@ -22,6 +22,16 @@ class Deal extends Model
         $flush = fn() => Cache::tags(['deals.index'])->flush();
         static::saved($flush);
         static::deleted($flush);
+
+        static::saving(function (Deal $deal) {
+            if ($deal->isDirty('pipeline_stage_id') && $deal->pipeline_stage_id) {
+                $stage = PipelineStage::find($deal->pipeline_stage_id);
+                if ($stage) {
+                    $deal->pipeline_id = $stage->pipeline_id;
+                    $deal->status = $stage->is_won ? 'won' : ($stage->is_lost ? 'lost' : 'open');
+                }
+            }
+        });
     }
 
     protected $fillable = [

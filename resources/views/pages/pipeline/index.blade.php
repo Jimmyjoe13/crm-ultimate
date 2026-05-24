@@ -81,8 +81,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const stageId = evt.to.dataset.stage;
                 if (!dealId || !stageId) return;
 
-                fetch('/api/v1/deals/' + dealId, {
-                    method: 'PATCH',
+                fetch('/api/v1/deals/' + dealId + '/move', {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,

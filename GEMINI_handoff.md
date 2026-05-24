@@ -4,6 +4,13 @@
 
 Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pages de détails (Contacts, Sociétés, Deals) en mettant en place un layout modernisé, équilibré et à trois colonnes, inspiré des meilleures pratiques des CRM modernes (type HubSpot).
 
+**v3.2 (En cours) :**
+
+- **Correction des fonctionnalités du Kanban :** Rétablissement de la mise à jour automatique du statut des deals (`open`, `won`, `lost`) lors du drag-drop entre colonnes :
+  - Modification du script SortableJS front-end pour appeler l'endpoint API dédié de déplacement (`POST /api/v1/deals/{id}/move`).
+  - Implémentation d'une synchronisation automatique au niveau du modèle `Deal` dans son événement de sauvegarde (`saving`) pour garantir que tout changement de `pipeline_stage_id` met à jour de façon cohérente le statut en base de données.
+  - Ajustement de `PipelineController` pour charger tous les deals associés au pipeline (y compris ceux gagnés et perdus dans leurs colonnes correspondantes) afin de correspondre aux données réelles de l'API.
+
 **v3.1 (Cette Session - Courante) :**
 
 - **Sélecteur de statut de deal rapide :** Remplacement de la puce de statut statique du Deal par un sélecteur déroulant interactif (Alpine.js) permettant de mettre à jour le statut (`open`, `won`, `lost`) en un clic.
