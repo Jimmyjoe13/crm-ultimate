@@ -33,6 +33,18 @@
         @endif
         <x-button href="/contacts/create" size="sm">Nouveau contact</x-button>
         <form method="GET" action="{{ '/contacts' }}" class="flex items-center gap-2">
+            @if(request('sort')) <input type="hidden" name="sort" value="{{ request('sort') }}"> @endif
+            @if(request('dir')) <input type="hidden" name="dir" value="{{ request('dir') }}"> @endif
+            
+            <label class="flex items-center gap-2 text-xs text-secondary cursor-pointer mr-2 select-none">
+                <input type="hidden" name="hide_blacklisted" value="0">
+                <input type="checkbox" name="hide_blacklisted" value="1" 
+                       @checked(request('hide_blacklisted', '1') === '1')
+                       @change="$el.form.submit()"
+                       class="rounded border-default text-accent focus:ring-accent" style="width: 14px; height: 14px; cursor: pointer;">
+                <span>Masquer les blacklistés ({{ \App\Models\Contact::blacklisted()->count() }})</span>
+            </label>
+
             <input type="text" name="search" value="{{ $search }}" placeholder="Rechercher…"
                    class="field" style="padding: 6px 10px; border: 1px solid var(--border); border-radius:7px; font-size:13px; background: var(--surface); color: var(--text);">
             <x-button type="submit" size="sm">Chercher</x-button>
@@ -109,7 +121,12 @@
                         <div class="flex items-center gap-2">
                             <span class="av {{ $color }}">{{ $initials }}</span>
                             <div>
-                                <div class="font-medium text-[13px]">{{ $fullName ?: $contact->email }}</div>
+                                <div class="font-medium text-[13px] flex items-center gap-1.5">
+                                    <span>{{ $fullName ?: $contact->email }}</span>
+                                    @if($contact->blacklisted_at)
+                                    <span class="chip err sm" style="font-size: 10px; padding: 1px 6px;">Blacklisté</span>
+                                    @endif
+                                </div>
                                 @if($contact->job_title)
                                 <div class="text-[11.5px] text-tertiary font-mono">{{ $contact->job_title }}</div>
                                 @endif

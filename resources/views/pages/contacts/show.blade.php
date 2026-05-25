@@ -21,6 +21,9 @@
         <h1 class="text-2xl">{{ $fullName ?: $contact->email }}</h1>
         <p class="text-sm text-secondary">{{ $contact->job_title ?? '' }} @if($company) · {{ $company->name }} @endif</p>
     </div>
+    @if($contact->blacklisted_at)
+    <span class="chip err ml-2" @if($contact->blacklist_reason) title="Raison : {{ $contact->blacklist_reason }}" @endif>Blacklisté</span>
+    @endif
     @if($contact->lifecycle_stage)
     <span class="chip ml-2">{{ $contact->lifecycle_stage }}</span>
     @endif
