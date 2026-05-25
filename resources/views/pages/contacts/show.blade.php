@@ -460,8 +460,9 @@
      x-show="open"
      x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center"
-     style="background: rgba(0,0,0,.45);"
-     @keydown.escape.window="open = false">
+     style="display:none; background: rgba(0,0,0,.45);"
+     @keydown.escape.window="open = false"
+     @click="open = false">
     <div class="card p-6 w-full max-w-md" @click.stop>
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-base font-semibold">Campagnes Emelia</h2>
@@ -507,8 +508,9 @@
      x-show="open"
      x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
-     style="background: rgba(0,0,0,.45);"
-     @keydown.escape.window="open = false">
+     style="display:none; background: rgba(0,0,0,.45);"
+     @keydown.escape.window="open = false"
+     @click="open = false">
     <div class="card p-6 w-full max-w-md" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-base font-semibold">Nouveau deal</h2>
@@ -562,7 +564,7 @@
      x-show="open"
      x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
-     style="background: rgba(0,0,0,.45);"
+     style="display:none; background: rgba(0,0,0,.45);"
      @keydown.escape.window="open = false"
      @click="open = false">
     <div class="card p-6 w-full max-w-lg" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
@@ -661,7 +663,7 @@
      x-show="open"
      x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
-     style="background: rgba(0,0,0,.45);"
+     style="display:none; background: rgba(0,0,0,.45);"
      @keydown.escape.window="open = false"
      @click="open = false">
     <div class="card p-6 w-full max-w-md" @click.stop style="max-height: 90vh; display: flex; flex-direction: column;">
