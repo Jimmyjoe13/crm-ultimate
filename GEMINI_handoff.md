@@ -4,7 +4,23 @@
 
 Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pages de détails (Contacts, Sociétés, Deals) en mettant en place un layout modernisé, équilibré et à trois colonnes, inspiré des meilleures pratiques des CRM modernes (type HubSpot).
 
-**v3.8 (Cette Session - Courante) — Terminé :**
+**v3.9 (Cette Session - Courante) — Terminé :**
+
+- **Badge "Blacklisté" sur la fiche contact** (`contacts/show.blade.php`) :
+  - Ajout d'un badge `.chip.err` rouge **"Blacklisté"** dans l'en-tête de la fiche contact, placé avant le badge `lifecycle_stage`.
+  - Le badge n'apparaît que si `$contact->blacklisted_at` est non-null (scope `Contact::blacklisted()` fourni par Claude Code).
+  - Si `$contact->blacklist_reason` est renseigné, il s'affiche en `title` au survol du badge (ex : "Raison : STOP via Emelia reply").
+- **Toggle "Masquer les blacklistés" sur la liste des contacts** (`contacts/index.blade.php`) :
+  - Ajout d'un checkbox dans la toolbar de filtres à côté de la recherche.
+  - Label dynamique : `Masquer les blacklistés (N)` où N est le nombre réel de contacts blacklistés (`Contact::blacklisted()->count()`).
+  - **Par défaut : masqués** — `@checked(request('hide_blacklisted', '1') === '1')` active le filtre dès le premier chargement.
+  - Soumission automatique du formulaire au changement (`@change="$el.form.submit()"`).
+  - Paramètre GET `?hide_blacklisted=1/0` transmis au backend (périmètre Claude Code pour le filtrage effectif).
+  - Badge `.chip.err sm` "Blacklisté" affiché en ligne à côté du nom dans la colonne Contact de la table.
+  - Les paramètres `sort` et `dir` sont préservés via des inputs hidden lors de la soumission du filtre.
+- **Déploiement** : 2 fichiers Blade déployés via SFTP ciblé, cache Blade + applicatif vidés. Validation DB : 1 contact blacklisté confirmé en production (`Micha Megret — STOP via Emelia reply`).
+
+**v3.8 — Terminé :**
 
 - **Lien "Console Admin" dans la sidebar** : Ajout du lien vers `route('console.index')` dans la section Settings de `app-shell.blade.php`, visible uniquement pour les administrateurs via `@if(auth()->user()?->isAdmin())`. L'icône de terminal (`>_`) est parfaitement intégrée et alignée avec les autres options Settings.
 - **Export CSV dans le module Segments** : Ajustement de la classe du bouton d'export dans la toolbar de `segments/show.blade.php` pour utiliser la classe `.btn` (style bouton secondaire blanc standard du CRM) au lieu de `btn sm ghost`.
@@ -123,13 +139,15 @@ Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pa
 
 ### Dernière action effectuée
 
-**Claude Code — v3.1 Rapports (2026-05-24) :** Backend livré et déployé en prod. Fichiers créés/modifiés :
-- `app/Http/Controllers/Web/ReportController.php` (nouveau)
-- `routes/web.php` (route `/reports` ajoutée)
-- `app/Models/Deal.php` (invalidation cache `reports.data`)
-- `resources/views/pages/reports/index.blade.php` (vue structurelle — **à enrichir par Gemini**)
+**Claude Code — v3.5 (2026-05-25) :** Backend blacklist livré et déployé :
+- `database/migrations/..._add_blacklist_to_contacts.php` — colonnes `blacklisted_at` + `blacklist_reason`
+- `app/Models/Contact.php` — scopes `blacklisted()` + `contactable()`
+- `app/Http/Controllers/Web/ContactController.php` — filtre `hide_blacklisted` dans `index()`
+- `app/Http/Controllers/Api/EmeliaWebhookController.php` — blacklistage auto sur réponse STOP
 
-**Gemini — v3.5 (session précédente) :** Déploiement et activation réussis sur le VPS de production (`51.38.99.226`). Les fichiers locaux modifiés ont été poussés sur Git et transférés sur le serveur, les images Docker reconstruites, et le cache Laravel rechargé.
+**Gemini — v3.9 (cette session, 2026-05-25) :** Interface blacklist déployée :
+- `resources/views/pages/contacts/show.blade.php` — badge `.chip.err` "Blacklisté" en en-tête
+- `resources/views/pages/contacts/index.blade.php` — toggle "Masquer les blacklistés" avec compte dynamique et badge inline dans la table
 
 ---
 
@@ -137,9 +155,11 @@ Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pa
 
 ### Logique & Vues
 
-| Fichier                                         | Rôle                                                                              |
-| ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| `resources/views/pages/dashboard.blade.php`     | Ajout des classes de transition, de survol et de groupes interactifs sur les 6 KPI. |
+| Fichier | Rôle |
+|---------|------|
+| `resources/views/pages/dashboard.blade.php` | Micro-animations KPI (hover, élévation, SVG opacity) |
+| `resources/views/pages/contacts/show.blade.php` | Badge `.chip.err` "Blacklisté" en en-tête fiche contact |
+| `resources/views/pages/contacts/index.blade.php` | Toggle "Masquer les blacklistés" + badge inline dans la table |
 
 ### Fichiers v3.1 (Claude Code — backend, ne pas modifier)
 
@@ -177,7 +197,8 @@ Améliorer l'interface utilisateur (UI) et l'expérience utilisateur (UX) des pa
 
 ### Priorité immédiate
 
-- Aucune tâche immédiate en attente (v3.6 entièrement validée et déployée).
+- **Filtrage effectif `hide_blacklisted`** : Le paramètre GET `?hide_blacklisted=1` est transmis mais le `ContactController::index()` doit ajouter le scope `->contactable()` quand ce paramètre est actif (périmètre Claude Code — backend).
+- Aucune autre tâche UI immédiate en attente.
 
 ### Backlog long terme
 
