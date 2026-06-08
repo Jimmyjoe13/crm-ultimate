@@ -96,7 +96,10 @@ class ImportController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        return response()->json(ImportJob::query()->latest()->paginate((int) $request->query('per_page', 25)));
+        return response()->json(ImportJob::query()
+            ->where('user_id', $request->user()->id)
+            ->latest()
+            ->paginate((int) $request->query('per_page', 25)));
     }
 
     public function preview(Request $request): JsonResponse

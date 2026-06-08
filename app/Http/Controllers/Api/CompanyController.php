@@ -42,7 +42,7 @@ class CompanyController extends Controller
     public function show(int $id): JsonResponse
     {
         $company = Company::query()
-            ->with(['contacts', 'deals', 'owner'])
+            ->with(['contacts', 'deals.stage', 'owner'])
             ->findOrFail($id);
 
         return response()->json([

@@ -56,6 +56,9 @@ class EmeliaControllerTest extends TestCase
     public function test_add_contact_sets_emelia_contact_id(): void
     {
         $this->mock(EmeliaService::class, function ($mock) {
+            $mock->shouldReceive('listCampaigns')
+                ->once()
+                ->andReturn([['_id' => 'camp_1', 'name' => 'Test Campaign']]);
             $mock->shouldReceive('addContactToCampaign')
                 ->once()
                 ->andReturn(['id' => 'em_42']);

@@ -60,6 +60,9 @@ class CompanyController extends Controller
             'country'  => ['nullable', 'string', 'max:255'],
         ], CustomValueValidator::validationRules('company')));
 
+        // owner_id auto-assigné à l'utilisateur connecté
+        $data['owner_id'] = $request->user()->id;
+
         $data['custom_values'] = CustomValueValidator::cast('company', $data['custom_values'] ?? []);
 
         $company = Company::create($data);

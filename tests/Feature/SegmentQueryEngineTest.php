@@ -254,15 +254,16 @@ class SegmentQueryEngineTest extends TestCase
 
     public function test_rel_deals_with_rel_filter_on_contact(): void
     {
-        $pipeline = Pipeline::query()->create(['name' => 'P', 'is_default' => true]);
-        $stage = $pipeline->stages()->create(['name' => 'S', 'position' => 1, 'probability' => 50]);
+        $pipeline  = Pipeline::query()->create(['name' => 'P', 'is_default' => true]);
+        $wonStage  = $pipeline->stages()->create(['name' => 'Won',  'position' => 2, 'probability' => 100, 'is_won' => true,  'is_lost' => false]);
+        $openStage = $pipeline->stages()->create(['name' => 'Open', 'position' => 1, 'probability' => 50,  'is_won' => false, 'is_lost' => false]);
 
         $contact = Contact::factory()->create();
-        $wonDeal = Deal::factory()->create(['status' => 'won', 'amount' => 5000, 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id]);
+        $wonDeal = Deal::factory()->create(['amount' => 5000, 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $wonStage->id]);
         $contact->deals()->attach($wonDeal->id, ['role' => 'primary']);
 
         $contact2 = Contact::factory()->create();
-        $openDeal = Deal::factory()->create(['status' => 'open', 'amount' => 5000, 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id]);
+        $openDeal = Deal::factory()->create(['amount' => 5000, 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $openStage->id]);
         $contact2->deals()->attach($openDeal->id, ['role' => 'primary']);
 
         $ids = (new SegmentQueryEngine())->buildQuery($this->segment('contact', [

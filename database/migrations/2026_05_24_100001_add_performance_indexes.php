@@ -23,6 +23,11 @@ return new class extends Migration
         Schema::table('activities', function (Blueprint $table) {
             $table->index(['subject_type', 'subject_id'], 'activities_subject_idx');
         });
+
+        // Index pour les lookups « contact primaire d'un deal » via pivot
+        Schema::table('deal_contact', function (Blueprint $table) {
+            $table->index(['deal_id', 'role']);
+        });
     }
 
     public function down(): void
@@ -40,6 +45,10 @@ return new class extends Migration
 
         Schema::table('activities', function (Blueprint $table) {
             $table->dropIndex('activities_subject_idx');
+        });
+
+        Schema::table('deal_contact', function (Blueprint $table) {
+            $table->dropIndex(['deal_id', 'role']);
         });
     }
 };

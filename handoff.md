@@ -31,6 +31,7 @@ et intégration d'outils tiers (Emelia emailing).
 **v3.2 :** Export CSV segments — refonte complète de `SegmentController::export()` : colonnes enrichies (contact : 11 cols + custom fields ; company : 12 cols + custom fields ; deal : 11 cols + custom fields), `chunk(200)` pour éviter les OOM, eager loading partiel par type d'entité, BOM UTF-8, même qualité que `ContactController::export()`. **11/11 tests locaux + 10/10 tests prod PASS. Déployé et validé (2026-05-24).**
 **v3.3 :** IA Rapports — `AiInsightService::analyzeReports()` : analyse les 4 datasets déjà en cache Redis (aucune requête SQL), génère 3-5 insights actionnables `{insights, alerts, recommendations}`, cache 1h `ai:report-insights`. Endpoint `POST /web/ai/report-insights` (admin/manager, throttle existant). **9/9 tests locaux + 10/10 tests prod PASS. Déployé et validé (2026-05-24).**
 **v3.4 :** Console Artisan admin — `ConsoleController` (whitelist stricte 5 commandes : emelia-sync, ai-score, ai-precompute, queue-restart, cache-clear), `RunConsoleCommandJob` (async/sync selon commande, timeout 600s), table `console_runs` (log complet : user, commande, output, exit_code, durée), routes admin-only, Vue Alpine (polling 2s, terminal output, historique). **9/9 tests locaux + 10/10 tests prod PASS. Déployé et validé (2026-05-24).**
+**v3.5 :** Blacklist contacts + filtrage multi-intent Emelia — colonnes `blacklisted_at`/`blacklist_reason` sur `contacts`, scopes `contactable()`/`blacklisted()`, methode `blacklist()`, endpoint `POST /api/webhooks/emelia-intent` (HMAC, idempotence, 4 intents : stop/interested/not_interested/out_of_office), job `RemoveFromEmeliaCampaign` (mutation GraphQL Emelia, 3 essais), protection re-ajout dans `EmeliaSyncCampaign` et `EmeliaController`. Workflow n8n `q4GXMH5Qzjz9H6AZ` mis a jour (12 noeuds) : `Normalize Event` expose `reply_text`, `Detect Intent` (Code node, fan-out parallele depuis `Normalize Event`) detecte 4 intents par regex + `Forward Intent to CRM`. **11/11 tests locaux PASS. Deploiement production a faire (migration + rebuild Docker).**
 
 ---
 
@@ -168,6 +169,16 @@ et intégration d'outils tiers (Emelia emailing).
 - Introspection GraphQL désactivée en prod (`__schema` bloqué) — mais les erreurs de validation révèlent les champs
 
 ### Dernière action effectuée
+
+**v3.5 — Blacklist contacts + filtrage multi-intent Emelia (2026-05-25)** — livre, 11/11 tests locaux PASS, deploiement production a faire :
+- Migration `2026_05_25_000001_add_blacklist_to_contacts.php` : `blacklisted_at TIMESTAMP nullable index` + `blacklist_reason VARCHAR(255) nullable`
+- `Contact` : `blacklist()`, `scopeContactable()`, `scopeBlacklisted()` — protection re-ajout dans `EmeliaSyncCampaign` et `EmeliaController::addContact()`
+- `EmeliaIntentWebhookController` : endpoint `POST /api/webhooks/emelia-intent`, HMAC optionnel, idempotence `event_id`, 4 intents (stop→blacklist+job / interested→tache urgente 4h+lifecycle sql / not_interested→note+lifecycle lead / out_of_office→tache differee 7j)
+- `RemoveFromEmeliaCampaign` job : ShouldQueue, tries=2, 3 mutations GraphQL essayees dans l'ordre
+- `EmeliaService::removeFromCampaign()` : 3 mutations GraphQL (removeContactFromCampaignHook / unsubscribeContact / pauseContact)
+- `routes/api.php` : route `POST /webhooks/emelia-intent` ajoutee sans auth/CSRF
+- Workflow n8n `q4GXMH5Qzjz9H6AZ` (12 noeuds, actif) : `Normalize Event` expose `reply_text`, `Detect Intent` (regex 4 patterns) en parallele, `Forward Intent to CRM`
+- `tests/Feature/EmeliaIntentWebhookTest.php` : 11 tests (stop/duplicate/already-blacklisted/no-email/unknown-contact/invalid-sig/interested/not_interested/out_of_office/unknown-intent/scopeContactable)
 
 **v3.1 — Page Rapports & Analytics (2026-05-24)** — livré, déployé et validé **11/11 tests PASS** en prod :
 - `ReportController` : 4 datasets (CA mensuel 12 mois, entonnoir conversion, classement commerciaux, activité hebdo 8 semaines), cache Redis 30 min

@@ -208,6 +208,7 @@
                             <span class="chip {{ match($deal->status) { 'won' => 'ok', 'lost' => 'err', default => '' } }}" style="font-size: 9px; padding: 1px 4px;">
                                 {{ $deal->status }}
                             </span>
+                            <span class="chip" style="font-size: 9px; padding: 1px 4px;">{{ $deal->stage?->name ?? '—' }}</span>
                             <span class="text-secondary text-[11px] font-mono">{{ number_format($deal->amount, 0, ',', "\xc2\xa0") }} €</span>
                         </div>
                     </div>

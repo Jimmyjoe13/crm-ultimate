@@ -124,9 +124,9 @@ class EmeliaCampaignSyncTest extends TestCase
             'date'     => '2026-05-24T12:00:00.000Z',
         ]));
 
-        // Toujours 1 seul pivot (même campagne) mais 2 activities
+        // Toujours 1 seul pivot (même campagne) ; 2 activités email + 1 tâche auto-créée par handleReply
         $this->assertDatabaseCount('contact_emelia_campaign', 1);
-        $this->assertEquals(2, Activity::where('source', 'emelia')->count());
+        $this->assertEquals(2, Activity::where('source', 'emelia')->whereIn('type', ['email_opened', 'email_replied', 'email_sent', 'email_clicked', 'email_bounced', 'email_unsubscribed'])->count());
 
         // Le pivot a bien son last_event_at mis à jour (REPLIED = le plus récent)
         $contact  = Contact::where('email', 'test@example.com')->firstOrFail();

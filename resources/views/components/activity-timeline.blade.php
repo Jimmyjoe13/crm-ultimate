@@ -162,6 +162,12 @@
             default               => '➕',
         };
         $isTask = $activity->type === 'task';
+        $subjectUrl = match($activity->subject_type) {
+            \App\Models\Contact::class => route('contacts.show', $activity->subject_id),
+            \App\Models\Company::class => route('companies.show', $activity->subject_id),
+            \App\Models\Deal::class    => route('deals.show', $activity->subject_id),
+            default => null,
+        };
     @endphp
     <div class="tl-item"
          data-type="{{ $activity->type }}"
@@ -200,7 +206,7 @@
         <div class="tl-content">
             <div class="ti flex items-center justify-between group/ti">
                 <div>
-                    {{ $emoji }} {{ $activity->title }}
+                    @if($subjectUrl)<a href="{{ $subjectUrl }}" class="hover:underline">{{ $emoji }} {{ $activity->title }}</a>@else{{ $emoji }} {{ $activity->title }}@endif
                     @if($activity->source === 'emelia' && ($activity->metadata['synthetic'] ?? false))
                     <span style="font-size:9px;padding:1px 4px;border-radius:3px;background:var(--surface-alt);color:var(--text-tertiary);vertical-align:middle;margin-left:4px;">sync</span>
                     @elseif($activity->source === 'emelia')

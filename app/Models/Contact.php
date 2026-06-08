@@ -48,8 +48,9 @@ class Contact extends Model
     protected function casts(): array
     {
         return [
-            'custom_values' => 'array',
-            'blacklisted_at' => 'datetime',
+            'custom_values'       => 'array',
+            'blacklisted_at'      => 'datetime',
+            'ai_score_updated_at' => 'datetime',
         ];
     }
 

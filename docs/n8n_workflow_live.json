@@ -1,5 +1,5 @@
 ﻿{
-    "updatedAt":  "2026-05-24T14:37:41.617Z",
+    "updatedAt":  "2026-05-25T17:36:35.686Z",
     "createdAt":  "2026-05-23T17:02:30.810Z",
     "id":  "q4GXMH5Qzjz9H6AZ",
     "name":  "Emelia - CRM Ultimate",
@@ -63,7 +63,7 @@
                   },
                   {
                       "parameters":  {
-                                         "jsCode":  "const d = $input.first().json;\nconst email = d.contact?.email || d.email || \u0027\u0027;\nconst event = d.event || d.type || \u0027\u0027;\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || \u0027\u0027;\n\n// Mapping nom campagne -\u003e UUID\nconst campaignMap = {\n  \u0027conseiller-consultant-acquisition\u0027: \u002769ebb7281762b60a8169f625\u0027,\n  \u0027acquisition-agence-marketing\u0027:      \u002769eb1cca5033df0a8663a88e\u0027,\n};\nconst campaignName = d.campaign || \u0027\u0027;\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\n// event_id deterministe pour idempotence cote CRM\nconst eventId = (email \u0026\u0026 event \u0026\u0026 date)\n  ? (email + \u0027_\u0027 + event + \u0027_\u0027 + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
+                                         "jsCode":  "const d = $input.first().json;\nconst email = d.contact?.email || d.email || \u0027\u0027;\nconst event = d.event || d.type || \u0027\u0027;\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || \u0027\u0027;\n\nconst campaignMap = {\n  \u0027conseiller-consultant-acquisition\u0027: \u002769ebb7281762b60a8169f625\u0027,\n  \u0027acquisition-agence-marketing\u0027:      \u002769eb1cca5033df0a8663a88e\u0027,\n};\nconst campaignName = d.campaign || \u0027\u0027;\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\nconst eventId = (email \u0026\u0026 event \u0026\u0026 date)\n  ? (email + \u0027_\u0027 + event + \u0027_\u0027 + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  reply_text:    d.reply || d.replyText || d.fullReply || d.preview || d.previewText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
                                      },
                       "type":  "n8n-nodes-base.code",
                       "typeVersion":  2,
@@ -252,6 +252,52 @@
                       "retryOnFail":  true,
                       "maxTries":  3,
                       "waitBetweenTries":  5000
+                  },
+                  {
+                      "id":  "c3d4e5f6-a7b8-9012-cdef-234567890123",
+                      "name":  "Detect Intent",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       200,
+                                       -512
+                                   ],
+                      "parameters":  {
+                                         "jsCode":  "const d = $input.first().json;\n\nconst event = (d.event || \u0027\u0027).toUpperCase();\nif (event !== \u0027REPLIED\u0027) return [];\n\nconst replyText = (d.reply_text || d.preview || \u0027\u0027).trim();\nif (!replyText) return [];\n\nconst patterns = [\n  [\u0027stop\u0027, /\\b(stop|d.sabonne[rz]?|d.sinscri[sv]?|ne plus me contacter|unsubscribe|remove me|do not contact|opt[- ]?out)\\b/i],\n  [\u0027not_interested\u0027, /\\b(pas int.ress.|non merci|ne suis pas int.ress.|aucun int.r.t|pas pour (moi|nous)|not interested|no thanks)\\b/i],\n  [\u0027out_of_office\u0027, /\\b(absent|en cong.s?|vacances|retour le|de retour|out of office|ooo|away until|back on|on leave)\\b/i],\n  [\u0027interested\u0027, /\\b(int.ress.|oui[,! ]|appel(ez|er)?[- ]moi|rappel(ez|er)?[- ]moi|je souhaite|je veux|dispo(nible)?|call me|interested|yes please|would like|schedule|book)\\b/i],\n];\n\nlet intent = null;\nfor (const [name, regex] of patterns) {\n  if (regex.test(replyText)) { intent = name; break; }\n}\n\nif (!intent) return [];\n\nreturn [{ json: {\n  ...d,\n  intent,\n  reply_text: replyText,\n  event_id: (d.event_id ? d.event_id + \u0027@\u0027 + intent : null),\n}}];"
+                                     }
+                  },
+                  {
+                      "id":  "d4e5f6a7-b8c9-0123-defa-345678901234",
+                      "name":  "Forward Intent to CRM",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       420,
+                                       -512
+                                   ],
+                      "retryOnFail":  true,
+                      "maxTries":  3,
+                      "waitBetweenTries":  5000,
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "http://crm-app:8080/api/webhooks/emelia-intent",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "value":  "application/json",
+                                                                                         "name":  "Content-Type"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "contentType":  "raw",
+                                         "rawContentType":  "application/json",
+                                         "body":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+
+                                                     }
+                                     }
                   }
               ],
     "connections":  {
@@ -284,10 +330,26 @@
                                                                      "node":  "Forward to CRM",
                                                                      "type":  "main",
                                                                      "index":  0
+                                                                 },
+                                                                 {
+                                                                     "node":  "Detect Intent",
+                                                                     "type":  "main",
+                                                                     "index":  0
                                                                  }
                                                              ]
                                                          ]
                                             },
+                        "Detect Intent":  {
+                                              "main":  [
+                                                           [
+                                                               {
+                                                                   "node":  "Forward Intent to CRM",
+                                                                   "type":  "main",
+                                                                   "index":  0
+                                                               }
+                                                           ]
+                                                       ]
+                                          },
                         "Schedule Trigger":  {
                                                  "main":  [
                                                               [
@@ -352,10 +414,10 @@
                  },
     "staticData":  {
                        "node:Emelia Trigger1":  {
-                                                    "webhookId":  "6a130d4ab725a80b4d342a0c"
+                                                    "webhookId":  "6a1488a4049d8c86477b83e0"
                                                 },
                        "node:Emelia Trigger":  {
-                                                   "webhookId":  "6a130d4aabf0390b58cc694d"
+                                                   "webhookId":  "6a1488a4b3cf6187c8e40d30"
                                                },
                        "node:Schedule Trigger":  {
                                                      "recurrenceRules":  [
@@ -369,9 +431,9 @@
     "pinData":  {
 
                 },
-    "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
-    "activeVersionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
-    "versionCounter":  149,
+    "versionId":  "9951a027-fd2c-4f79-9708-12c32ecc5e80",
+    "activeVersionId":  "9951a027-fd2c-4f79-9708-12c32ecc5e80",
+    "versionCounter":  155,
     "triggerCount":  3,
     "shared":  [
                    {
@@ -396,9 +458,9 @@
 
              ],
     "activeVersion":  {
-                          "updatedAt":  "2026-05-24T14:37:41.621Z",
-                          "createdAt":  "2026-05-24T14:37:41.621Z",
-                          "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+                          "updatedAt":  "2026-05-25T17:36:35.698Z",
+                          "createdAt":  "2026-05-25T17:36:35.698Z",
+                          "versionId":  "9951a027-fd2c-4f79-9708-12c32ecc5e80",
                           "workflowId":  "q4GXMH5Qzjz9H6AZ",
                           "nodes":  [
                                         {
@@ -457,7 +519,7 @@
                                         },
                                         {
                                             "parameters":  {
-                                                               "jsCode":  "const d = $input.first().json;\nconst email = d.contact?.email || d.email || \u0027\u0027;\nconst event = d.event || d.type || \u0027\u0027;\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || \u0027\u0027;\n\n// Mapping nom campagne -\u003e UUID\nconst campaignMap = {\n  \u0027conseiller-consultant-acquisition\u0027: \u002769ebb7281762b60a8169f625\u0027,\n  \u0027acquisition-agence-marketing\u0027:      \u002769eb1cca5033df0a8663a88e\u0027,\n};\nconst campaignName = d.campaign || \u0027\u0027;\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\n// event_id deterministe pour idempotence cote CRM\nconst eventId = (email \u0026\u0026 event \u0026\u0026 date)\n  ? (email + \u0027_\u0027 + event + \u0027_\u0027 + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
+                                                               "jsCode":  "const d = $input.first().json;\nconst email = d.contact?.email || d.email || \u0027\u0027;\nconst event = d.event || d.type || \u0027\u0027;\nconst date  = d.date  || d.timestamp || d.createdAt || d.created_at || \u0027\u0027;\n\nconst campaignMap = {\n  \u0027conseiller-consultant-acquisition\u0027: \u002769ebb7281762b60a8169f625\u0027,\n  \u0027acquisition-agence-marketing\u0027:      \u002769eb1cca5033df0a8663a88e\u0027,\n};\nconst campaignName = d.campaign || \u0027\u0027;\nconst campaignId   = d.campaign_id || d.campaignId || campaignMap[campaignName] || null;\n\nconst eventId = (email \u0026\u0026 event \u0026\u0026 date)\n  ? (email + \u0027_\u0027 + event + \u0027_\u0027 + date)\n  : null;\n\nreturn [{ json: {\n  event,\n  email,\n  event_id:      eventId,\n  date,\n  subject:       d.subject               || null,\n  preview:       d.preview || d.previewText || null,\n  reply_text:    d.reply || d.replyText || d.fullReply || d.preview || d.previewText || null,\n  campaign_id:   campaignId,\n  campaign_name: campaignName,\n  first_name:    d.contact?.firstName    || null,\n  last_name:     d.contact?.lastName     || null,\n  step:          d.step                  || null,\n} }];"
                                                            },
                                             "type":  "n8n-nodes-base.code",
                                             "typeVersion":  2,
@@ -646,6 +708,52 @@
                                             "retryOnFail":  true,
                                             "maxTries":  3,
                                             "waitBetweenTries":  5000
+                                        },
+                                        {
+                                            "id":  "c3d4e5f6-a7b8-9012-cdef-234567890123",
+                                            "name":  "Detect Intent",
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             200,
+                                                             -512
+                                                         ],
+                                            "parameters":  {
+                                                               "jsCode":  "const d = $input.first().json;\n\nconst event = (d.event || \u0027\u0027).toUpperCase();\nif (event !== \u0027REPLIED\u0027) return [];\n\nconst replyText = (d.reply_text || d.preview || \u0027\u0027).trim();\nif (!replyText) return [];\n\nconst patterns = [\n  [\u0027stop\u0027, /\\b(stop|d.sabonne[rz]?|d.sinscri[sv]?|ne plus me contacter|unsubscribe|remove me|do not contact|opt[- ]?out)\\b/i],\n  [\u0027not_interested\u0027, /\\b(pas int.ress.|non merci|ne suis pas int.ress.|aucun int.r.t|pas pour (moi|nous)|not interested|no thanks)\\b/i],\n  [\u0027out_of_office\u0027, /\\b(absent|en cong.s?|vacances|retour le|de retour|out of office|ooo|away until|back on|on leave)\\b/i],\n  [\u0027interested\u0027, /\\b(int.ress.|oui[,! ]|appel(ez|er)?[- ]moi|rappel(ez|er)?[- ]moi|je souhaite|je veux|dispo(nible)?|call me|interested|yes please|would like|schedule|book)\\b/i],\n];\n\nlet intent = null;\nfor (const [name, regex] of patterns) {\n  if (regex.test(replyText)) { intent = name; break; }\n}\n\nif (!intent) return [];\n\nreturn [{ json: {\n  ...d,\n  intent,\n  reply_text: replyText,\n  event_id: (d.event_id ? d.event_id + \u0027@\u0027 + intent : null),\n}}];"
+                                                           }
+                                        },
+                                        {
+                                            "id":  "d4e5f6a7-b8c9-0123-defa-345678901234",
+                                            "name":  "Forward Intent to CRM",
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.2,
+                                            "position":  [
+                                                             420,
+                                                             -512
+                                                         ],
+                                            "retryOnFail":  true,
+                                            "maxTries":  3,
+                                            "waitBetweenTries":  5000,
+                                            "parameters":  {
+                                                               "method":  "POST",
+                                                               "url":  "http://crm-app:8080/api/webhooks/emelia-intent",
+                                                               "sendHeaders":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "value":  "application/json",
+                                                                                                               "name":  "Content-Type"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "sendBody":  true,
+                                                               "contentType":  "raw",
+                                                               "rawContentType":  "application/json",
+                                                               "body":  "={{ JSON.stringify($json) }}",
+                                                               "options":  {
+
+                                                                           }
+                                                           }
                                         }
                                     ],
                           "connections":  {
@@ -678,10 +786,26 @@
                                                                                            "node":  "Forward to CRM",
                                                                                            "type":  "main",
                                                                                            "index":  0
+                                                                                       },
+                                                                                       {
+                                                                                           "node":  "Detect Intent",
+                                                                                           "type":  "main",
+                                                                                           "index":  0
                                                                                        }
                                                                                    ]
                                                                                ]
                                                                   },
+                                              "Detect Intent":  {
+                                                                    "main":  [
+                                                                                 [
+                                                                                     {
+                                                                                         "node":  "Forward Intent to CRM",
+                                                                                         "type":  "main",
+                                                                                         "index":  0
+                                                                                     }
+                                                                                 ]
+                                                                             ]
+                                                                },
                                               "Schedule Trigger":  {
                                                                        "main":  [
                                                                                     [
@@ -744,34 +868,18 @@
                           "autosaved":  false,
                           "workflowPublishHistory":  [
                                                          {
-                                                             "createdAt":  "2026-05-24T14:37:42.584Z",
-                                                             "id":  30,
+                                                             "createdAt":  "2026-05-25T17:36:36.587Z",
+                                                             "id":  34,
                                                              "workflowId":  "q4GXMH5Qzjz9H6AZ",
-                                                             "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+                                                             "versionId":  "9951a027-fd2c-4f79-9708-12c32ecc5e80",
                                                              "event":  "activated",
                                                              "userId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
                                                          },
                                                          {
-                                                             "createdAt":  "2026-05-24T14:38:02.429Z",
-                                                             "id":  32,
+                                                             "createdAt":  "2026-05-25T17:36:36.092Z",
+                                                             "id":  33,
                                                              "workflowId":  "q4GXMH5Qzjz9H6AZ",
-                                                             "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
-                                                             "event":  "activated",
-                                                             "userId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
-                                                         },
-                                                         {
-                                                             "createdAt":  "2026-05-24T14:37:42.052Z",
-                                                             "id":  29,
-                                                             "workflowId":  "q4GXMH5Qzjz9H6AZ",
-                                                             "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
-                                                             "event":  "deactivated",
-                                                             "userId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
-                                                         },
-                                                         {
-                                                             "createdAt":  "2026-05-24T14:38:01.880Z",
-                                                             "id":  31,
-                                                             "workflowId":  "q4GXMH5Qzjz9H6AZ",
-                                                             "versionId":  "77e31789-d13c-45a0-aecd-0f23a1e32d7c",
+                                                             "versionId":  "9951a027-fd2c-4f79-9708-12c32ecc5e80",
                                                              "event":  "deactivated",
                                                              "userId":  "dfeeeb01-c491-4a2f-8b00-e8fb1c18b70a"
                                                          }

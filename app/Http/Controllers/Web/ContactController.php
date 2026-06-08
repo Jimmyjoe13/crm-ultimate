@@ -66,6 +66,9 @@ class ContactController extends Controller
             'company_id'      => ['nullable', 'exists:companies,id'],
         ], CustomValueValidator::validationRules('contact')));
 
+        // owner_id auto-assigné à l'utilisateur connecté (sécurité : pas de injection via form)
+        $data['owner_id'] = $request->user()->id;
+
         $companyId = $data['company_id'] ?? null;
         unset($data['company_id']);
 

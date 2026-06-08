@@ -106,4 +106,56 @@ Alpine.directive('datepicker', (el, { expression }, { evaluate }) => {
     flatpickr(el, options);
 });
 
+// Register emeliaModalComponent as an Alpine.data component.
+// Using Alpine.data() guarantees the component factory is registered BEFORE
+// Alpine.start() processes the DOM — window.xxx would be undefined at that point
+// because <script type="module"> defers execution after HTML parsing.
+Alpine.data('emeliaModalComponent', (contactId, initialSelectedIds) => ({
+    open: false,
+    campaigns: [],
+    loading: false,
+    error: '',
+    selectedIds: initialSelectedIds ?? [],
+    submitting: false,
+    fetchCampaigns() {
+        this.loading = true;
+        this.error = '';
+        fetch('/emelia/campaigns', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                this.campaigns = Array.isArray(data) ? data : [];
+                this.loading = false;
+                if (this.campaigns.length === 0) this.error = 'Aucune campagne trouvée dans Emelia.';
+            })
+            .catch(() => {
+                this.error = 'Impossible de charger les campagnes Emelia.';
+                this.loading = false;
+            });
+    },
+    submit() {
+        if (!this.selectedIds.length) return;
+        this.submitting = true;
+        fetch('/contacts/' + contactId + '/emelia', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ campaign_ids: this.selectedIds }),
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.error) { this.error = d.error; this.submitting = false; return; }
+            window.location.reload();
+        })
+        .catch(() => {
+            this.error = 'Une erreur est survenue.';
+            this.submitting = false;
+        });
+    },
+}));
+
 Alpine.start();
+

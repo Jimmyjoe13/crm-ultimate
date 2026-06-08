@@ -15,14 +15,16 @@ class EmeliaWebhookController extends Controller
 {
     public function handle(Request $request)
     {
-        // 1. Vérification signature HMAC (optionnelle : Emelia n'envoie le header que si configuré)
+        // 1. Vérification signature HMAC obligatoire : sans elle, n'importe qui peut pousser des événements.
         $secret    = config('services.emelia.webhook_secret');
         $signature = $request->header('X-Emelia-Signature');
 
-        if ($signature !== null && ! empty($secret)) {
-            $expected = hash_hmac('sha256', $request->getContent(), $secret);
-            abort_unless(hash_equals($expected, $signature), 401, 'Invalid signature.');
+        if (empty($secret) || empty($signature)) {
+            abort(401, 'Missing webhook signature.');
         }
+
+        $expected = hash_hmac('sha256', $request->getContent(), $secret);
+        abort_unless(hash_equals($expected, $signature), 401, 'Invalid signature.');
 
         // 2. Idempotence — ignorer les doublons via external_id
         $eventId = $request->input('event_id');

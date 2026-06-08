@@ -20,7 +20,10 @@ class EmeliaService
 
     public function listCampaigns(): array
     {
-        $response = $this->http()->get($this->url('/campaigns'));
+        $response = $this->http()
+            ->timeout(30)
+            ->retry(2, 1000)
+            ->get($this->url('/campaigns'));
 
         if ($response->failed()) {
             throw new RuntimeException('Emelia listCampaigns failed: '.$response->body());
@@ -53,7 +56,8 @@ class EmeliaService
         $gql = 'query($q: String!) { contacts(query: $q) { _id email status mailsSent lastOpen lastContacted lastReplied campaigns } }';
 
         $response = $this->http()
-            ->timeout(10)
+            ->timeout(15)
+            ->retry(1, 500)
             ->post($this->url('/graphql'), [
                 'query'     => $gql,
                 'variables' => ['q' => $email],

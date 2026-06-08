@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Contact;
 use App\Models\Deal;
+use App\Models\Pipeline;
+use App\Models\PipelineStage;
 use App\Services\AiInsightService;
 use App\Services\LlmService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,7 +18,25 @@ class AiPrecomputeTest extends TestCase
     private function makeDeal(string $status = 'open', int $amount = 1000): Deal
     {
         static $n = 0; $n++;
-        return Deal::create(['name' => "Deal {$n}", 'amount' => $amount, 'status' => $status]);
+        $pipeline = Pipeline::firstOrCreate(['name' => 'Default']);
+        $stageName = match($status) {
+            'won'   => 'Won',
+            'lost'  => 'Lost',
+            default => 'New',
+        };
+        $stage = PipelineStage::firstOrCreate(
+            ['pipeline_id' => $pipeline->id, 'name' => $stageName],
+            ['position' => match($status) { 'won' => 90, 'lost' => 91, default => 1 },
+             'is_won'   => $status === 'won',
+             'is_lost'  => $status === 'lost',
+            ]
+        );
+        return Deal::create([
+            'name'              => "Deal {$n}",
+            'amount'            => $amount,
+            'pipeline_id'       => $pipeline->id,
+            'pipeline_stage_id' => $stage->id,
+        ]);
     }
 
     private function mockLlm(string $response = '{"summary":"ok"}', int $times = 0): void

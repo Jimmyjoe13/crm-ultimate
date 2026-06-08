@@ -18,6 +18,8 @@ trait CrudActions
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate($this->rules('store'));
+        $data = $this->authorizeOwnerAssignment($request, $data);
+
         $record = ($this->modelClass)::query()->create($data);
         $record->refresh();
 
@@ -32,7 +34,8 @@ trait CrudActions
     public function update(Request $request, int $id): JsonResponse
     {
         $record = ($this->modelClass)::query()->findOrFail($id);
-        $record->fill($request->validate($this->rules('update')));
+        $data = $this->authorizeOwnerAssignment($request, $request->validate($this->rules('update')));
+        $record->fill($data);
         $record->save();
 
         return response()->json(['data' => $record]);
@@ -43,6 +46,25 @@ trait CrudActions
         ($this->modelClass)::query()->findOrFail($id)->delete();
 
         return response()->json(status: 204);
+    }
+
+    protected function authorizeOwnerAssignment(Request $request, array $data): array
+    {
+        if (! array_key_exists('owner_id', $data) || $data['owner_id'] === null) {
+            return $data;
+        }
+
+        $user = $request->user();
+
+        if ($user?->isAdmin() || $user?->isManager()) {
+            return $data;
+        }
+
+        if ((int) $data['owner_id'] !== (int) $user?->id) {
+            abort(403, 'Forbidden owner assignment.');
+        }
+
+        return $data;
     }
 
     abstract protected function rules(string $operation): array;

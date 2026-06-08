@@ -21,6 +21,7 @@ class LlmService
                 'X-Title' => 'CRM Ultimate',
             ])
             ->timeout($config['timeout'] ?? 30)
+            ->retry(2, 500)
             ->post($config['base_url'].'/chat/completions', array_merge([
                 'model' => $config['model'],
                 'messages' => [

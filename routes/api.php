@@ -31,7 +31,7 @@ Route::post('/webhooks/emelia-intent', [EmeliaIntentWebhookController::class, 'h
 Route::prefix('v1')->name('api.')->group(function (): void {
     Route::get('/', [InfoController::class, 'index']);
 
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
     Route::middleware('jwt')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
