@@ -26,16 +26,28 @@
                 ->where('created_at', '>', auth()->user()?->emelia_replies_last_seen ?? '1970-01-01')
                 ->count();
         @endphp
-        <div class="relative" x-data="{ badge: {{ $emeliaPending }} }">
+        <div class="relative" x-data="{ emeliaBadge: {{ $emeliaPending }}, aiAlertBadge: 0 }" x-init="
+            fetch('/web/ai/proactive-alerts', { headers:{'Accept':'application/json'}, credentials:'same-origin' })
+                .then(r => r.ok ? r.json() : null)
+                .then(d => { if(d) aiAlertBadge = d.critical || 0; })
+                .catch(() => {});
+        ">
             <a href="/contacts"
                class="rail-ic {{ $active === 'contacts' ? 'on' : '' }}"
-               @click="if(badge > 0) { fetch('/notifications/emelia-replies/seen', { method:'POST', headers:{'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content}, credentials:'same-origin' }); badge = 0; }">
+               @click="if(emeliaBadge > 0) { fetch('/notifications/emelia-replies/seen', { method:'POST', headers:{'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content}, credentials:'same-origin' }); emeliaBadge = 0; }">
                 <svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 <span class="tt">Contacts</span>
             </a>
-            <template x-if="badge > 0">
-                <span x-text="badge > 9 ? '9+' : badge"
+            {{-- Badge Emelia (rouge) --}}
+            <template x-if="emeliaBadge > 0">
+                <span x-text="emeliaBadge > 9 ? '9+' : emeliaBadge"
                       style="position:absolute;top:3px;right:3px;min-width:14px;height:14px;padding:0 3px;border-radius:7px;font-size:8px;font-weight:700;line-height:14px;text-align:center;background:var(--err);color:#fff;pointer-events:none;"></span>
+            </template>
+            {{-- Badge alertes IA critique (orange/amber — au-dessus à gauche) --}}
+            <template x-if="aiAlertBadge > 0 && emeliaBadge === 0">
+                <span x-text="aiAlertBadge > 9 ? '9+' : aiAlertBadge"
+                      style="position:absolute;top:3px;right:3px;min-width:14px;height:14px;padding:0 3px;border-radius:7px;font-size:8px;font-weight:700;line-height:14px;text-align:center;background:var(--accent);color:#fff;pointer-events:none;"
+                      title="Alerte(s) IA critique(s)"></span>
             </template>
         </div>
         <x-rail-icon href="/companies" :active="$active === 'companies'" tooltip="Entreprises">

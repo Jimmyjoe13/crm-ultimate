@@ -157,5 +157,42 @@ Alpine.data('emeliaModalComponent', (contactId, initialSelectedIds) => ({
     },
 }));
 
+// Composant alertes IA proactives — bandeau dashboard
+Alpine.data('aiAlerts', () => ({
+    alerts: [],
+    expanded: false,
+    criticalCount: 0,
+
+    get criticalAlerts() {
+        return this.alerts.filter(a => a.severity === 'critical');
+    },
+    get warningAlerts() {
+        return this.alerts.filter(a => a.severity !== 'critical');
+    },
+
+    init() {
+        this.fetchAlerts();
+    },
+
+    async fetchAlerts() {
+        try {
+            const resp = await fetch('/web/ai/proactive-alerts', {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            this.alerts = data.alerts || [];
+            this.criticalCount = data.critical || 0;
+        } catch (e) {
+            console.warn('AI alerts fetch failed:', e);
+        }
+    },
+
+    dismiss() {
+        this.alerts = [];
+    }
+}));
+
 Alpine.start();
 

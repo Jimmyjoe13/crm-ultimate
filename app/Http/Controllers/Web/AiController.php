@@ -128,4 +128,29 @@ class AiController extends Controller
 
         return response()->json(array_merge($result, ['generated_at' => now()->toIso8601String()]));
     }
+
+    /**
+     * Retourne les alertes IA proactives depuis le cache Redis.
+     * Lecture seule — pas d'appel LLM.
+     */
+    public function proactiveAlerts(): JsonResponse
+    {
+        $alerts = Cache::get('ai:proactive_alerts', []);
+
+        // Filtrer les alertes par utilisateur (les alertes owner-specific)
+        $user = auth()->user();
+        $filtered = array_filter($alerts, function ($alert) use ($user) {
+            // Alertes globales (pipeline_stagnant etc.) → visibles par tous
+            if (!isset($alert['owner_id'])) return true;
+            // Alertes owner-specific → visible par le owner ou admin/manager
+            return $alert['owner_id'] === $user->id || in_array($user->role, ['admin', 'manager']);
+        });
+
+        return response()->json([
+            'alerts'   => array_values($filtered),
+            'total'    => count($filtered),
+            'critical' => count(array_filter($filtered, fn ($a) => ($a['severity'] ?? '') === 'critical')),
+            'fetched_at' => now()->toIso8601String(),
+        ]);
+    }
 }

@@ -72,6 +72,7 @@ Route::middleware('web.auth')->group(function () {
         Route::post('/web/ai/dashboard/suggestions',    [AiController::class, 'dashboardSuggestions']);
         Route::post('/web/ai/draft-email',              [AiController::class, 'draftEmail']);
         Route::post('/web/ai/report-insights',          [AiController::class, 'reportInsights'])->middleware('role:admin,manager');
+        Route::get('/web/ai/proactive-alerts',          [AiController::class, 'proactiveAlerts']);
     });
 
     Route::get('/search',       [SearchController::class, 'index'])->name('search');

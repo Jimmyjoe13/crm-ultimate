@@ -21,3 +21,9 @@ Schedule::command('ai:score-contacts --limit=50')
     ->dailyAt('04:00')
     ->withoutOverlapping()
     ->runInBackground();
+
+// Alertes IA proactives — toutes les 2h (deals critiques, réponses négatives, tâches overdue)
+Schedule::command('ai:proactive-alerts')
+    ->everyTwoHours()
+    ->withoutOverlapping()
+    ->runInBackground();

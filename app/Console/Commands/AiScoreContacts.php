@@ -13,7 +13,7 @@ class AiScoreContacts extends Command
                             {--all : Inclure tous les contacts, pas seulement ceux liés à Emelia}
                             {--dry-run : Simuler sans écrire en base}';
 
-    protected $description = 'Calcule et persiste un score IA (0-100) pour chaque contact actif';
+    protected $description = 'Calcule et persiste un score IA (0-100) pour chaque contact actif (batch)';
 
     public function handle(AiInsightService $ai): int
     {
@@ -21,6 +21,7 @@ class AiScoreContacts extends Command
         $dryRun = (bool) $this->option('dry-run');
 
         $query = Contact::whereNull('deleted_at')
+                        ->with('deals')
                         ->orderByDesc('updated_at');
 
         if (!$this->option('all')) {
@@ -35,43 +36,38 @@ class AiScoreContacts extends Command
         }
 
         $this->info(sprintf(
-            'Scoring %d contact(s)%s…',
+            'Scoring %d contact(s) en batch (10 par appel LLM)%s…',
             $contacts->count(),
             $dryRun ? ' [dry-run]' : ''
         ));
 
-        $bar    = $this->output->createProgressBar($contacts->count());
+        $results = $ai->batchScoreContacts($contacts);
+
+        if (empty($results)) {
+            $this->error('Aucun résultat retourné par le batch LLM.');
+            return Command::FAILURE;
+        }
+
         $scored = 0;
         $errors = 0;
 
         foreach ($contacts as $contact) {
-            try {
-                $result = $ai->scoreContact($contact->id, fresh: true);
-                $data   = $result['data'];
-                $score  = is_array($data) ? ($data['score'] ?? null) : null;
+            $item = $results[$contact->id] ?? null;
 
-                if ($score !== null && !$dryRun) {
+            if ($item && isset($item['score'])) {
+                if (!$dryRun) {
                     $contact->update([
-                        'ai_score'            => (int) min(100, max(0, $score)),
+                        'ai_score'            => (int) min(100, max(0, $item['score'])),
                         'ai_score_updated_at' => now(),
                     ]);
                 }
-
-                if ($score !== null) {
-                    $scored++;
-                }
-
-                usleep(500_000); // respect OpenRouter ~2 req/s
-            } catch (\Exception $e) {
-                $this->newLine();
-                $this->line("<error>Contact #{$contact->id}: {$e->getMessage()}</error>");
+                $scored++;
+            } else {
+                $this->line("<error>Contact #{$contact->id}: aucun score retourné</error>");
                 $errors++;
             }
-
-            $bar->advance();
         }
 
-        $bar->finish();
         $this->newLine();
         $this->info("Terminé : {$scored} scorés, {$errors} erreur(s).");
 

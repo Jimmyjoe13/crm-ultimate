@@ -43,7 +43,7 @@ class AuthController extends Controller
         ]);
 
         return redirect()->route('dashboard')
-            ->withCookie(cookie('crm_jwt', $token, config('jwt.ttl_minutes', 1440), '/', null, false, true));
+            ->withCookie(cookie('crm_jwt', $token, config('jwt.ttl_minutes', 1440), '/', null, true, true));
     }
 
     public function logout()

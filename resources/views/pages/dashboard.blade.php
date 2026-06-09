@@ -16,6 +16,73 @@
     </div>
 </div>
 
+{{-- ─── ALERTES IA PROACTIVES ─── --}}
+<div x-data="aiAlerts()" x-init="fetchAlerts()">
+    <template x-if="alerts.length > 0">
+        <div class="px-7 pb-3">
+            <div class="card border-0 overflow-hidden" style="background: var(--surface2); border-left: 3px solid var(--accent);">
+                <div class="flex items-center justify-between px-4 py-2.5" style="background: var(--surface);">
+                    <div class="flex items-center gap-2">
+                        <svg class="ic" style="width:16px;height:16px;color:var(--accent);" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="text-sm font-medium text-primary">Alertes IA</span>
+                        <span class="chip accent sm" x-text="alerts.length + ' alerte(s)'"></span>
+                        <span x-show="criticalCount > 0" class="chip err sm" x-text="criticalCount + ' critique(s)'"></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="expanded = !expanded" class="btn sm ghost">
+                            <span x-text="expanded ? 'Réduire' : 'Tout voir'"></span>
+                            <svg class="ic" style="width:12px;height:12px;transition:transform 0.2s;" :style="expanded ? 'transform:rotate(180deg)' : ''" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <button @click="dismiss()" class="btn sm ghost" title="Ignorer">
+                            <svg class="ic" style="width:12px;height:12px;" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
+                {{-- Alertes critiques toujours visibles --}}
+                <div class="divide-y" style="border-color: var(--border);">
+                    <template x-for="alert in criticalAlerts" :key="alert.title">
+                        <div class="flex items-start gap-3 px-4 py-2.5" style="border-color: var(--border);">
+                            <span class="text-lg flex-shrink-0 mt-0.5" x-text="alert.icon"></span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-medium text-primary truncate" x-text="alert.title"></span>
+                                    <span class="chip err sm flex-shrink-0" x-show="alert.severity === 'critical'">critique</span>
+                                </div>
+                                <p class="text-xs text-secondary mt-0.5 truncate" x-text="alert.message"></p>
+                            </div>
+                            <template x-if="alert.deal_id">
+                                <a :href="'/deals/' + alert.deal_id" class="btn sm ghost flex-shrink-0">Voir</a>
+                            </template>
+                            <template x-if="alert.contact_id">
+                                <a :href="'/contacts/' + alert.contact_id" class="btn sm ghost flex-shrink-0">Voir</a>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+                {{-- Alertes non-critiques : expandables --}}
+                <div x-show="expanded" x-collapse class="divide-y" style="border-color: var(--border);">
+                    <template x-for="alert in warningAlerts" :key="alert.title">
+                        <div class="flex items-start gap-3 px-4 py-2.5" style="border-color: var(--border);">
+                            <span class="text-lg flex-shrink-0 mt-0.5" x-text="alert.icon"></span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-medium text-primary truncate" x-text="alert.title"></span>
+                                    <span class="chip warn sm flex-shrink-0" x-show="alert.severity === 'warning'">attention</span>
+                                    <span class="chip info sm flex-shrink-0" x-show="alert.severity === 'info'">info</span>
+                                </div>
+                                <p class="text-xs text-secondary mt-0.5 truncate" x-text="alert.message"></p>
+                            </div>
+                            <template x-if="alert.deal_id">
+                                <a :href="'/deals/' + alert.deal_id" class="btn sm ghost flex-shrink-0">Voir</a>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
 {{-- ─── KPI BAND ─── --}}
 <div class="px-7 pt-2">
     {{-- Principaux indicateurs --}}
