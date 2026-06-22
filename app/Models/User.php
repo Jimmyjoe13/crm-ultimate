@@ -47,4 +47,36 @@ class User extends Authenticatable
     {
         return $this->role === self::ROLE_MANAGER;
     }
+
+    /**
+     * Commerciaux rattachés à ce manager (users.manager_id = id).
+     */
+    public function subordinates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(self::class, 'manager_id');
+    }
+
+    /**
+     * Liste des owner_id que cet utilisateur a le droit de voir/modifier (cloisonnement des données).
+     *
+     * - admin       : null  → accès total, aucun filtrage.
+     * - manager     : son propre id + ceux des commerciaux dont il est le manager.
+     * - commercial  : uniquement son propre id.
+     *
+     * @return array<int>|null  null = aucun filtre (voit tout)
+     */
+    public function accessibleOwnerIds(): ?array
+    {
+        if ($this->isAdmin()) {
+            return null;
+        }
+
+        if ($this->isManager()) {
+            // Son équipe (commerciaux rattachés) + lui-même.
+            return $this->subordinates()->pluck('id')->push($this->id)->unique()->values()->all();
+        }
+
+        // Commercial : strictement ses propres enregistrements.
+        return [$this->id];
+    }
 }

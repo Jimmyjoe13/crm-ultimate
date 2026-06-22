@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Web\Concerns\AuthorizesOwnerAccess;
 use App\Models\Contact;
 use App\Support\CustomFieldRenderer;
 use App\Support\CustomValueValidator;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Cache;
 
 class ContactController extends Controller
 {
+    use AuthorizesOwnerAccess;
+
     public function index(Request $request)
     {
         $search  = $request->get('search');
@@ -20,10 +23,15 @@ class ContactController extends Controller
         $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
         $page    = (int) $request->get('page', 1);
 
-        $cacheKey = 'contacts.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search);
+        // Cloisonnement par owner : la clé de cache intègre le périmètre de l'utilisateur
+        // pour ne jamais servir à un commercial le cache d'un admin/manager.
+        $user      = $request->user();
+        $scopeKey  = md5(json_encode($user->accessibleOwnerIds() ?? 'all'));
+        $cacheKey  = 'contacts.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search) . '.sc' . $scopeKey;
 
-        $cached = Cache::tags(['contacts.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page) {
+        $cached = Cache::tags(['contacts.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page, $user) {
             $pag = Contact::with(['companies:id,name', 'owner:id,name'])
+                ->visibleTo($user)
                 ->when($search, fn($q) => $q->where('first_name', 'ilike', "%{$search}%")
                     ->orWhere('last_name', 'ilike', "%{$search}%")
                     ->orWhere('email', 'ilike', "%{$search}%"))
@@ -87,8 +95,9 @@ class ContactController extends Controller
         ]);
     }
 
-    public function show(Contact $contact)
+    public function show(Request $request, Contact $contact)
     {
+        $this->ensureVisible($contact, $request->user());
         $contact->load('companies', 'deals.stage', 'owner');
         $activities = \App\Models\Activity::where('subject_type', Contact::class)
             ->where('subject_id', $contact->id)
@@ -101,13 +110,17 @@ class ContactController extends Controller
         return view('pages.contacts.show', compact('contact', 'activities', 'stages'));
     }
 
-    public function edit(Contact $contact)
+    public function edit(Request $request, Contact $contact)
     {
+        $this->ensureVisible($contact, $request->user());
+
         return view('pages.contacts.edit', compact('contact'));
     }
 
     public function update(Request $request, Contact $contact)
     {
+        $this->ensureVisible($contact, $request->user());
+
         \Log::info('[Contact.update] input', [
             'contact_id'    => $contact->id,
             'raw_input'     => $request->except('_token', '_method', 'password'),
@@ -153,8 +166,9 @@ class ContactController extends Controller
         ]);
     }
 
-    public function destroy(Contact $contact)
+    public function destroy(Request $request, Contact $contact)
     {
+        $this->ensureVisible($contact, $request->user());
         $contact->delete();
 
         return redirect('/contacts')->with('flash_toast', [

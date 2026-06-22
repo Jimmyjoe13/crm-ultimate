@@ -68,10 +68,34 @@ class AiScoreContactsTest extends TestCase
 
     // ─── Commande Artisan ai:score-contacts ───────────────────────────────────
 
+    /**
+     * Construit une réponse LLM au FORMAT BATCH attendu par
+     * AiInsightService::batchScoreContacts() : un tableau JSON d'objets
+     * {"id": N, "score": X, "rationale": "..."} couvrant les IDs présents
+     * dans le prompt utilisateur (extraits via "ID:<n>").
+     *
+     * Note : l'ancienne version de ces tests mockait un objet unique
+     * {"score": X} (API mono-contact), incompatible avec le scoring batch
+     * introduit ensuite — d'où les échecs préexistants. On aligne le mock
+     * sur l'implémentation réelle.
+     */
+    private function batchReply(int $score, string $rationale = 'ok'): \Closure
+    {
+        return function (string $system, string $userPrompt) use ($score, $rationale): string {
+            preg_match_all('/ID:(\d+)/', $userPrompt, $matches);
+            $items = array_map(
+                fn ($id) => ['id' => (int) $id, 'score' => $score, 'rationale' => $rationale],
+                $matches[1]
+            );
+
+            return json_encode($items);
+        };
+    }
+
     public function test_artisan_command_updates_ai_score_on_contacts(): void
     {
         $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
-            ->andReturn('{"score": 80, "rationale": "Bon profil."}'));
+            ->andReturnUsing($this->batchReply(80, 'Bon profil.')));
 
         $c1 = Contact::create(['first_name' => 'A', 'last_name' => 'B', 'email' => 'a@b.test', 'emelia_campaign_id' => 'c1']);
         $c2 = Contact::create(['first_name' => 'C', 'last_name' => 'D', 'email' => 'c@d.test', 'emelia_campaign_id' => 'c2']);
@@ -96,7 +120,7 @@ class AiScoreContactsTest extends TestCase
     public function test_artisan_command_with_all_flag_scores_all_contacts(): void
     {
         $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
-            ->once()->andReturn('{"score": 30, "rationale": "Peu engagé."}'));
+            ->once()->andReturnUsing($this->batchReply(30, 'Peu engagé.')));
 
         $contact = Contact::create(['first_name' => 'All', 'last_name' => 'Flag', 'email' => 'all@flag.test']);
 
@@ -108,7 +132,7 @@ class AiScoreContactsTest extends TestCase
     public function test_artisan_command_dry_run_does_not_write_score(): void
     {
         $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
-            ->andReturn('{"score": 90, "rationale": "Top."}'));
+            ->andReturnUsing($this->batchReply(90, 'Top.')));
 
         $contact = Contact::create(['first_name' => 'Dry', 'last_name' => 'Run', 'email' => 'dry@run.test', 'emelia_campaign_id' => 'cx']);
 
@@ -120,7 +144,7 @@ class AiScoreContactsTest extends TestCase
     public function test_artisan_command_caps_score_at_100(): void
     {
         $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
-            ->andReturn('{"score": 150, "rationale": "Hors limite."}'));
+            ->andReturnUsing($this->batchReply(150, 'Hors limite.')));
 
         $contact = Contact::create(['first_name' => 'Cap', 'last_name' => 'Test', 'email' => 'cap@test.test', 'emelia_campaign_id' => 'cx2']);
 

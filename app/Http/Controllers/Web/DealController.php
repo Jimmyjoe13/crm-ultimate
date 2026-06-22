@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Web\Concerns\AuthorizesOwnerAccess;
 use App\Models\Activity;
 use App\Models\Deal;
 use App\Models\PipelineStage;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Cache;
 
 class DealController extends Controller
 {
+    use AuthorizesOwnerAccess;
+
     public function index(Request $request)
     {
         $filter  = $request->get('filter', 'all');
@@ -22,15 +25,18 @@ class DealController extends Controller
         $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
         $page    = (int) $request->get('page', 1);
 
-        $cacheKey = 'deals.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search);
+        // Cloisonnement par owner : la clé de cache intègre le périmètre de l'utilisateur.
+        $user      = $request->user();
+        $scopeKey  = md5(json_encode($user->accessibleOwnerIds() ?? 'all'));
+        $cacheKey  = 'deals.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search) . '.sc' . $scopeKey;
 
-        $cached = Cache::tags(['deals.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page) {
+        $cached = Cache::tags(['deals.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page, $user) {
             $base = Deal::with([
                 'stage:id,name',
                 'companies:id,name',
                 'contacts:id,first_name,last_name',
                 'owner:id,name',
-            ])->where('status', 'open');
+            ])->visibleTo($user)->where('status', 'open');
 
             $allCount = (clone $base)->count();
             $total    = (clone $base)->sum('amount');
@@ -108,8 +114,11 @@ class DealController extends Controller
             ->with('flash_toast', ['message' => "Deal « {$deal->name} » créé.", 'type' => 'success']);
     }
 
-    public function show(Deal $deal)
+    public function show(Request $request, Deal $deal)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $deal->load('stage', 'companies', 'contacts', 'owner');
 
         $stages = $this->activeStages();
@@ -138,8 +147,11 @@ class DealController extends Controller
         return view('pages.deals.show', compact('deal', 'stages', 'activities', 'bgDeals', 'allContacts', 'allCompanies'));
     }
 
-    public function edit(Deal $deal)
+    public function edit(Request $request, Deal $deal)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $stages = $this->activeStages();
 
         return view('pages.deals.edit', compact('deal', 'stages'));
@@ -147,6 +159,9 @@ class DealController extends Controller
 
     public function update(Request $request, Deal $deal)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $data = $request->validate(array_merge([
             'name'              => ['required', 'string', 'max:255'],
             'amount'            => ['required', 'numeric', 'min:0'],
@@ -173,8 +188,11 @@ class DealController extends Controller
         ]);
     }
 
-    public function destroy(Deal $deal)
+    public function destroy(Request $request, Deal $deal)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $deal->delete();
 
         return redirect('/deals')->with('flash_toast', [
@@ -198,8 +216,11 @@ class DealController extends Controller
         ]);
     }
 
-    public function markWon(Deal $deal)
+    public function markWon(Request $request, Deal $deal)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $wonStage = $this->wonStage();
         $deal->update([
             'status'            => 'won',
@@ -210,8 +231,11 @@ class DealController extends Controller
             ->with('flash_toast', ['message' => "Deal « {$deal->name} » marqué gagné ✓", 'type' => 'success']);
     }
 
-    public function markLost(Deal $deal)
+    public function markLost(Request $request, Deal $deal)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $lostStage = $this->lostStage();
         $deal->update([
             'status'            => 'lost',
@@ -224,6 +248,9 @@ class DealController extends Controller
 
     public function attachContact(Request $request, Deal $deal)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $data = $request->validate([
             'contact_id' => ['required', 'exists:contacts,id'],
             'role'       => ['nullable', 'in:primary,technical,billing,other'],
@@ -248,8 +275,11 @@ class DealController extends Controller
             ->with('flash_toast', ['message' => 'Contact associé au deal.', 'type' => 'success']);
     }
 
-    public function detachContact(Deal $deal, \App\Models\Contact $contact)
+    public function detachContact(Request $request, Deal $deal, \App\Models\Contact $contact)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $deal->contacts()->detach($contact->id);
 
         \App\Services\AssociationAuditor::recordDetach($deal, 'contacts', $contact->id, \App\Models\Contact::class);
@@ -260,6 +290,9 @@ class DealController extends Controller
 
     public function attachCompany(Request $request, Deal $deal)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $data = $request->validate([
             'company_id' => ['required', 'exists:companies,id'],
             'role'       => ['nullable', 'in:customer,partner,reseller'],
@@ -280,8 +313,11 @@ class DealController extends Controller
             ->with('flash_toast', ['message' => 'Entreprise associée au deal.', 'type' => 'success']);
     }
 
-    public function detachCompany(Deal $deal, \App\Models\Company $company)
+    public function detachCompany(Request $request, Deal $deal, \App\Models\Company $company)
     {
+        // Cloisonnement par owner : 404 si le deal est hors du périmètre du commercial.
+        $this->ensureVisible($deal, $request->user());
+
         $deal->companies()->detach($company->id);
 
         \App\Services\AssociationAuditor::recordDetach($deal, 'companies', $company->id, \App\Models\Company::class);

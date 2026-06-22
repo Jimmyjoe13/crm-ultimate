@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Web\Concerns\AuthorizesOwnerAccess;
 use App\Models\Company;
 use App\Support\CustomFieldRenderer;
 use App\Support\CustomValueValidator;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Cache;
 
 class CompanyController extends Controller
 {
+    use AuthorizesOwnerAccess;
+
     public function index(Request $request)
     {
         $search  = $request->get('search');
@@ -20,10 +23,14 @@ class CompanyController extends Controller
         $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
         $page    = (int) $request->get('page', 1);
 
-        $cacheKey = 'companies.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search);
+        // Cloisonnement par owner : la clé de cache intègre le périmètre de l'utilisateur.
+        $user      = $request->user();
+        $scopeKey  = md5(json_encode($user->accessibleOwnerIds() ?? 'all'));
+        $cacheKey  = 'companies.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search) . '.sc' . $scopeKey;
 
-        $cached = Cache::tags(['companies.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page) {
+        $cached = Cache::tags(['companies.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page, $user) {
             $pag = Company::with(['contacts:id,first_name,last_name', 'owner:id,name'])
+                ->visibleTo($user)
                 ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%")
                     ->orWhere('industry', 'ilike', "%{$search}%"))
                 ->orderBy($sort, $dir)
@@ -73,8 +80,11 @@ class CompanyController extends Controller
         ]);
     }
 
-    public function show(Company $company)
+    public function show(Request $request, Company $company)
     {
+        // Cloisonnement par owner : 404 si l'entreprise est hors du périmètre du commercial.
+        $this->ensureVisible($company, $request->user());
+
         $company->load('contacts', 'deals.stage');
         $activities = \App\Models\Activity::where('subject_type', Company::class)
             ->where('subject_id', $company->id)
@@ -85,13 +95,19 @@ class CompanyController extends Controller
         return view('pages.companies.show', compact('company', 'activities'));
     }
 
-    public function edit(Company $company)
+    public function edit(Request $request, Company $company)
     {
+        // Cloisonnement par owner : 404 si l'entreprise est hors du périmètre du commercial.
+        $this->ensureVisible($company, $request->user());
+
         return view('pages.companies.edit', compact('company'));
     }
 
     public function update(Request $request, Company $company)
     {
+        // Cloisonnement par owner : 404 si l'entreprise est hors du périmètre du commercial.
+        $this->ensureVisible($company, $request->user());
+
         $data = $request->validate(array_merge([
             'name'     => ['required', 'string', 'max:255'],
             'domain'   => ['nullable', 'string', 'max:255'],
@@ -117,8 +133,11 @@ class CompanyController extends Controller
         ]);
     }
 
-    public function destroy(Company $company)
+    public function destroy(Request $request, Company $company)
     {
+        // Cloisonnement par owner : 404 si l'entreprise est hors du périmètre du commercial.
+        $this->ensureVisible($company, $request->user());
+
         $company->delete();
 
         return redirect('/companies')->with('flash_toast', [
