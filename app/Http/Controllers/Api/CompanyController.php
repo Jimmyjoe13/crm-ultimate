@@ -39,9 +39,11 @@ class CompanyController extends Controller
         ];
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
+        // Scope par owner : 404 si l'entreprise est hors du périmètre de l'utilisateur.
         $company = Company::query()
+            ->visibleTo($request->user())
             ->with(['contacts', 'deals.stage', 'owner'])
             ->findOrFail($id);
 
@@ -71,7 +73,7 @@ class CompanyController extends Controller
             'is_primary' => ['boolean'],
         ]);
 
-        $company = Company::query()->findOrFail($id);
+        $company = Company::query()->visibleTo($request->user())->findOrFail($id);
         $contact = Contact::query()->findOrFail($data['contact_id']);
 
         $pivot = [
@@ -88,7 +90,7 @@ class CompanyController extends Controller
 
     public function detachContact(Request $request, int $id, int $contactId): JsonResponse
     {
-        $company = Company::query()->findOrFail($id);
+        $company = Company::query()->visibleTo($request->user())->findOrFail($id);
         $company->contacts()->detach($contactId);
 
         AssociationAuditor::recordDetach($company, 'contacts', $contactId, Contact::class);
@@ -103,7 +105,7 @@ class CompanyController extends Controller
             'is_primary' => ['boolean'],
         ]);
 
-        $company = Company::query()->findOrFail($id);
+        $company = Company::query()->visibleTo($request->user())->findOrFail($id);
         $company->contacts()->updateExistingPivot($contactId, $data);
 
         return response()->json(['data' => $company->contacts()->withPivot('role', 'is_primary')->get()]);

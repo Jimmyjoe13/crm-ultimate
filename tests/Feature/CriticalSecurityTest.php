@@ -23,15 +23,24 @@ class CriticalSecurityTest extends TestCase
             'exp' => time() + 3600,
         ]);
 
-        return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+        // Correction : ces tests appellent l'API stateless. Le JWT doit passer en
+        // header Bearer (lu en priorité par JwtMiddleware). Le cookie `crm_jwt` est
+        // attendu CHIFFRÉ (Crypt::decrypt) côté middleware ; y mettre un JWT brut
+        // échouait silencieusement → toutes les requêtes renvoyaient 401.
+        return $this->withToken($jwt);
     }
 
     private function makeUser(string $role): User
     {
+        // Correction : email rendu unique. L'ancienne version utilisait un email fixe
+        // par rôle, ce qui provoquait une UniqueConstraintViolation dès qu'un test
+        // créait deux utilisateurs du même rôle (ex. deux commerciaux).
+        static $seq = 0;
+        $seq++;
+
         return User::create([
             'name' => ucfirst($role),
-            'email' => "{$role}-critical@example.test",
+            'email' => "{$role}-{$seq}-critical@example.test",
             'password' => bcrypt('password'),
             'role' => $role,
         ]);
@@ -140,10 +149,31 @@ class CriticalSecurityTest extends TestCase
         ]);
     }
 
+    public function test_export_routes_are_forbidden_to_sales(): void
+    {
+        // Les routes /exports sont sous middleware role:admin,manager.
+        // Un commercial est donc rejeté en amont (403), avant tout scope owner.
+        $sales = $this->makeUser(User::ROLE_SALES);
+
+        $otherJob = ExportJob::create([
+            'user_id' => $this->makeUser(User::ROLE_MANAGER)->id,
+            'entity_type' => 'contact',
+            'status' => 'completed',
+            'filters' => [],
+            'file_path' => 'exports/other.csv',
+        ]);
+
+        $this->withAuth($sales)->getJson("/api/v1/exports/{$otherJob->id}")->assertForbidden();
+        $this->withAuth($sales)->getJson("/api/v1/exports/{$otherJob->id}/download")->assertForbidden();
+        $this->withAuth($sales)->getJson('/api/v1/exports')->assertForbidden();
+    }
+
     public function test_export_show_and_download_are_owner_scoped(): void
     {
-        $sales = $this->makeUser(User::ROLE_SALES);
-        $other = $this->makeUser(User::ROLE_SALES);
+        // Entre deux utilisateurs AUTORISÉS (managers), un export reste cloisonné par
+        // user_id : l'export d'autrui renvoie 404 (ownedJobOrFail → findOrFail scopé).
+        $manager = $this->makeUser(User::ROLE_MANAGER);
+        $other   = $this->makeUser(User::ROLE_MANAGER);
 
         $otherJob = ExportJob::create([
             'user_id' => $other->id,
@@ -153,15 +183,15 @@ class CriticalSecurityTest extends TestCase
             'file_path' => 'exports/other.csv',
         ]);
 
-        $this->withAuth($sales)
+        $this->withAuth($manager)
             ->getJson("/api/v1/exports/{$otherJob->id}")
             ->assertNotFound();
 
-        $this->withAuth($sales)
+        $this->withAuth($manager)
             ->getJson("/api/v1/exports/{$otherJob->id}/download")
             ->assertNotFound();
 
-        $this->withAuth($sales)
+        $this->withAuth($manager)
             ->getJson('/api/v1/exports')
             ->assertOk()
             ->assertJsonMissingPath('data.0.id');

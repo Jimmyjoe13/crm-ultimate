@@ -46,7 +46,8 @@ class DealController extends Controller
             'pipeline_stage_id' => ['required', 'exists:pipeline_stages,id'],
         ]);
 
-        $deal = Deal::query()->findOrFail($id);
+        // Scope par owner : empêche le déplacement d'un deal hors périmètre.
+        $deal = Deal::query()->visibleTo($request->user())->findOrFail($id);
         $stage = PipelineStage::query()->findOrFail($data['pipeline_stage_id']);
 
         $deal->fill([
@@ -58,9 +59,11 @@ class DealController extends Controller
         return response()->json(['data' => $deal->fresh()]);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
+        // Scope par owner : 404 si le deal est hors du périmètre de l'utilisateur.
         $deal = Deal::query()
+            ->visibleTo($request->user())
             ->with(['companies', 'contacts', 'pipeline', 'stage', 'owner'])
             ->findOrFail($id);
 
@@ -80,7 +83,7 @@ class DealController extends Controller
         ]);
     }
 
-    public function board(): JsonResponse
+    public function board(Request $request): JsonResponse
     {
         $pipeline = Pipeline::query()
             ->with('stages')
@@ -88,6 +91,7 @@ class DealController extends Controller
             ->first() ?? Pipeline::query()->with('stages')->firstOrFail();
 
         $deals = Deal::query()
+            ->visibleTo($request->user())
             ->with(['companies', 'contacts', 'stage'])
             ->where('pipeline_id', $pipeline->id)
             ->orderByDesc('created_at')
@@ -112,7 +116,7 @@ class DealController extends Controller
             'role' => ['in:primary,technical,billing,other'],
         ]);
 
-        $deal = Deal::query()->findOrFail($id);
+        $deal = Deal::query()->visibleTo($request->user())->findOrFail($id);
         $contact = Contact::query()->findOrFail($data['contact_id']);
 
         $pivot = ['role' => $data['role'] ?? 'primary'];
@@ -126,7 +130,7 @@ class DealController extends Controller
 
     public function detachContact(Request $request, int $id, int $contactId): JsonResponse
     {
-        $deal = Deal::query()->findOrFail($id);
+        $deal = Deal::query()->visibleTo($request->user())->findOrFail($id);
         $deal->contacts()->detach($contactId);
 
         AssociationAuditor::recordDetach($deal, 'contacts', $contactId, Contact::class);
@@ -140,7 +144,7 @@ class DealController extends Controller
             'role' => ['required', 'in:primary,technical,billing,other'],
         ]);
 
-        $deal = Deal::query()->findOrFail($id);
+        $deal = Deal::query()->visibleTo($request->user())->findOrFail($id);
         $deal->contacts()->updateExistingPivot($contactId, $data);
 
         return response()->json(['data' => $deal->contacts()->withPivot('role')->get()]);
@@ -154,7 +158,7 @@ class DealController extends Controller
             'is_primary' => ['boolean'],
         ]);
 
-        $deal = Deal::query()->findOrFail($id);
+        $deal = Deal::query()->visibleTo($request->user())->findOrFail($id);
         $company = Company::query()->findOrFail($data['company_id']);
 
         $pivot = [
@@ -171,7 +175,7 @@ class DealController extends Controller
 
     public function detachCompany(Request $request, int $id, int $companyId): JsonResponse
     {
-        $deal = Deal::query()->findOrFail($id);
+        $deal = Deal::query()->visibleTo($request->user())->findOrFail($id);
         $deal->companies()->detach($companyId);
 
         AssociationAuditor::recordDetach($deal, 'companies', $companyId, Company::class);
@@ -186,7 +190,7 @@ class DealController extends Controller
             'is_primary' => ['boolean'],
         ]);
 
-        $deal = Deal::query()->findOrFail($id);
+        $deal = Deal::query()->visibleTo($request->user())->findOrFail($id);
         $deal->companies()->updateExistingPivot($companyId, $data);
 
         return response()->json(['data' => $deal->companies()->withPivot('role', 'is_primary')->get()]);

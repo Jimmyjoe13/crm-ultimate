@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Concerns;
 
 use App\Support\CrmQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -10,7 +11,7 @@ trait CrudActions
 {
     public function index(Request $request): JsonResponse
     {
-        $query = CrmQuery::apply(($this->modelClass)::query(), $request, $this->searchable);
+        $query = CrmQuery::apply($this->scopedQuery($request), $request, $this->searchable);
 
         return response()->json($query->paginate((int) $request->query('per_page', 25)));
     }
@@ -26,14 +27,15 @@ trait CrudActions
         return response()->json(['data' => $record], 201);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        return response()->json(['data' => ($this->modelClass)::query()->findOrFail($id)]);
+        // findOrFail sur la requête scopée → 404 si hors périmètre (ne leak pas l'existence).
+        return response()->json(['data' => $this->scopedQuery($request)->findOrFail($id)]);
     }
 
     public function update(Request $request, int $id): JsonResponse
     {
-        $record = ($this->modelClass)::query()->findOrFail($id);
+        $record = $this->scopedQuery($request)->findOrFail($id);
         $data = $this->authorizeOwnerAssignment($request, $request->validate($this->rules('update')));
         $record->fill($data);
         $record->save();
@@ -41,11 +43,29 @@ trait CrudActions
         return response()->json(['data' => $record]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        ($this->modelClass)::query()->findOrFail($id)->delete();
+        $this->scopedQuery($request)->findOrFail($id)->delete();
 
         return response()->json(status: 204);
+    }
+
+    /**
+     * Requête de base du modèle, restreinte au périmètre de l'utilisateur courant
+     * (cloisonnement par owner_id) lorsque le modèle expose le scope `visibleTo`.
+     *
+     * Les modèles sans owner_id (config partagée : pipelines, champs custom…) ne
+     * portent pas le trait ScopesToOwner et restent donc non filtrés.
+     */
+    protected function scopedQuery(Request $request): Builder
+    {
+        $query = ($this->modelClass)::query();
+
+        if (method_exists($this->modelClass, 'scopeVisibleTo')) {
+            $query->visibleTo($request->user());
+        }
+
+        return $query;
     }
 
     protected function authorizeOwnerAssignment(Request $request, array $data): array

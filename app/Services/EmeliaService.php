@@ -22,7 +22,10 @@ class EmeliaService
     {
         $response = $this->http()
             ->timeout(30)
-            ->retry(2, 1000)
+            // throw: false → laisse la gestion d'erreur ci-dessous (RuntimeException
+            // métier) reprendre la main. Sans cela, retry() lève une RequestException
+            // dès le statut d'échec et court-circuite notre $response->failed().
+            ->retry(2, 1000, throw: false)
             ->get($this->url('/campaigns'));
 
         if ($response->failed()) {
@@ -291,7 +294,8 @@ class EmeliaService
     {
         $response = $this->http()
             ->timeout(30)
-            ->retry(2, 1000)
+            // throw: false → cf. listCampaigns(), on garde la gestion d'erreur métier.
+            ->retry(2, 1000, throw: false)
             ->post($this->url('/graphql'), [
                 'query' => 'mutation AddContact($id: ID!, $contact: JSON!) { addContactToCampaignHook(id: $id, contact: $contact) }',
                 'variables' => ['id' => $campaignId, 'contact' => $payload],

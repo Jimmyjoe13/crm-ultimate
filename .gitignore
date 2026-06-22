@@ -24,12 +24,16 @@
 # Session handoff / scratch files
 /handoff.md
 /GEMINI_handoff.md
+/walkthrough.md.resolved
+
+# Debug / scratch PHP scripts (ne jamais commiter)
+/_*.php
+/test_*.php
+/check_*.php
 /list_users.php
 /test_curl.html
 /test_headers.txt
-/test_redis.php
-/check_hash.php
-/walkthrough.md.resolved
+/scripts/_*.php
 
 # Playwright
 /playwright-report/

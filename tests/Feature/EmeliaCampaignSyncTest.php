@@ -12,9 +12,37 @@ class EmeliaCampaignSyncTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const WEBHOOK_SECRET = 'test-webhook-secret';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Le webhook exige désormais une signature HMAC (durcissement sécurité).
+        // On fixe un secret de test connu pour pouvoir signer les payloads, sans
+        // dépendre d'un éventuel EMELIA_WEBHOOK_SECRET injecté par l'environnement.
+        config(['services.emelia.webhook_secret' => self::WEBHOOK_SECRET]);
+    }
+
     private function postWebhook(array $payload)
     {
-        return $this->postJson('/api/webhooks/emelia', $payload);
+        // Signe le corps exactement comme le contrôleur le recalcule
+        // (hash_hmac sha256 sur le JSON brut transmis).
+        $body      = json_encode($payload);
+        $signature = hash_hmac('sha256', $body, self::WEBHOOK_SECRET);
+
+        return $this->call(
+            'POST',
+            '/api/webhooks/emelia',
+            [],
+            [],
+            [],
+            [
+                'CONTENT_TYPE'           => 'application/json',
+                'HTTP_ACCEPT'            => 'application/json',
+                'HTTP_X_EMELIA_SIGNATURE' => $signature,
+            ],
+            $body
+        );
     }
 
     private function basePayload(array $overrides = []): array

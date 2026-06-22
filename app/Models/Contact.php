@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasLifecycle;
+use App\Models\Concerns\ScopesToOwner;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ class Contact extends Model
     use Auditable;
     use HasFactory;
     use HasLifecycle;
+    use ScopesToOwner;
     use SoftDeletes;
 
     protected static function boot(): void
