@@ -13,7 +13,7 @@ class AuthTest extends TestCase
 
     public function test_user_can_login_and_read_profile(): void
     {
-        User::query()->create([
+        User::createWithRole([
             'name' => 'CRM Admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),

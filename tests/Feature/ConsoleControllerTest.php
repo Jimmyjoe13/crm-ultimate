@@ -29,17 +29,17 @@ class ConsoleControllerTest extends TestCase
 
     private function makeAdmin(): User
     {
-        return User::create(['name' => 'Admin', 'email' => 'a@test.com', 'password' => bcrypt('p'), 'role' => User::ROLE_ADMIN]);
+        return User::createWithRole(['name' => 'Admin', 'email' => 'a@test.com', 'password' => bcrypt('p'), 'role' => User::ROLE_ADMIN]);
     }
 
     private function makeManager(): User
     {
-        return User::create(['name' => 'Manager', 'email' => 'm@test.com', 'password' => bcrypt('p'), 'role' => User::ROLE_MANAGER]);
+        return User::createWithRole(['name' => 'Manager', 'email' => 'm@test.com', 'password' => bcrypt('p'), 'role' => User::ROLE_MANAGER]);
     }
 
     private function makeSales(): User
     {
-        return User::create(['name' => 'Sales', 'email' => 's@test.com', 'password' => bcrypt('p'), 'role' => User::ROLE_SALES]);
+        return User::createWithRole(['name' => 'Sales', 'email' => 's@test.com', 'password' => bcrypt('p'), 'role' => User::ROLE_SALES]);
     }
 
     // T1 — admin accède à /settings/console

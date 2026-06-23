@@ -46,7 +46,7 @@ class WebOwnerScopeTest extends TestCase
         static $seq = 0;
         $seq++;
 
-        return User::create([
+        return User::createWithRole([
             'name'       => ucfirst($role) . " {$seq}",
             'email'      => "{$role}-{$seq}-webscope@example.test",
             'password'   => bcrypt('password'),

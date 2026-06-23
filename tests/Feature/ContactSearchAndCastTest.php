@@ -26,7 +26,7 @@ class ContactSearchAndCastTest extends TestCase
 
     private function makeAdmin(): User
     {
-        return User::create([
+        return User::createWithRole([
             'name'     => 'Admin',
             'email'    => 'admin@casttest.dev',
             'password' => bcrypt('secret'),

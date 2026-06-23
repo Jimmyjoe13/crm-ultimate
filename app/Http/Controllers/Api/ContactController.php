@@ -37,6 +37,35 @@ class ContactController extends Controller
         ];
     }
 
+    /**
+     * Statistiques agrégées sur les contacts visibles par l'utilisateur courant.
+     *
+     * Cet endpoint DOIT être déclaré avant la route paramétrique `contacts/{contact}`
+     * (cf. routes/api.php). Sinon `GET /contacts/stats` est capturé par `show()` qui
+     * attend un int → TypeError 500 (bug observé en prod). La contrainte whereNumber
+     * sur l'apiResource sert de garde-fou supplémentaire.
+     */
+    public function stats(Request $request): JsonResponse
+    {
+        $base = Contact::query()->visibleTo($request->user());
+
+        return response()->json([
+            'data' => [
+                'total'         => (clone $base)->count(),
+                'contactable'   => (clone $base)->contactable()->count(),
+                'blacklisted'   => (clone $base)->blacklisted()->count(),
+                'by_lifecycle'  => (clone $base)
+                    ->selectRaw('lifecycle_stage, COUNT(*) as count')
+                    ->groupBy('lifecycle_stage')
+                    ->pluck('count', 'lifecycle_stage'),
+                'by_lead_status' => (clone $base)
+                    ->selectRaw('lead_status, COUNT(*) as count')
+                    ->groupBy('lead_status')
+                    ->pluck('count', 'lead_status'),
+            ],
+        ]);
+    }
+
     public function show(Request $request, int $id): JsonResponse
     {
         // Scope par owner : 404 si le contact est hors du périmètre de l'utilisateur.

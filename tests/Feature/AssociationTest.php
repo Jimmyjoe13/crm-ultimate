@@ -34,7 +34,7 @@ class AssociationTest extends TestCase
     {
         parent::setUp();
 
-        $admin = User::query()->create([
+        $admin = User::createWithRole([
             'name' => 'Admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),

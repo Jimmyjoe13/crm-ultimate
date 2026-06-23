@@ -22,14 +22,14 @@ class SegmentTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::query()->create([
+        $this->admin = User::createWithRole([
             'name'     => 'Admin',
             'email'    => 'admin@example.com',
             'password' => Hash::make('password'),
             'role'     => User::ROLE_ADMIN,
         ]);
 
-        $commercial = User::query()->create([
+        $commercial = User::createWithRole([
             'name'     => 'Commercial',
             'email'    => 'commercial@example.com',
             'password' => Hash::make('password'),
@@ -224,7 +224,7 @@ class SegmentTest extends TestCase
 
     public function test_user_delete_nullifies_created_by(): void
     {
-        $user = User::query()->create([
+        $user = User::createWithRole([
             'name'     => 'Temp', 'email' => 'temp@example.com',
             'password' => Hash::make('password'), 'role' => User::ROLE_ADMIN,
         ]);

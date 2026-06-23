@@ -29,7 +29,7 @@ class ContactTimelineTest extends TestCase
         static $counter = 0;
         $counter++;
 
-        return User::create([
+        return User::createWithRole([
             'name'     => 'User ' . $counter,
             'email'    => 'user' . $counter . '@timeline.test',
             'password' => bcrypt('password'),

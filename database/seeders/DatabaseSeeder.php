@@ -16,14 +16,17 @@ class DatabaseSeeder extends Seeder
     {
         // ── Admin user ────────────────────────────────────────────────────────
 
-        $admin = User::query()->firstOrCreate(
-            ['email' => 'admin@example.com'],
-            [
+        // `role` étant hors $fillable (anti-escalade), on l'assigne explicitement
+        // via forceFill sur l'instance avant save (firstOrCreate ignorerait `role`).
+        $admin = User::query()->where('email', 'admin@example.com')->first();
+        if (! $admin) {
+            $admin = User::createWithRole([
+                'email' => 'admin@example.com',
                 'name' => 'Admin CRM',
                 'password' => Hash::make('password'),
                 'role' => User::ROLE_ADMIN,
-            ],
-        );
+            ]);
+        }
 
         // ── Default pipeline ──────────────────────────────────────────────────
 

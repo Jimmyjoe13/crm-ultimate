@@ -38,7 +38,7 @@ class CriticalSecurityTest extends TestCase
         static $seq = 0;
         $seq++;
 
-        return User::create([
+        return User::createWithRole([
             'name' => ucfirst($role),
             'email' => "{$role}-{$seq}-critical@example.test",
             'password' => bcrypt('password'),
@@ -48,7 +48,7 @@ class CriticalSecurityTest extends TestCase
 
     public function test_login_route_is_throttled(): void
     {
-        User::create([
+        User::createWithRole([
             'name' => 'Login Target',
             'email' => 'login-target@example.test',
             'password' => bcrypt('password'),
@@ -66,6 +66,83 @@ class CriticalSecurityTest extends TestCase
             'email' => 'login-target@example.test',
             'password' => 'wrong-password',
         ])->assertStatus(429);
+    }
+
+    public function test_web_login_route_is_throttled(): void
+    {
+        // FIX 1 (audit) : la route POST /login (web) doit être throttlée (throttle:10,1),
+        // au même titre que /api/v1/auth/login. Après 10 tentatives, la 11e renvoie 429.
+        User::createWithRole([
+            'name' => 'Web Login Target',
+            'email' => 'web-login-target@example.test',
+            'password' => bcrypt('password'),
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        for ($i = 0; $i < 10; $i++) {
+            // Identifiants invalides → 302 (back avec erreurs). On vérifie surtout le 429 ensuite.
+            $this->withSession(['_token' => 'test'])->post('/login', [
+                '_token' => 'test',
+                'email' => 'web-login-target@example.test',
+                'password' => 'wrong-password',
+            ]);
+        }
+
+        $this->withSession(['_token' => 'test'])->post('/login', [
+            '_token' => 'test',
+            'email' => 'web-login-target@example.test',
+            'password' => 'wrong-password',
+        ])->assertStatus(429);
+    }
+
+    public function test_contacts_stats_endpoint_does_not_500(): void
+    {
+        // FIX 2 (audit) : GET /api/v1/contacts/stats ne doit PAS être capturé par la
+        // route paramétrique contacts/{contact} (qui appelait show(int $id) avec "stats"
+        // → TypeError 500). La route stats est déclarée avant + whereNumber sur {contact}.
+        $admin = $this->makeUser(User::ROLE_ADMIN);
+
+        $response = $this->withAuth($admin)->getJson('/api/v1/contacts/stats');
+
+        $response->assertOk();
+        $response->assertJsonStructure([
+            'data' => [
+                'total',
+                'contactable',
+                'blacklisted',
+                'by_lifecycle',
+                'by_lead_status',
+            ],
+        ]);
+    }
+
+    public function test_user_role_is_not_mass_assignable(): void
+    {
+        // FIX 3 (audit) : `role` (et `manager_id`) sont hors $fillable. Un create() en
+        // mass-assignment doit IGNORER `role` → l'utilisateur retombe sur le default DB
+        // ('commercial'), et n'obtient donc PAS le rôle admin demandé.
+        $user = User::create([
+            'name' => 'Sneaky',
+            'email' => 'sneaky@example.test',
+            'password' => bcrypt('password'),
+            'role' => User::ROLE_ADMIN,
+            'manager_id' => 42,
+        ]);
+
+        $user->refresh();
+
+        $this->assertNotSame(User::ROLE_ADMIN, $user->role, 'role ne doit pas être assignable en masse');
+        $this->assertFalse($user->isAdmin());
+        $this->assertNull($user->manager_id, 'manager_id ne doit pas être assignable en masse');
+
+        // Le helper interne de confiance, lui, assigne bien le rôle (forceFill explicite).
+        $admin = User::createWithRole([
+            'name' => 'Real Admin',
+            'email' => 'real-admin@example.test',
+            'password' => bcrypt('password'),
+            'role' => User::ROLE_ADMIN,
+        ]);
+        $this->assertTrue($admin->isAdmin());
     }
 
     public function test_emelia_webhooks_require_signature_when_secret_configured(): void

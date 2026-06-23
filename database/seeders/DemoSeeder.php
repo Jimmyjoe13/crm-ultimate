@@ -18,15 +18,12 @@ class DemoSeeder extends Seeder
     {
         // ── Users ─────────────────────────────────────────────────────────────
 
-        $admin = User::query()->firstOrCreate(
-            ['email' => 'admin@demo.com'],
-            ['name' => 'Marie Dupont', 'password' => Hash::make('password'), 'role' => User::ROLE_ADMIN],
-        );
+        // `role` hors $fillable (anti-escalade) : assignation explicite via createWithRole.
+        $admin = User::query()->where('email', 'admin@demo.com')->first()
+            ?? User::createWithRole(['email' => 'admin@demo.com', 'name' => 'Marie Dupont', 'password' => Hash::make('password'), 'role' => User::ROLE_ADMIN]);
 
-        $user = User::query()->firstOrCreate(
-            ['email' => 'user@demo.com'],
-            ['name' => 'Thomas Leroy', 'password' => Hash::make('password'), 'role' => 'commercial'],
-        );
+        $user = User::query()->where('email', 'user@demo.com')->first()
+            ?? User::createWithRole(['email' => 'user@demo.com', 'name' => 'Thomas Leroy', 'password' => Hash::make('password'), 'role' => 'commercial']);
 
         // ── Pipelines & Stages ────────────────────────────────────────────────
 

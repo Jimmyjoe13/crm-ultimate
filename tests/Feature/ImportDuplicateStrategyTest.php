@@ -22,7 +22,7 @@ class ImportDuplicateStrategyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::query()->create([
+        $this->user = User::createWithRole([
             'name'     => 'Admin',
             'email'    => 'admin@test.com',
             'password' => Hash::make('password'),

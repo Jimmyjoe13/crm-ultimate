@@ -54,7 +54,11 @@ Route::prefix('v1')->name('api.')->group(function (): void {
         Route::delete('/companies/{company}/contacts/{contact}', [CompanyController::class, 'detachContact']);
         Route::patch('/companies/{company}/contacts/{contact}', [CompanyController::class, 'updateContactAssoc']);
 
-        Route::apiResource('contacts', ContactController::class);
+        // Route statique déclarée AVANT la route paramétrique {contact} : sinon
+        // `GET /contacts/stats` est capturé par show(int $id) → TypeError 500 (bug prod).
+        Route::get('/contacts/stats', [ContactController::class, 'stats']);
+        // whereNumber : garde-fou supplémentaire, le param {contact} n'accepte que des entiers.
+        Route::apiResource('contacts', ContactController::class)->whereNumber('contact');
         Route::post('/contacts/{contact}/companies', [ContactController::class, 'attachCompany']);
         Route::delete('/contacts/{contact}/companies/{company}', [ContactController::class, 'detachCompany']);
         Route::patch('/contacts/{contact}/companies/{company}', [ContactController::class, 'updateCompanyAssoc']);
