@@ -26,7 +26,7 @@ class AiScoreContactsTest extends TestCase
     private function makeUser(string $role = User::ROLE_ADMIN): User
     {
         static $n = 0; $n++;
-        return User::create(['name' => "U{$n}", 'email' => "u{$n}@score.test", 'password' => bcrypt('x'), 'role' => $role]);
+        return User::createWithRole(['name' => "U{$n}", 'email' => "u{$n}@score.test", 'password' => bcrypt('x'), 'role' => $role]);
     }
 
     // ─── scoreContact() service ───────────────────────────────────────────────

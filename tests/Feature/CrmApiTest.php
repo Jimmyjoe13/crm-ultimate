@@ -95,7 +95,7 @@ class CrmApiTest extends TestCase
 
     private function adminToken(): string
     {
-        User::query()->create([
+        User::createWithRole([
             'name' => 'CRM Admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),

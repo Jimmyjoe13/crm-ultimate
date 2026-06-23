@@ -30,7 +30,7 @@ class CustomFieldsWebTest extends TestCase
         static $counter = 0;
         $counter++;
 
-        return User::create([
+        return User::createWithRole([
             'name'     => 'Admin ' . $counter,
             'email'    => 'admin' . $counter . '@cf.test',
             'password' => bcrypt('password'),

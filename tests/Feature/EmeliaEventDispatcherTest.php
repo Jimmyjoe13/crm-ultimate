@@ -60,7 +60,7 @@ class EmeliaEventDispatcherTest extends TestCase
 
     public function test_replied_creates_followup_task(): void
     {
-        $owner   = User::create(['name' => 'Bob', 'email' => 'bob@crm.com', 'password' => 'x', 'role' => 'commercial']);
+        $owner   = User::createWithRole(['name' => 'Bob', 'email' => 'bob@crm.com', 'password' => 'x', 'role' => 'commercial']);
         $contact = $this->makeContact(['owner_id' => $owner->id, 'emelia_campaign_name' => 'ma-campagne']);
 
         EmeliaEventDispatcher::dispatch(

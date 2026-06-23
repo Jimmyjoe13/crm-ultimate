@@ -28,7 +28,7 @@ class ImportRequiredFieldsTest extends TestCase
 
     private function createAdmin(): User
     {
-        return User::create([
+        return User::createWithRole([
             'name'     => 'Admin',
             'email'    => 'admin@test.com',
             'password' => bcrypt('password'),

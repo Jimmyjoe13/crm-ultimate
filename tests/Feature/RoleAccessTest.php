@@ -24,7 +24,7 @@ class RoleAccessTest extends TestCase
 
     private function makeUser(string $role): User
     {
-        return User::create([
+        return User::createWithRole([
             'name' => ucfirst($role),
             'email' => $role.'@test.com',
             'password' => bcrypt('password'),

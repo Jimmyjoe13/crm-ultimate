@@ -31,7 +31,7 @@ class BulkActionsTest extends TestCase
         static $counter = 0;
         $counter++;
 
-        return User::create([
+        return User::createWithRole([
             'name'     => 'User ' . $counter,
             'email'    => 'user' . $counter . '@bulk.test',
             'password' => bcrypt('password'),

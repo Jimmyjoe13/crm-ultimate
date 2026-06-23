@@ -102,7 +102,7 @@ class AiTest extends TestCase
 
     private function adminToken(): string
     {
-        User::query()->create([
+        User::createWithRole([
             'name' => 'CRM Admin',
             'email' => 'admin@test.com',
             'password' => Hash::make('password'),

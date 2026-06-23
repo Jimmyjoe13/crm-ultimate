@@ -31,7 +31,7 @@ class ReportControllerTest extends TestCase
         static $counter = 0;
         $counter++;
 
-        return User::create([
+        return User::createWithRole([
             'name'     => 'User ' . $counter,
             'email'    => 'user' . $counter . '@test.com',
             'password' => bcrypt('password'),

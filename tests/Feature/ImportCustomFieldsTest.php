@@ -19,7 +19,7 @@ class ImportCustomFieldsTest extends TestCase
 
     private function makeUser(): User
     {
-        return User::query()->create([
+        return User::createWithRole([
             'name'     => 'Admin',
             'email'    => 'admin@test.com',
             'password' => Hash::make('password'),

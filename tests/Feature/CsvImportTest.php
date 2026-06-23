@@ -21,7 +21,7 @@ class CsvImportTest extends TestCase
     {
         Storage::fake('local');
 
-        $user = User::query()->create([
+        $user = User::createWithRole([
             'name' => 'Import Admin',
             'email' => 'import@test.com',
             'password' => Hash::make('password'),
@@ -65,7 +65,7 @@ class CsvImportTest extends TestCase
     {
         Storage::fake('local');
 
-        $user = User::query()->create([
+        $user = User::createWithRole([
             'name' => 'Mapping Admin',
             'email' => 'mapping@test.com',
             'password' => Hash::make('password'),
@@ -102,7 +102,7 @@ class CsvImportTest extends TestCase
     {
         Storage::fake('local');
 
-        $user = User::query()->create([
+        $user = User::createWithRole([
             'name' => 'Enrich Admin',
             'email' => 'enrich@test.com',
             'password' => Hash::make('password'),
@@ -146,7 +146,7 @@ class CsvImportTest extends TestCase
     {
         Storage::fake('local');
 
-        $user = User::query()->create([
+        $user = User::createWithRole([
             'name' => 'Domain Admin',
             'email' => 'domain@test.com',
             'password' => Hash::make('password'),
@@ -183,7 +183,7 @@ class CsvImportTest extends TestCase
     {
         Storage::fake('local');
 
-        $user = User::query()->create([
+        $user = User::createWithRole([
             'name' => 'Preview Admin',
             'email' => 'preview@test.com',
             'password' => Hash::make('password'),
