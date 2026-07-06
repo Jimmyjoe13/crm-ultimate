@@ -246,8 +246,8 @@ class FleetController extends Controller
             // 3. Sauvegarder l'état
             $fleetRedis->set("task:{$taskId}", json_encode($task, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
-            // 4. Pousser dans le Stream tasks:<dept> via XADD
-            $fleetRedis->xadd("tasks:{$dept}", '*', ['id' => $taskId]);
+            // 4. Pousser dans le Stream tasks:<dept> via XADD de façon brute pour éviter les bugs de conversion d'arguments
+            $fleetRedis->executeRaw(['XADD', "tasks:{$dept}", '*', 'id', $taskId]);
 
             return redirect()->route('fleet.index')->with('flash_toast', [
                 'message' => "Tâche {$taskId} envoyée avec succès au bus Redis pour {$agentConfig['name']} !",
@@ -287,8 +287,8 @@ class FleetController extends Controller
             // 3. Retirer de la liste approvals:pending
             $fleetRedis->lrem('approvals:pending', 1, $taskId);
 
-            // 4. Republier le résultat ou relancer l'agent (XADD dans tasks:<dept>)
-            $fleetRedis->xadd("tasks:{$task['dept']}", '*', ['id' => $taskId]);
+            // 4. Republier le résultat ou relancer l'agent (XADD dans tasks:<dept>) de façon brute pour éviter les bugs de conversion d'arguments
+            $fleetRedis->executeRaw(['XADD', "tasks:{$task['dept']}", '*', 'id', $taskId]);
 
             return redirect()->route('fleet.index')->with('flash_toast', [
                 'message' => "Tâche {$taskId} approuvée et relancée !",
