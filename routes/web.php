@@ -10,6 +10,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\DealController;
 use App\Http\Controllers\Web\EmailTemplateController;
 use App\Http\Controllers\Web\EmeliaController;
+use App\Http\Controllers\Web\FleetController;
 use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\PipelineController;
@@ -107,6 +108,9 @@ Route::middleware('web.auth')->group(function () {
     Route::middleware('role:admin,manager')->group(function () {
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+        Route::get('/fleet', [FleetController::class, 'index'])->name('fleet.index');
+        Route::post('/fleet/trigger', [FleetController::class, 'triggerAction'])->name('fleet.trigger');
+        Route::post('/fleet/approve/{taskId}', [FleetController::class, 'approveTask'])->name('fleet.approve');
 
         Route::post('/contacts/{contact}/emelia', [EmeliaController::class, 'addContact'])->name('contacts.emelia.add');
         Route::delete('/contacts/{contact}', [ContactController::class, 'destroy']);

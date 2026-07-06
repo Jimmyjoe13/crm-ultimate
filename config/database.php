@@ -29,5 +29,11 @@ return [
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
         ],
+        'fleet' => [
+            'host' => env('FLEET_REDIS_HOST', env('REDIS_HOST', '127.0.0.1')),
+            'password' => env('FLEET_REDIS_PASSWORD', env('REDIS_PASSWORD')),
+            'port' => env('FLEET_REDIS_PORT', env('REDIS_PORT', '6379')),
+            'database' => env('FLEET_REDIS_DB', '0'),
+        ],
     ],
 ];

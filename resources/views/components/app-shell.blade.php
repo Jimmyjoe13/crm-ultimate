@@ -63,6 +63,9 @@
         <x-rail-icon href="/audit" :active="$active === 'audit'" tooltip="Journal d'audit">
             <svg class="ic" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </x-rail-icon>
+        <x-rail-icon href="/fleet" :active="$active === 'fleet'" tooltip="Flotte d'agents">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 2a5 5 0 100 10 5 5 0 000-10zM17 14h-1.3a6.7 6.7 0 01-7.4 0H7a4 4 0 00-4 4v2h18v-2a4 4 0 00-4-4z"/></svg>
+        </x-rail-icon>
         @endif
 
         <div class="my-2 h-px w-6" style="background: var(--border);"></div>
