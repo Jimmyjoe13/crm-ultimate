@@ -49,11 +49,11 @@
 
 <div class="px-7 pb-12 grid grid-cols-12 gap-6">
 
-    <!-- ─── BLOC 1 : CARTES DES AGENTS ─── -->
+    <!-- ─── BLOC 1 : CARTES DES AGENTS DE CROISSANCE (GROWTH & ACQUISITION) ─── -->
     <div class="col-span-12 flex flex-col gap-3">
-        <div class="mono-label">Membres de la Flotte (Production VPS)</div>
+        <div class="mono-label">Équipe Croissance & Acquisition (Growth / Acquisition)</div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            @foreach($agents as $key => $agent)
+            @foreach(collect($agents)->filter(fn($a) => $a['squad'] !== 'web') as $key => $agent)
                 <div class="agent-card p-5 flex flex-col justify-between h-full">
                     <div>
                         <!-- En-tête : Avatar + LED statut -->
@@ -113,6 +113,89 @@
                                 <input type="hidden" name="action_type" value="inbox_sync">
                                 <button type="submit" class="btn primary sm w-full justify-center text-xs">
                                     ⚡ Sync Campaign & Inbox
+                                </button>
+                            @endif
+                        </form>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    <!-- ─── BLOC 1.5 : CARTES DES AGENTS DE L'EQUIPE WEB ─── -->
+    <div class="col-span-12 flex flex-col gap-3">
+        <div class="mono-label">Équipe Web (Site internet nana-intelligence.fr & SEO)</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            @foreach(collect($agents)->filter(fn($a) => $a['squad'] === 'web') as $key => $agent)
+                <div class="agent-card p-4 flex flex-col justify-between h-full" style="padding: 14px;">
+                    <div>
+                        <!-- En-tête : Avatar + LED statut -->
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="av sm text-white font-bold" style="background: color-mix(in srgb, var(--accent) 70%, #000); width: 28px; height: 28px; font-size: 10px;">
+                                    {{ strtoupper(substr($agent['name'], 0, 2)) }}
+                                </span>
+                                <div>
+                                    <h3 class="text-xs font-semibold m-0" style="margin:0;">{{ $agent['name'] }}</h3>
+                                    <span class="text-[9px] text-tertiary font-mono truncate max-w-[80px]" title="{{ $agent['role'] }}">{{ $agent['name'] === 'SiteWeb' ? 'Lead' : $agent['dept'] }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Voyant LED d'activité -->
+                            @if($agent['status'] === 'active')
+                                <span class="led led.pulse" title="Actif - Audit en cours"></span>
+                            @else
+                                <span class="led green" title="En veille - Prêt à auditer"></span>
+                            @endif
+                        </div>
+
+                        <!-- Rôle & Description -->
+                        <div class="mb-3">
+                            <div class="text-[9.5px] font-bold" style="color: var(--accent);">{{ $agent['role'] }}</div>
+                            <p class="text-[11px] text-secondary mt-1 leading-normal" style="margin: 2px 0 0 0;">{{ $agent['description'] }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Boutons d'actions rapides -->
+                    <div class="mt-3 pt-2 border-t border-default flex flex-col gap-1">
+                        <form method="POST" action="{{ route('fleet.trigger') }}">
+                            @csrf
+                            <input type="hidden" name="agent" value="{{ $key }}">
+                            
+                            @if($key === 'siteweb')
+                                <input type="hidden" name="action_type" value="web_quality_audit">
+                                <button type="submit" class="btn primary sm w-full justify-center text-[10.5px]" style="padding: 3px 6px;">
+                                    ⚡ Audit global
+                                </button>
+                            @elseif($key === 'lea')
+                                <input type="hidden" name="action_type" value="seo_audit">
+                                <button type="submit" class="btn sm w-full justify-center text-[10.5px]" style="background: var(--surface2); border-color: var(--border); padding: 3px 6px;">
+                                    🔍 Audit SEO
+                                </button>
+                            @elseif($key === 'alex')
+                                <input type="hidden" name="action_type" value="deploy_build">
+                                <button type="submit" class="btn sm w-full justify-center text-[10.5px]" style="background: var(--surface2); border-color: var(--border); padding: 3px 6px;">
+                                    🚀 Build/Deploy
+                                </button>
+                            @elseif($key === 'vera')
+                                <input type="hidden" name="action_type" value="competitor_scan">
+                                <button type="submit" class="btn sm w-full justify-center text-[10.5px]" style="background: var(--surface2); border-color: var(--border); padding: 3px 6px;">
+                                    🌐 Scan Conc.
+                                </button>
+                            @elseif($key === 'caro')
+                                <input type="hidden" name="action_type" value="conversion_audit">
+                                <button type="submit" class="btn sm w-full justify-center text-[10.5px]" style="background: var(--surface2); border-color: var(--border); padding: 3px 6px;">
+                                    🎯 Audit CRO
+                                </button>
+                            @elseif($key === 'lin')
+                                <input type="hidden" name="action_type" value="backlink_check">
+                                <button type="submit" class="btn sm w-full justify-center text-[10.5px]" style="background: var(--surface2); border-color: var(--border); padding: 3px 6px;">
+                                    🔗 Backlinks
+                                </button>
+                            @elseif($key === 'max')
+                                <input type="hidden" name="action_type" value="non_regression_test">
+                                <button type="submit" class="btn sm w-full justify-center text-[10.5px]" style="background: var(--surface2); border-color: var(--border); padding: 3px 6px;">
+                                    🧪 Tests QA
                                 </button>
                             @endif
                         </form>

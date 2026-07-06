@@ -52,6 +52,62 @@ class FleetController extends Controller
             'dept' => 'acquisition',
             'avatar_color' => 'bg-sky-600',
         ],
+        'siteweb' => [
+            'name' => 'SiteWeb',
+            'role' => 'Chef de projet Web',
+            'description' => 'Supervise la squad web et lance des audits globaux du site nana-intelligence.fr.',
+            'squad' => 'web',
+            'dept' => 'web-lead',
+            'avatar_color' => 'bg-slate-700',
+        ],
+        'lea' => [
+            'name' => 'Léa',
+            'role' => 'Optimisation SEO',
+            'description' => 'Audit sémantique, mots-clés, maillage et performances de trafic SEO.',
+            'squad' => 'web',
+            'dept' => 'seo',
+            'avatar_color' => 'bg-teal-600',
+        ],
+        'alex' => [
+            'name' => 'Alex',
+            'role' => 'Ingénieur DevOps',
+            'description' => 'Validation de builds, branches git, PRs GitHub et monitoring du VPS.',
+            'squad' => 'web',
+            'dept' => 'devops',
+            'avatar_color' => 'bg-cyan-700',
+        ],
+        'vera' => [
+            'name' => 'Véra',
+            'role' => 'Veille Concurrentielle',
+            'description' => 'Analyse les concurrents et détecte des opportunités d\'acquisition de trafic.',
+            'squad' => 'web',
+            'dept' => 'watch',
+            'avatar_color' => 'bg-purple-600',
+        ],
+        'caro' => [
+            'name' => 'Caro',
+            'role' => 'Audit de Conversion (CRO)',
+            'description' => 'Optimise le taux de conversion, la performance et les CTA du site.',
+            'squad' => 'web',
+            'dept' => 'cro',
+            'avatar_color' => 'bg-rose-600',
+        ],
+        'lin' => [
+            'name' => 'Lin',
+            'role' => 'Stratégie Netlinking',
+            'description' => 'Audit d\'autorité de domaine, backlinks, partenariats de liens et popularité.',
+            'squad' => 'web',
+            'dept' => 'linking',
+            'avatar_color' => 'bg-yellow-600',
+        ],
+        'max' => [
+            'name' => 'Max',
+            'role' => 'Contrôle Qualité (QA)',
+            'description' => 'Tests de non-régression sémantique, liens brisés, WCAG et sécurité Next.js.',
+            'squad' => 'web',
+            'dept' => 'qa',
+            'avatar_color' => 'bg-emerald-700',
+        ],
     ];
 
     public function index(Request $request)
@@ -131,7 +187,7 @@ class FleetController extends Controller
     public function triggerAction(Request $request)
     {
         $data = $request->validate([
-            'agent' => 'required|string|in:richard,sam,nora,mia,juliette',
+            'agent' => 'required|string|in:richard,sam,nora,mia,juliette,siteweb,lea,alex,vera,caro,lin,max',
             'action_type' => 'required|string',
         ]);
 
@@ -165,6 +221,8 @@ class FleetController extends Controller
                 $payload = ['theme' => 'tech_insights', 'publish' => false];
             } elseif ($actionType === 'ceo_routine') {
                 $payload = ['check_all' => true];
+            } elseif (in_array($actionType, ['web_quality_audit', 'seo_audit', 'competitor_scan', 'conversion_audit', 'backlink_check', 'non_regression_test', 'deploy_build'])) {
+                $payload = ['target' => 'nana-intelligence.fr', 'depth' => 2, 'initiated_by' => 'crm_ultimate'];
             }
 
             $task = [
