@@ -162,7 +162,13 @@
             default               => '➕',
         };
         $isTask = $activity->type === 'task';
-        $isCurrentSubject = ($activity->subject_type === $subjectType && $activity->subject_id == $subjectId);
+        $normalizedSubjectType = match(strtolower($subjectType)) {
+            'contact', \App\Models\Contact::class => \App\Models\Contact::class,
+            'company', \App\Models\Company::class => \App\Models\Company::class,
+            'deal', \App\Models\Deal::class => \App\Models\Deal::class,
+            default => $subjectType,
+        };
+        $isCurrentSubject = ($activity->subject_type === $normalizedSubjectType && $activity->subject_id == $subjectId);
         $subjectUrl = $isCurrentSubject ? null : match($activity->subject_type) {
             \App\Models\Contact::class => route('contacts.show', $activity->subject_id),
             \App\Models\Company::class => route('companies.show', $activity->subject_id),
