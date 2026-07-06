@@ -110,7 +110,13 @@ class CompanyController extends Controller
             ->limit(50)
             ->get();
 
-        return view('pages.companies.show', compact('company', 'activities'));
+        $auditLogs = \App\Models\AuditLog::where('auditable_type', Company::class)
+            ->where('auditable_id', $company->id)
+            ->with('user')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('pages.companies.show', compact('company', 'activities', 'auditLogs'));
     }
 
     public function edit(Request $request, Company $company)

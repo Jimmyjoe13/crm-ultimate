@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\ActivityController;
 use App\Http\Controllers\Web\AiController;
+use App\Http\Controllers\Web\AuditController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CompanyController;
 use App\Http\Controllers\Web\ContactController;
@@ -105,6 +106,7 @@ Route::middleware('web.auth')->group(function () {
     // ─── Admin + Manager uniquement ──────────────────────────────────────────
     Route::middleware('role:admin,manager')->group(function () {
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
 
         Route::post('/contacts/{contact}/emelia', [EmeliaController::class, 'addContact'])->name('contacts.emelia.add');
         Route::delete('/contacts/{contact}', [ContactController::class, 'destroy']);

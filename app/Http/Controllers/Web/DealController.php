@@ -157,7 +157,13 @@ class DealController extends Controller
         $allCompanies = Cache::tags(['companies.index'])->remember('companies.dropdown', 60, fn () => Company::select('id', 'name')->orderBy('name')->get()
         );
 
-        return view('pages.deals.show', compact('deal', 'stages', 'activities', 'bgDeals', 'allContacts', 'allCompanies'));
+        $auditLogs = \App\Models\AuditLog::where('auditable_type', Deal::class)
+            ->where('auditable_id', $deal->id)
+            ->with('user')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('pages.deals.show', compact('deal', 'stages', 'activities', 'bgDeals', 'allContacts', 'allCompanies', 'auditLogs'));
     }
 
     public function edit(Request $request, Deal $deal)

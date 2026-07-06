@@ -134,9 +134,15 @@ class ContactController extends Controller
             ->limit(50)
             ->get();
 
+        $auditLogs = \App\Models\AuditLog::where('auditable_type', Contact::class)
+            ->where('auditable_id', $contact->id)
+            ->with('user')
+            ->orderByDesc('id')
+            ->get();
+
         $stages = PipelineStage::orderBy('position')->get();
 
-        return view('pages.contacts.show', compact('contact', 'activities', 'stages'));
+        return view('pages.contacts.show', compact('contact', 'activities', 'stages', 'auditLogs'));
     }
 
     public function edit(Request $request, Contact $contact)

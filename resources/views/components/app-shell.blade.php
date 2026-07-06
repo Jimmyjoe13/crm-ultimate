@@ -60,6 +60,9 @@
         <x-rail-icon href="/reports" :active="$active === 'reports'" tooltip="Rapports">
             <svg class="ic" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
         </x-rail-icon>
+        <x-rail-icon href="/audit" :active="$active === 'audit'" tooltip="Journal d'audit">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </x-rail-icon>
         @endif
 
         <div class="my-2 h-px w-6" style="background: var(--border);"></div>
