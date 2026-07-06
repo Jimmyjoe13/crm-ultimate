@@ -21,7 +21,7 @@ class ContactTimelineTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(): User
@@ -30,19 +30,19 @@ class ContactTimelineTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@timeline.test',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@timeline.test',
             'password' => bcrypt('password'),
-            'role'     => User::ROLE_ADMIN,
+            'role' => User::ROLE_ADMIN,
         ]);
     }
 
     public function test_contact_show_renders_activity_tab(): void
     {
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $contact = Contact::create(['first_name' => 'Test', 'email' => 'tl@test.com']);
 
-        $response = $this->withAuth($user)->get('/contacts/' . $contact->id);
+        $response = $this->withAuth($user)->get('/contacts/'.$contact->id);
 
         $response->assertStatus(200);
         $response->assertSee('Activité');
@@ -50,41 +50,41 @@ class ContactTimelineTest extends TestCase
 
     public function test_store_activity_for_contact(): void
     {
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $contact = Contact::create(['first_name' => 'Test', 'email' => 'tl2@test.com']);
 
         $response = $this->withAuth($user)->post('/activities', [
-            'type'         => 'note',
-            'title'        => 'Appel découverte',
-            'body'         => 'RAS',
+            'type' => 'note',
+            'title' => 'Appel découverte',
+            'body' => 'RAS',
             'subject_type' => 'contact',
-            'subject_id'   => $contact->id,
-            '_token'       => 'test',
+            'subject_id' => $contact->id,
+            '_token' => 'test',
         ]);
 
         $response->assertRedirect();
         $this->assertDatabaseHas('activities', [
-            'title'        => 'Appel découverte',
+            'title' => 'Appel découverte',
             'subject_type' => Contact::class,
-            'subject_id'   => $contact->id,
+            'subject_id' => $contact->id,
         ]);
     }
 
     public function test_activity_appears_in_contact_show(): void
     {
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $contact = Contact::create(['first_name' => 'Test', 'email' => 'tl3@test.com']);
 
         Activity::create([
-            'type'         => 'note',
-            'title'        => 'Note timeline',
-            'status'       => 'open',
+            'type' => 'note',
+            'title' => 'Note timeline',
+            'status' => 'open',
             'subject_type' => Contact::class,
-            'subject_id'   => $contact->id,
-            'owner_id'     => $user->id,
+            'subject_id' => $contact->id,
+            'owner_id' => $user->id,
         ]);
 
-        $response = $this->withAuth($user)->get('/contacts/' . $contact->id);
+        $response = $this->withAuth($user)->get('/contacts/'.$contact->id);
 
         $response->assertStatus(200);
         $response->assertSee('Note timeline');

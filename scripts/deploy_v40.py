@@ -11,9 +11,12 @@ import time
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-HOSTNAME = "51.38.99.226"
-USERNAME = "jimmy"
-PASSWORD = "<purge-crm-20260713>ù891234kfp"
+# Secrets lus depuis l'environnement — ne JAMAIS coder en dur (le repo est versionné).
+HOSTNAME = os.environ.get("VPS_SSH_HOST", "51.38.99.226")
+USERNAME = os.environ.get("VPS_SSH_USER", "jimmy")
+PASSWORD = os.environ.get("VPS_SSH_PASSWORD")
+if not PASSWORD:
+    sys.exit("VPS_SSH_PASSWORD non défini — exporte la variable avant de lancer ce script.")
 REMOTE_BASE = "/home/jimmy/crm-ultimate"
 LOCAL_BASE  = r"C:\Users\jimmy\Projet\crm_ultimate"
 

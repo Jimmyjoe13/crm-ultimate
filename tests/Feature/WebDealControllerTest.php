@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
+use App\Models\Contact;
 use App\Models\Deal;
 use App\Models\Pipeline;
 use App\Models\User;
@@ -21,7 +23,7 @@ class WebDealControllerTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function createAdmin(): User
@@ -74,7 +76,7 @@ class WebDealControllerTest extends TestCase
     {
         $ctx = $this->createDealWithStages();
 
-        $response = $this->withAuth($ctx['admin'])->get('/deals/' . $ctx['deal']->id);
+        $response = $this->withAuth($ctx['admin'])->get('/deals/'.$ctx['deal']->id);
 
         $response->assertOk();
         $response->assertSee('Test Deal');
@@ -86,7 +88,7 @@ class WebDealControllerTest extends TestCase
         $ctx = $this->createDealWithStages();
 
         $response = $this->withAuth($ctx['admin'])
-            ->post('/deals/' . $ctx['deal']->id . '/won', ['_token' => 'test']);
+            ->post('/deals/'.$ctx['deal']->id.'/won', ['_token' => 'test']);
 
         $response->assertRedirect();
         $this->assertDatabaseHas('deals', [
@@ -100,7 +102,7 @@ class WebDealControllerTest extends TestCase
         $ctx = $this->createDealWithStages();
 
         $response = $this->withAuth($ctx['admin'])
-            ->post('/deals/' . $ctx['deal']->id . '/lost', ['_token' => 'test']);
+            ->post('/deals/'.$ctx['deal']->id.'/lost', ['_token' => 'test']);
 
         $response->assertRedirect();
         $this->assertDatabaseHas('deals', [
@@ -113,7 +115,7 @@ class WebDealControllerTest extends TestCase
     {
         $ctx = $this->createDealWithStages();
 
-        $response = $this->withAuth($ctx['admin'])->get('/deals/' . $ctx['deal']->id . '/edit');
+        $response = $this->withAuth($ctx['admin'])->get('/deals/'.$ctx['deal']->id.'/edit');
         $response->assertStatus(200)->assertSee('Modifier le deal');
     }
 
@@ -121,14 +123,14 @@ class WebDealControllerTest extends TestCase
     {
         $ctx = $this->createDealWithStages();
 
-        $response = $this->withAuth($ctx['admin'])->put('/deals/' . $ctx['deal']->id, [
-            'name'              => 'Updated Deal',
-            'amount'            => 9999,
+        $response = $this->withAuth($ctx['admin'])->put('/deals/'.$ctx['deal']->id, [
+            'name' => 'Updated Deal',
+            'amount' => 9999,
             'pipeline_stage_id' => $ctx['stage']->id,
-            '_token'            => 'test',
+            '_token' => 'test',
         ]);
 
-        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $response->assertRedirect('/deals/'.$ctx['deal']->id);
         $this->assertDatabaseHas('deals', ['id' => $ctx['deal']->id, 'name' => 'Updated Deal', 'amount' => 9999]);
     }
 
@@ -136,7 +138,7 @@ class WebDealControllerTest extends TestCase
     {
         $ctx = $this->createDealWithStages();
 
-        $response = $this->withAuth($ctx['admin'])->delete('/deals/' . $ctx['deal']->id, ['_token' => 'test']);
+        $response = $this->withAuth($ctx['admin'])->delete('/deals/'.$ctx['deal']->id, ['_token' => 'test']);
 
         $response->assertRedirect('/deals');
         $this->assertSoftDeleted('deals', ['id' => $ctx['deal']->id]);
@@ -150,7 +152,7 @@ class WebDealControllerTest extends TestCase
             'password' => bcrypt('password'), 'role' => User::ROLE_SALES,
         ]);
 
-        $response = $this->withAuth($viewer)->delete('/deals/' . $ctx['deal']->id, ['_token' => 'test']);
+        $response = $this->withAuth($viewer)->delete('/deals/'.$ctx['deal']->id, ['_token' => 'test']);
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('deals', ['id' => $ctx['deal']->id, 'deleted_at' => null]);
@@ -159,19 +161,19 @@ class WebDealControllerTest extends TestCase
     public function test_admin_can_attach_contact_to_deal(): void
     {
         $ctx = $this->createDealWithStages();
-        $contact = \App\Models\Contact::create([
+        $contact = Contact::create([
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'john.doe@example.com',
         ]);
 
-        $response = $this->withAuth($ctx['admin'])->post('/deals/' . $ctx['deal']->id . '/contacts', [
+        $response = $this->withAuth($ctx['admin'])->post('/deals/'.$ctx['deal']->id.'/contacts', [
             'contact_id' => $contact->id,
             'role' => 'technical',
             '_token' => 'test',
         ]);
 
-        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $response->assertRedirect('/deals/'.$ctx['deal']->id);
         $this->assertDatabaseHas('deal_contact', [
             'deal_id' => $ctx['deal']->id,
             'contact_id' => $contact->id,
@@ -182,18 +184,18 @@ class WebDealControllerTest extends TestCase
     public function test_admin_can_detach_contact_from_deal(): void
     {
         $ctx = $this->createDealWithStages();
-        $contact = \App\Models\Contact::create([
+        $contact = Contact::create([
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'john.doe@example.com',
         ]);
         $ctx['deal']->contacts()->attach($contact->id, ['role' => 'technical']);
 
-        $response = $this->withAuth($ctx['admin'])->delete('/deals/' . $ctx['deal']->id . '/contacts/' . $contact->id, [
+        $response = $this->withAuth($ctx['admin'])->delete('/deals/'.$ctx['deal']->id.'/contacts/'.$contact->id, [
             '_token' => 'test',
         ]);
 
-        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $response->assertRedirect('/deals/'.$ctx['deal']->id);
         $this->assertDatabaseMissing('deal_contact', [
             'deal_id' => $ctx['deal']->id,
             'contact_id' => $contact->id,
@@ -203,18 +205,18 @@ class WebDealControllerTest extends TestCase
     public function test_admin_can_attach_company_to_deal(): void
     {
         $ctx = $this->createDealWithStages();
-        $company = \App\Models\Company::create([
+        $company = Company::create([
             'name' => 'Acme Corp',
         ]);
 
-        $response = $this->withAuth($ctx['admin'])->post('/deals/' . $ctx['deal']->id . '/companies', [
+        $response = $this->withAuth($ctx['admin'])->post('/deals/'.$ctx['deal']->id.'/companies', [
             'company_id' => $company->id,
             'role' => 'partner',
             'is_primary' => '1',
             '_token' => 'test',
         ]);
 
-        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $response->assertRedirect('/deals/'.$ctx['deal']->id);
         $this->assertDatabaseHas('deal_company', [
             'deal_id' => $ctx['deal']->id,
             'company_id' => $company->id,
@@ -226,16 +228,16 @@ class WebDealControllerTest extends TestCase
     public function test_admin_can_detach_company_from_deal(): void
     {
         $ctx = $this->createDealWithStages();
-        $company = \App\Models\Company::create([
+        $company = Company::create([
             'name' => 'Acme Corp',
         ]);
         $ctx['deal']->companies()->attach($company->id, ['role' => 'partner', 'is_primary' => true]);
 
-        $response = $this->withAuth($ctx['admin'])->delete('/deals/' . $ctx['deal']->id . '/companies/' . $company->id, [
+        $response = $this->withAuth($ctx['admin'])->delete('/deals/'.$ctx['deal']->id.'/companies/'.$company->id, [
             '_token' => 'test',
         ]);
 
-        $response->assertRedirect('/deals/' . $ctx['deal']->id);
+        $response->assertRedirect('/deals/'.$ctx['deal']->id);
         $this->assertDatabaseMissing('deal_company', [
             'deal_id' => $ctx['deal']->id,
             'company_id' => $company->id,
@@ -246,13 +248,13 @@ class WebDealControllerTest extends TestCase
     {
         $ctx = $this->createDealWithStages();
 
-        $contact = \App\Models\Contact::create([
+        $contact = Contact::create([
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'john.doe@example.com',
         ]);
 
-        $company = \App\Models\Company::create([
+        $company = Company::create([
             'name' => 'Acme Corp',
         ]);
 

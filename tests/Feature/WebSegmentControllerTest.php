@@ -24,7 +24,7 @@ class WebSegmentControllerTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function createAdmin(): User
@@ -112,7 +112,7 @@ class WebSegmentControllerTest extends TestCase
             'created_by' => $admin->id,
         ]);
 
-        $response = $this->withAuth($admin)->get('/segments/' . $segment->id);
+        $response = $this->withAuth($admin)->get('/segments/'.$segment->id);
 
         $response->assertOk();
         $response->assertSee('jane@test.com');
@@ -130,7 +130,7 @@ class WebSegmentControllerTest extends TestCase
             'created_by' => $admin->id,
         ]);
 
-        $response = $this->withAuth($admin)->put('/segments/' . $segment->id, [
+        $response = $this->withAuth($admin)->put('/segments/'.$segment->id, [
             '_token' => 'test',
             'name' => 'New name',
             'entity_type' => 'contact',
@@ -153,7 +153,7 @@ class WebSegmentControllerTest extends TestCase
             'created_by' => $admin->id,
         ]);
 
-        $response = $this->withAuth($admin)->delete('/segments/' . $segment->id, ['_token' => 'test']);
+        $response = $this->withAuth($admin)->delete('/segments/'.$segment->id, ['_token' => 'test']);
 
         $response->assertRedirect();
         $this->assertDatabaseMissing('segments', ['id' => $segment->id]);
@@ -191,22 +191,22 @@ class WebSegmentControllerTest extends TestCase
 
         Contact::create([
             'first_name' => 'Export',
-            'last_name'  => 'Test',
-            'email'      => 'export@test.com',
-            'phone'      => '0600000000',
-            'owner_id'   => $admin->id,
+            'last_name' => 'Test',
+            'email' => 'export@test.com',
+            'phone' => '0600000000',
+            'owner_id' => $admin->id,
         ]);
 
         $segment = Segment::create([
-            'name'        => 'Export contacts',
+            'name' => 'Export contacts',
             'entity_type' => 'contact',
-            'rules'       => ['op' => 'AND', 'rules' => [
+            'rules' => ['op' => 'AND', 'rules' => [
                 ['field' => 'email', 'operator' => 'is_not_null', 'value' => null],
             ]],
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
-        $response = $this->withAuth($admin)->get('/segments/' . $segment->id . '/export');
+        $response = $this->withAuth($admin)->get('/segments/'.$segment->id.'/export');
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
@@ -218,20 +218,20 @@ class WebSegmentControllerTest extends TestCase
         $admin = $this->createAdmin();
 
         Company::create([
-            'name'     => 'Acme Corp',
-            'domain'   => 'acme.com',
+            'name' => 'Acme Corp',
+            'domain' => 'acme.com',
             'industry' => 'Tech',
             'owner_id' => $admin->id,
         ]);
 
         $segment = Segment::create([
-            'name'        => 'All companies',
+            'name' => 'All companies',
             'entity_type' => 'company',
-            'rules'       => ['op' => 'AND', 'rules' => []],
-            'created_by'  => $admin->id,
+            'rules' => ['op' => 'AND', 'rules' => []],
+            'created_by' => $admin->id,
         ]);
 
-        $response = $this->withAuth($admin)->get('/segments/' . $segment->id . '/export');
+        $response = $this->withAuth($admin)->get('/segments/'.$segment->id.'/export');
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
@@ -240,29 +240,29 @@ class WebSegmentControllerTest extends TestCase
 
     public function test_export_deal_segment_returns_csv(): void
     {
-        $admin    = $this->createAdmin();
+        $admin = $this->createAdmin();
         $pipeline = Pipeline::create(['name' => 'Test Pipeline', 'is_default' => true]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
 
         Deal::create([
-            'name'              => 'Big Deal',
-            'amount'            => 5000,
-            'status'            => 'open',
-            'pipeline_id'       => $pipeline->id,
+            'name' => 'Big Deal',
+            'amount' => 5000,
+            'status' => 'open',
+            'pipeline_id' => $pipeline->id,
             'pipeline_stage_id' => $stage->id,
-            'owner_id'          => $admin->id,
+            'owner_id' => $admin->id,
         ]);
 
         $segment = Segment::create([
-            'name'        => 'Open deals',
+            'name' => 'Open deals',
             'entity_type' => 'deal',
-            'rules'       => ['op' => 'AND', 'rules' => [
+            'rules' => ['op' => 'AND', 'rules' => [
                 ['field' => 'status', 'operator' => 'eq', 'value' => 'open'],
             ]],
-            'created_by'  => $admin->id,
+            'created_by' => $admin->id,
         ]);
 
-        $response = $this->withAuth($admin)->get('/segments/' . $segment->id . '/export');
+        $response = $this->withAuth($admin)->get('/segments/'.$segment->id.'/export');
 
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');

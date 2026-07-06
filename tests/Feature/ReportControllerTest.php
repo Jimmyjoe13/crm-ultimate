@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Deal;
-use App\Models\PipelineStage;
 use App\Models\Pipeline;
+use App\Models\PipelineStage;
 use App\Models\User;
 use App\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +23,7 @@ class ReportControllerTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -32,10 +32,10 @@ class ReportControllerTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@test.com',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@test.com',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
@@ -48,11 +48,11 @@ class ReportControllerTest extends TestCase
     {
         return PipelineStage::create([
             'pipeline_id' => $pipeline->id,
-            'name'        => 'Stage ' . $position,
-            'position'    => $position,
-            'color'       => '#3b82f6',
-            'is_won'      => false,
-            'is_lost'     => false,
+            'name' => 'Stage '.$position,
+            'position' => $position,
+            'color' => '#3b82f6',
+            'is_won' => false,
+            'is_lost' => false,
         ]);
     }
 
@@ -98,23 +98,23 @@ class ReportControllerTest extends TestCase
     // T3 — $entonnoir.taux_conversion_global entre 0 et 100
     public function test_entonnoir_taux_conversion_is_valid(): void
     {
-        $admin    = $this->makeUser();
+        $admin = $this->makeUser();
         $pipeline = $this->makePipeline();
-        $stage    = $this->makeStage($pipeline);
+        $stage = $this->makeStage($pipeline);
 
         Deal::create([
-            'name'              => 'Deal A',
-            'status'            => 'won',
-            'pipeline_id'       => $pipeline->id,
+            'name' => 'Deal A',
+            'status' => 'won',
+            'pipeline_id' => $pipeline->id,
             'pipeline_stage_id' => $stage->id,
-            'amount'            => 1000,
+            'amount' => 1000,
         ]);
         Deal::create([
-            'name'              => 'Deal B',
-            'status'            => 'open',
-            'pipeline_id'       => $pipeline->id,
+            'name' => 'Deal B',
+            'status' => 'open',
+            'pipeline_id' => $pipeline->id,
             'pipeline_stage_id' => $stage->id,
-            'amount'            => 500,
+            'amount' => 500,
         ]);
 
         $response = $this->withAuth($admin)->get('/reports');
@@ -139,14 +139,14 @@ class ReportControllerTest extends TestCase
         Cache::put('reports.data', ['test' => true], 3600);
 
         $pipeline = $this->makePipeline();
-        $stage    = $this->makeStage($pipeline);
+        $stage = $this->makeStage($pipeline);
 
         Deal::create([
-            'name'              => 'Deal cache test',
-            'status'            => 'open',
-            'pipeline_id'       => $pipeline->id,
+            'name' => 'Deal cache test',
+            'status' => 'open',
+            'pipeline_id' => $pipeline->id,
             'pipeline_stage_id' => $stage->id,
-            'amount'            => 0,
+            'amount' => 0,
         ]);
 
         $this->assertFalse(Cache::has('reports.data'));
@@ -158,21 +158,21 @@ class ReportControllerTest extends TestCase
         $admin = $this->makeUser(User::ROLE_ADMIN);
 
         Cache::put('reports.data', [
-            'ca_mensuel'     => [
+            'ca_mensuel' => [
                 ['mois' => '2026-04', 'ca_gagne' => 5000.0, 'pipeline' => 2000.0],
                 ['mois' => '2026-05', 'ca_gagne' => 8000.0, 'pipeline' => 3000.0],
             ],
-            'entonnoir'      => [
-                'stages'                  => [['name' => 'Prospect', 'count' => 5]],
-                'taux_conversion_global'  => 42.0,
+            'entonnoir' => [
+                'stages' => [['name' => 'Prospect', 'count' => 5]],
+                'taux_conversion_global' => 42.0,
             ],
-            'classement'     => [['commercial' => 'Alice', 'nb_deals' => 3, 'ca' => 8000.0]],
+            'classement' => [['commercial' => 'Alice', 'nb_deals' => 3, 'ca' => 8000.0]],
             'activite_hebdo' => [['semaine' => '2026-05-18', 'detail' => [], 'total' => 12]],
         ], 3600);
 
         Cache::put('ai:report-insights', [
-            'insights'        => ['CA en hausse de 60%'],
-            'alerts'          => [],
+            'insights' => ['CA en hausse de 60%'],
+            'alerts' => [],
             'recommendations' => ['Relancer les deals stagnants'],
         ], 3600);
 

@@ -73,6 +73,9 @@
         <x-rail-icon route="fields.index" :active="$active === 'fields'" tooltip="Champs perso">
             <svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </x-rail-icon>
+        <x-rail-icon route="email-templates.index" :active="$active === 'email-templates'" tooltip="Modèles d'email">
+            <svg class="ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+        </x-rail-icon>
         @if(in_array(auth()->user()?->role, ['admin','manager']))
         <x-rail-icon route="trash.index" :active="$active === 'trash'" tooltip="Corbeille">
             <svg class="ic" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>

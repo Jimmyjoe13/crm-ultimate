@@ -23,7 +23,7 @@ class WebImportControllerTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function createAdmin(): User
@@ -114,14 +114,14 @@ class WebImportControllerTest extends TestCase
         $response->assertStatus(202);
         $response->assertJsonStructure(['id', 'status']);
         $this->assertDatabaseHas('import_jobs', [
-            'user_id'            => $admin->id,
-            'entity_type'        => 'contact',
-            'status'             => 'pending',
+            'user_id' => $admin->id,
+            'entity_type' => 'contact',
+            'status' => 'pending',
             'duplicate_strategy' => 'skip',
         ]);
 
         // Cleanup
-        Storage::disk('local')->delete('imports/' . basename($path));
+        Storage::disk('local')->delete('imports/'.basename($path));
     }
 
     public function test_store_rejects_invalid_preview_token(): void
@@ -156,7 +156,7 @@ class WebImportControllerTest extends TestCase
             'mapping' => ['email' => 'email'],
         ]);
 
-        $response = $this->withAuth($admin)->get('/imports/' . $job->id . '/status');
+        $response = $this->withAuth($admin)->get('/imports/'.$job->id.'/status');
 
         $response->assertOk();
         $response->assertJsonPath('status', 'completed');

@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\EmeliaCampaign;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class EmeliaService
@@ -62,7 +65,7 @@ class EmeliaService
             ->timeout(15)
             ->retry(1, 500)
             ->post($this->url('/graphql'), [
-                'query'     => $gql,
+                'query' => $gql,
                 'variables' => ['q' => $email],
             ]);
 
@@ -84,6 +87,7 @@ class EmeliaService
                     return $c;
                 }
             }
+
             return null;
         }
 
@@ -107,7 +111,7 @@ class EmeliaService
         $response = $this->http()
             ->timeout(10)
             ->post($this->url('/graphql'), [
-                'query'     => $gql,
+                'query' => $gql,
                 'variables' => ['id' => $emeliaid, 'campaignId' => $campaignId],
             ]);
 
@@ -128,13 +132,13 @@ class EmeliaService
      * Chaque event retourné : ['type' => 'OPENED|REPLIED|SENT|BOUNCED|UNSUBSCRIBED', 'date' => Carbon]
      */
     /**
-     * @param string|null $email       Email du contact CRM (pour fallback getContactByEmail)
-     * @param string|null $campaignName Nom de campagne (pour fallback getContactByEmail)
+     * @param  string|null  $email  Email du contact CRM (pour fallback getContactByEmail)
+     * @param  string|null  $campaignName  Nom de campagne (pour fallback getContactByEmail)
      */
     public function getContactEvents(
-        string  $emeliaContactId,
-        string  $campaignId,
-        ?string $email        = null,
+        string $emeliaContactId,
+        string $campaignId,
+        ?string $email = null,
         ?string $campaignName = null,
     ): array {
         // Tentative GraphQL enrichie (champ activities non documenté, présent dans certaines versions)
@@ -148,7 +152,7 @@ class EmeliaService
         $response = $this->http()
             ->timeout(10)
             ->post($this->url('/graphql'), [
-                'query'     => $gql,
+                'query' => $gql,
                 'variables' => ['id' => $emeliaContactId, 'campaignId' => $campaignId],
             ]);
 
@@ -156,10 +160,10 @@ class EmeliaService
 
         // Si Emelia retourne le champ activities (liste d'events horodatés), on les utilise
         if (is_array($data) && isset($data['activities']) && is_array($data['activities'])) {
-            return array_map(fn($a) => [
+            return array_map(fn ($a) => [
                 'type' => $a['type'],
-                'date' => \Carbon\Carbon::parse($a['date']),
-            ], array_filter($data['activities'], fn($a) => isset($a['type'], $a['date'])));
+                'date' => Carbon::parse($a['date']),
+            ], array_filter($data['activities'], fn ($a) => isset($a['type'], $a['date'])));
         }
 
         // Fallback : getContactByEmail si disponible (données complètes garanties)
@@ -172,11 +176,12 @@ class EmeliaService
         }
 
         // Les timestamps Emelia (lastContacted, lastOpen, lastReplied) sont en millisecondes
-        $fromMs = function (?string $ms): ?\Carbon\Carbon {
+        $fromMs = function (?string $ms): ?Carbon {
             if (empty($ms)) {
                 return null;
             }
-            return \Carbon\Carbon::createFromTimestampMs((int) $ms);
+
+            return Carbon::createFromTimestampMs((int) $ms);
         };
 
         $events = [];
@@ -212,19 +217,19 @@ class EmeliaService
      */
     public function syncCampaignRegistry(): int
     {
-        $raw       = $this->listCampaigns();
+        $raw = $this->listCampaigns();
         $campaigns = $raw['campaigns'] ?? $raw;
-        $count     = 0;
+        $count = 0;
 
         foreach ($campaigns as $c) {
             $emeliaid = $c['_id'] ?? $c['id'] ?? null;
-            $name     = $c['name'] ?? $c['title'] ?? $emeliaid;
+            $name = $c['name'] ?? $c['title'] ?? $emeliaid;
 
             if (! $emeliaid) {
                 continue;
             }
 
-            \App\Models\EmeliaCampaign::updateOrCreate(
+            EmeliaCampaign::updateOrCreate(
                 ['emelia_id' => $emeliaid],
                 ['name' => $name, 'status' => $c['status'] ?? null, 'last_synced_at' => now()],
             );
@@ -254,7 +259,7 @@ class EmeliaService
                 $response = $this->http()
                     ->timeout(15)
                     ->post($this->url('/graphql'), [
-                        'query'     => $gql,
+                        'query' => $gql,
                         'variables' => ['id' => $emeliaContactId, 'cid' => $campaignId],
                     ]);
 
@@ -283,7 +288,7 @@ class EmeliaService
 
         // Aucune mutation n'a fonctionné — on loggue mais on ne lève pas d'exception
         // Le contact reste blacklisté côté CRM ; Emelia continuera sa séquence jusqu'à expiration
-        \Illuminate\Support\Facades\Log::warning(
+        Log::warning(
             "EmeliaService::removeFromCampaign: no working mutation found for contact {$emeliaContactId} in campaign {$campaignId}"
         );
 
@@ -322,6 +327,6 @@ class EmeliaService
 
     private function url(string $path): string
     {
-        return rtrim($this->config['base_url'], '/') . $path;
+        return rtrim($this->config['base_url'], '/').$path;
     }
 }

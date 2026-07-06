@@ -23,10 +23,10 @@ class ImportDuplicateStrategyTest extends TestCase
     {
         parent::setUp();
         $this->user = User::createWithRole([
-            'name'     => 'Admin',
-            'email'    => 'admin@test.com',
+            'name' => 'Admin',
+            'email' => 'admin@test.com',
             'password' => Hash::make('password'),
-            'role'     => User::ROLE_ADMIN,
+            'role' => User::ROLE_ADMIN,
         ]);
     }
 
@@ -38,11 +38,11 @@ class ImportDuplicateStrategyTest extends TestCase
         Storage::disk('local')->put($path, $csv);
 
         $job = ImportJob::query()->create([
-            'user_id'            => $this->user->id,
-            'entity_type'        => 'contact',
-            'filename'           => 'dupe_test.csv',
-            'status'             => 'pending',
-            'mapping'            => $mapping,
+            'user_id' => $this->user->id,
+            'entity_type' => 'contact',
+            'filename' => 'dupe_test.csv',
+            'status' => 'pending',
+            'mapping' => $mapping,
             'duplicate_strategy' => $strategy,
         ]);
 
@@ -54,19 +54,19 @@ class ImportDuplicateStrategyTest extends TestCase
     public function test_skip_strategy_does_not_modify_existing(): void
     {
         Contact::query()->create([
-            'email'     => 'jane@test.com',
-            'first_name'=> 'Jane',
+            'email' => 'jane@test.com',
+            'first_name' => 'Jane',
             'last_name' => 'Old',
             'job_title' => 'Original',
-            'owner_id'  => $this->user->id,
+            'owner_id' => $this->user->id,
         ]);
 
         $csv = "email,first_name,last_name,job_title\njane@test.com,Jane,New,Updated";
         $job = $this->runImport($csv, [
-            'email'      => 'email',
+            'email' => 'email',
             'first_name' => 'first_name',
-            'last_name'  => 'last_name',
-            'job_title'  => 'job_title',
+            'last_name' => 'last_name',
+            'job_title' => 'job_title',
         ], 'skip');
 
         $this->assertSame('completed', $job->status);
@@ -78,15 +78,15 @@ class ImportDuplicateStrategyTest extends TestCase
     public function test_update_strategy_updates_existing_record(): void
     {
         Contact::query()->create([
-            'email'     => 'jane@test.com',
-            'first_name'=> 'Jane',
+            'email' => 'jane@test.com',
+            'first_name' => 'Jane',
             'job_title' => 'Old Title',
-            'owner_id'  => $this->user->id,
+            'owner_id' => $this->user->id,
         ]);
 
         $csv = "email,job_title\njane@test.com,New Title";
         $job = $this->runImport($csv, [
-            'email'     => 'email',
+            'email' => 'email',
             'job_title' => 'job_title',
         ], 'update');
 
@@ -100,23 +100,23 @@ class ImportDuplicateStrategyTest extends TestCase
         Cache::flush();
         CustomField::create([
             'entity_type' => 'contact',
-            'key'         => 'linkedin_url',
-            'label'       => 'LinkedIn',
-            'field_type'  => 'text',
-            'position'    => 1,
+            'key' => 'linkedin_url',
+            'label' => 'LinkedIn',
+            'field_type' => 'text',
+            'position' => 1,
         ]);
         CustomField::create([
             'entity_type' => 'contact',
-            'key'         => 'notes',
-            'label'       => 'Notes',
-            'field_type'  => 'text',
-            'position'    => 2,
+            'key' => 'notes',
+            'label' => 'Notes',
+            'field_type' => 'text',
+            'position' => 2,
         ]);
 
         Contact::query()->create([
-            'email'         => 'jane@test.com',
-            'first_name'    => 'Jane',
-            'owner_id'      => $this->user->id,
+            'email' => 'jane@test.com',
+            'first_name' => 'Jane',
+            'owner_id' => $this->user->id,
             'custom_values' => ['linkedin_url' => 'https://old-link.com'],
         ]);
 
@@ -137,14 +137,14 @@ class ImportDuplicateStrategyTest extends TestCase
     {
         Contact::query()->create([
             'first_name' => 'Jane',
-            'email'      => 'jane@test.com',
-            'owner_id'   => $this->user->id,
+            'email' => 'jane@test.com',
+            'owner_id' => $this->user->id,
         ]);
 
         $csv = "first_name,email\nDuplicate,jane@test.com";
         $job = $this->runImport($csv, [
             'first_name' => 'first_name',
-            'email'      => 'email',
+            'email' => 'email',
         ], 'create');
 
         $this->assertSame('completed', $job->status);

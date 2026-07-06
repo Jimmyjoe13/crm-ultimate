@@ -21,16 +21,16 @@ class ContactSearchAndCastTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeAdmin(): User
     {
         return User::createWithRole([
-            'name'     => 'Admin',
-            'email'    => 'admin@casttest.dev',
+            'name' => 'Admin',
+            'email' => 'admin@casttest.dev',
             'password' => bcrypt('secret'),
-            'role'     => User::ROLE_ADMIN,
+            'role' => User::ROLE_ADMIN,
         ]);
     }
 
@@ -38,9 +38,9 @@ class ContactSearchAndCastTest extends TestCase
     public function test_ai_score_updated_at_is_cast_to_carbon(): void
     {
         $contact = Contact::create([
-            'first_name'          => 'Jean',
-            'email'               => 'jean@cast.test',
-            'ai_score'            => 75,
+            'first_name' => 'Jean',
+            'email' => 'jean@cast.test',
+            'ai_score' => 75,
             'ai_score_updated_at' => now(),
         ]);
 
@@ -56,9 +56,9 @@ class ContactSearchAndCastTest extends TestCase
         $user = $this->makeAdmin();
 
         Contact::create([
-            'first_name'          => 'Marie',
-            'email'               => 'marie@scored.test',
-            'ai_score'            => 82,
+            'first_name' => 'Marie',
+            'email' => 'marie@scored.test',
+            'ai_score' => 82,
             'ai_score_updated_at' => now()->subHour(),
         ]);
 
@@ -88,9 +88,9 @@ class ContactSearchAndCastTest extends TestCase
         $user = $this->makeAdmin();
 
         Contact::create([
-            'first_name'          => 'Lucas',
-            'email'               => 'lucas@aiscore.test',
-            'ai_score'            => 60,
+            'first_name' => 'Lucas',
+            'email' => 'lucas@aiscore.test',
+            'ai_score' => 60,
             'ai_score_updated_at' => now()->subDays(2),
         ]);
 
@@ -105,7 +105,7 @@ class ContactSearchAndCastTest extends TestCase
     {
         $contact = Contact::create([
             'first_name' => 'Stop',
-            'email'      => 'stop@blacklist.test',
+            'email' => 'stop@blacklist.test',
         ]);
 
         $contact->blacklist('Test raison');

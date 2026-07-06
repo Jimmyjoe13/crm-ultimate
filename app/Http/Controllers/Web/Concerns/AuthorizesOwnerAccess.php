@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Concerns;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 /**
  * Cloisonnement par owner pour les contrôleurs Web utilisant le route-model binding.
@@ -32,5 +33,27 @@ trait AuthorizesOwnerAccess
         if (! in_array((int) $model->getAttribute('owner_id'), $ownerIds, true)) {
             abort(404);
         }
+    }
+
+    /**
+     * Liste des propriétaires (users) visibles par $user, pour alimenter un filtre.
+     * - admin   : tous les utilisateurs.
+     * - manager : lui + son équipe.
+     * - commercial : lui seul.
+     *
+     * @return Collection<int, User>
+     */
+    protected function visibleOwners(?User $user): Collection
+    {
+        if (! $user) {
+            return collect();
+        }
+
+        $ownerIds = $user->accessibleOwnerIds();
+
+        return User::query()
+            ->when($ownerIds !== null, fn ($q) => $q->whereIn('id', $ownerIds))
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 }

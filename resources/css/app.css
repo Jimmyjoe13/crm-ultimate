@@ -314,6 +314,10 @@ html.dark {
     }
     .k-card:hover { border-color: var(--borderS); }
     .k-card.hot { border-left: 3px solid var(--accent); padding-left: 9px; }
+    /* Feedback drag & drop (SortableJS) */
+    .k-ghost { opacity: .4; background: var(--surface2); border-style: dashed; }
+    .k-card.sortable-chosen { cursor: grabbing; }
+    .k-card.sortable-drag { box-shadow: 0 8px 24px rgba(0,0,0,.18); transform: rotate(1.5deg); opacity: .95; }
 
     /* ── KPI hero ── */
     .kpi-hero {

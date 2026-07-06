@@ -23,7 +23,7 @@ class TrashRestoreTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -32,10 +32,10 @@ class TrashRestoreTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@trash.test',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@trash.test',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
@@ -141,16 +141,16 @@ class TrashRestoreTest extends TestCase
 
     public function test_admin_can_restore_deal(): void
     {
-        $admin    = $this->makeUser();
+        $admin = $this->makeUser();
         $pipeline = Pipeline::create(['name' => 'TrashPipe', 'is_default' => true]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
 
         $d = Deal::create([
-            'name'              => 'Lost Deal',
-            'pipeline_id'       => $pipeline->id,
+            'name' => 'Lost Deal',
+            'pipeline_id' => $pipeline->id,
             'pipeline_stage_id' => $stage->id,
-            'status'            => 'open',
-            'amount'            => 0,
+            'status' => 'open',
+            'amount' => 0,
         ]);
         $d->delete();
 
@@ -166,16 +166,16 @@ class TrashRestoreTest extends TestCase
 
     public function test_viewer_cannot_restore_deal(): void
     {
-        $viewer   = $this->makeUser(User::ROLE_SALES);
+        $viewer = $this->makeUser(User::ROLE_SALES);
         $pipeline = Pipeline::create(['name' => 'TrashPipe2', 'is_default' => false]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
 
         $d = Deal::create([
-            'name'              => 'Prot Deal',
-            'pipeline_id'       => $pipeline->id,
+            'name' => 'Prot Deal',
+            'pipeline_id' => $pipeline->id,
             'pipeline_stage_id' => $stage->id,
-            'status'            => 'open',
-            'amount'            => 0,
+            'status' => 'open',
+            'amount' => 0,
         ]);
         $d->delete();
 

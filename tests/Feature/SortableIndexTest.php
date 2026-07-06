@@ -23,7 +23,7 @@ class SortableIndexTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -32,10 +32,10 @@ class SortableIndexTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@sort.test',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@sort.test',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
@@ -146,7 +146,8 @@ class SortableIndexTest extends TestCase
     private function makePipeline(): array
     {
         $pipeline = Pipeline::create(['name' => 'Test', 'is_default' => true]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+
         return [$pipeline, $stage];
     }
 

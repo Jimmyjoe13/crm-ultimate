@@ -27,7 +27,7 @@ class EmeliaCampaignSyncTest extends TestCase
     {
         // Signe le corps exactement comme le contrôleur le recalcule
         // (hash_hmac sha256 sur le JSON brut transmis).
-        $body      = json_encode($payload);
+        $body = json_encode($payload);
         $signature = hash_hmac('sha256', $body, self::WEBHOOK_SECRET);
 
         return $this->call(
@@ -37,8 +37,8 @@ class EmeliaCampaignSyncTest extends TestCase
             [],
             [],
             [
-                'CONTENT_TYPE'           => 'application/json',
-                'HTTP_ACCEPT'            => 'application/json',
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_ACCEPT' => 'application/json',
                 'HTTP_X_EMELIA_SIGNATURE' => $signature,
             ],
             $body
@@ -48,14 +48,14 @@ class EmeliaCampaignSyncTest extends TestCase
     private function basePayload(array $overrides = []): array
     {
         return array_merge([
-            'event'         => 'OPENED',
-            'email'         => 'test@example.com',
-            'event_id'      => 'test@example.com_OPENED_2026-05-24T10:00:00.000Z',
-            'date'          => '2026-05-24T10:00:00.000Z',
-            'campaign_id'   => 'emeliaid_campaign_abc',
+            'event' => 'OPENED',
+            'email' => 'test@example.com',
+            'event_id' => 'test@example.com_OPENED_2026-05-24T10:00:00.000Z',
+            'date' => '2026-05-24T10:00:00.000Z',
+            'campaign_id' => 'emeliaid_campaign_abc',
             'campaign_name' => 'campagne-test',
-            'first_name'    => 'Test',
-            'last_name'     => 'User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
         ], $overrides);
     }
 
@@ -71,7 +71,7 @@ class EmeliaCampaignSyncTest extends TestCase
         // La campagne a été créée
         $this->assertDatabaseHas('emelia_campaigns', [
             'emelia_id' => 'emeliaid_campaign_abc',
-            'name'      => 'campagne-test',
+            'name' => 'campagne-test',
         ]);
 
         // Le contact a été créé et lié à la campagne
@@ -98,17 +98,17 @@ class EmeliaCampaignSyncTest extends TestCase
     {
         // Premier event — campagne A
         $this->postWebhook($this->basePayload([
-            'event_id'      => 'test@example.com_OPENED_2026-05-24T10:00:00.000Z',
-            'campaign_id'   => 'emeliaid_campaign_abc',
+            'event_id' => 'test@example.com_OPENED_2026-05-24T10:00:00.000Z',
+            'campaign_id' => 'emeliaid_campaign_abc',
             'campaign_name' => 'campagne-a',
         ]));
 
         // Deuxième event — campagne B (même contact)
         $this->postWebhook($this->basePayload([
-            'event_id'      => 'test@example.com_SENT_2026-05-24T11:00:00.000Z',
-            'event'         => 'SENT',
-            'date'          => '2026-05-24T11:00:00.000Z',
-            'campaign_id'   => 'emeliaid_campaign_xyz',
+            'event_id' => 'test@example.com_SENT_2026-05-24T11:00:00.000Z',
+            'event' => 'SENT',
+            'date' => '2026-05-24T11:00:00.000Z',
+            'campaign_id' => 'emeliaid_campaign_xyz',
             'campaign_name' => 'campagne-b',
         ]));
 
@@ -141,15 +141,15 @@ class EmeliaCampaignSyncTest extends TestCase
         // Event 1 — OPENED
         $this->postWebhook($this->basePayload([
             'event_id' => 'test@example.com_OPENED_2026-05-24T10:00:00.000Z',
-            'event'    => 'OPENED',
-            'date'     => '2026-05-24T10:00:00.000Z',
+            'event' => 'OPENED',
+            'date' => '2026-05-24T10:00:00.000Z',
         ]));
 
         // Event 2 — REPLIED, même campagne
         $this->postWebhook($this->basePayload([
             'event_id' => 'test@example.com_REPLIED_2026-05-24T12:00:00.000Z',
-            'event'    => 'REPLIED',
-            'date'     => '2026-05-24T12:00:00.000Z',
+            'event' => 'REPLIED',
+            'date' => '2026-05-24T12:00:00.000Z',
         ]));
 
         // Toujours 1 seul pivot (même campagne) ; 2 activités email + 1 tâche auto-créée par handleReply
@@ -157,9 +157,9 @@ class EmeliaCampaignSyncTest extends TestCase
         $this->assertEquals(2, Activity::where('source', 'emelia')->whereIn('type', ['email_opened', 'email_replied', 'email_sent', 'email_clicked', 'email_bounced', 'email_unsubscribed'])->count());
 
         // Le pivot a bien son last_event_at mis à jour (REPLIED = le plus récent)
-        $contact  = Contact::where('email', 'test@example.com')->firstOrFail();
+        $contact = Contact::where('email', 'test@example.com')->firstOrFail();
         $campaign = EmeliaCampaign::where('emelia_id', 'emeliaid_campaign_abc')->firstOrFail();
-        $pivot    = $contact->emeliaCampaigns()->where('emelia_campaign_id', $campaign->id)->first();
+        $pivot = $contact->emeliaCampaigns()->where('emelia_campaign_id', $campaign->id)->first();
 
         $this->assertEquals('REPLIED', $pivot->pivot->status);
     }

@@ -9,8 +9,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Activity;
 
 class Contact extends Model
 {
@@ -23,7 +25,7 @@ class Contact extends Model
     protected static function boot(): void
     {
         parent::boot();
-        $flush = fn() => Cache::tags(['contacts.index'])->flush();
+        $flush = fn () => Cache::tags(['contacts.index'])->flush();
         static::saved($flush);
         static::deleted($flush);
     }
@@ -50,8 +52,8 @@ class Contact extends Model
     protected function casts(): array
     {
         return [
-            'custom_values'       => 'array',
-            'blacklisted_at'      => 'datetime',
+            'custom_values' => 'array',
+            'blacklisted_at' => 'datetime',
             'ai_score_updated_at' => 'datetime',
         ];
     }
@@ -75,6 +77,7 @@ class Contact extends Model
             return false;
         }
         $this->forceFill(['blacklisted_at' => now(), 'blacklist_reason' => $reason])->save();
+
         return true;
     }
 
@@ -83,6 +86,11 @@ class Contact extends Model
         return $this->belongsToMany(Company::class, 'contact_company')
             ->withPivot('role', 'is_primary')
             ->withTimestamps();
+    }
+
+    public function activities(): MorphMany
+    {
+        return $this->morphMany(Activity::class, 'subject');
     }
 
     public function primaryCompany(): BelongsToMany

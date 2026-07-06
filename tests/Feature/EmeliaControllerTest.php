@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Services\EmeliaService;
 use App\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class EmeliaControllerTest extends TestCase
@@ -22,7 +21,7 @@ class EmeliaControllerTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -31,10 +30,10 @@ class EmeliaControllerTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User '.$counter,
-            'email'    => 'emelia_ctrl_'.$counter.'@test.com',
+            'name' => 'User '.$counter,
+            'email' => 'emelia_ctrl_'.$counter.'@test.com',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 

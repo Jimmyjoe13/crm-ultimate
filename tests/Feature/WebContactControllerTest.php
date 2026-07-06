@@ -20,7 +20,7 @@ class WebContactControllerTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -29,10 +29,10 @@ class WebContactControllerTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@test.com',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@test.com',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
@@ -58,14 +58,14 @@ class WebContactControllerTest extends TestCase
 
         $response = $this->withAuth($admin)->post('/contacts', [
             'first_name' => 'Bob',
-            'last_name'  => 'Martin',
-            'email'      => 'bob@test.com',
-            '_token'     => 'test',
+            'last_name' => 'Martin',
+            'email' => 'bob@test.com',
+            '_token' => 'test',
         ]);
 
         $contact = Contact::where('email', 'bob@test.com')->first();
         $this->assertNotNull($contact);
-        $response->assertRedirect('/contacts/' . $contact->id);
+        $response->assertRedirect('/contacts/'.$contact->id);
     }
 
     public function test_store_fails_without_first_name(): void
@@ -73,7 +73,7 @@ class WebContactControllerTest extends TestCase
         $admin = $this->makeUser();
 
         $response = $this->withAuth($admin)->post('/contacts', [
-            'email'  => 'no-name@test.com',
+            'email' => 'no-name@test.com',
             '_token' => 'test',
         ]);
 
@@ -83,42 +83,42 @@ class WebContactControllerTest extends TestCase
 
     public function test_show_renders_contact(): void
     {
-        $admin   = $this->makeUser();
+        $admin = $this->makeUser();
         $contact = Contact::create(['first_name' => 'Carol', 'email' => 'carol@test.com']);
 
-        $response = $this->withAuth($admin)->get('/contacts/' . $contact->id);
+        $response = $this->withAuth($admin)->get('/contacts/'.$contact->id);
         $response->assertStatus(200)->assertSee('Carol');
     }
 
     public function test_edit_page_loads(): void
     {
-        $admin   = $this->makeUser();
+        $admin = $this->makeUser();
         $contact = Contact::create(['first_name' => 'Dan', 'email' => 'dan@test.com']);
 
-        $response = $this->withAuth($admin)->get('/contacts/' . $contact->id . '/edit');
+        $response = $this->withAuth($admin)->get('/contacts/'.$contact->id.'/edit');
         $response->assertStatus(200)->assertSee('Modifier le contact');
     }
 
     public function test_update_modifies_contact(): void
     {
-        $admin   = $this->makeUser();
+        $admin = $this->makeUser();
         $contact = Contact::create(['first_name' => 'Eve', 'email' => 'eve@test.com']);
 
-        $response = $this->withAuth($admin)->put('/contacts/' . $contact->id, [
+        $response = $this->withAuth($admin)->put('/contacts/'.$contact->id, [
             'first_name' => 'Eva',
-            '_token'     => 'test',
+            '_token' => 'test',
         ]);
 
-        $response->assertRedirect('/contacts/' . $contact->id);
+        $response->assertRedirect('/contacts/'.$contact->id);
         $this->assertDatabaseHas('contacts', ['id' => $contact->id, 'first_name' => 'Eva']);
     }
 
     public function test_destroy_soft_deletes_contact(): void
     {
-        $admin   = $this->makeUser();
+        $admin = $this->makeUser();
         $contact = Contact::create(['first_name' => 'Frank', 'email' => 'frank@test.com']);
 
-        $response = $this->withAuth($admin)->delete('/contacts/' . $contact->id, ['_token' => 'test']);
+        $response = $this->withAuth($admin)->delete('/contacts/'.$contact->id, ['_token' => 'test']);
 
         $response->assertRedirect('/contacts');
         $this->assertSoftDeleted('contacts', ['id' => $contact->id]);
@@ -126,10 +126,10 @@ class WebContactControllerTest extends TestCase
 
     public function test_viewer_cannot_delete_contact(): void
     {
-        $viewer  = $this->makeUser(User::ROLE_SALES);
+        $viewer = $this->makeUser(User::ROLE_SALES);
         $contact = Contact::create(['first_name' => 'Grace', 'email' => 'grace@test.com']);
 
-        $response = $this->withAuth($viewer)->delete('/contacts/' . $contact->id, ['_token' => 'test']);
+        $response = $this->withAuth($viewer)->delete('/contacts/'.$contact->id, ['_token' => 'test']);
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('contacts', ['id' => $contact->id, 'deleted_at' => null]);

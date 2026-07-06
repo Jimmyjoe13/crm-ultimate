@@ -17,22 +17,22 @@ class EmeliaEventDispatcherTest extends TestCase
     private function makeContact(array $attrs = []): Contact
     {
         return Contact::create(array_merge([
-            'first_name'      => 'Alice',
-            'last_name'       => 'Test',
-            'email'           => 'alice@test.com',
+            'first_name' => 'Alice',
+            'last_name' => 'Test',
+            'email' => 'alice@test.com',
             'lifecycle_stage' => 'lead',
         ], $attrs));
     }
 
     public function test_dispatch_creates_activity_with_occurred_at(): void
     {
-        $contact    = $this->makeContact();
+        $contact = $this->makeContact();
         $occurredAt = Carbon::parse('2026-05-10 14:30:00');
 
         $activity = EmeliaEventDispatcher::dispatch(
-            contact:    $contact,
-            type:       Activity::TYPE_EMAIL_OPENED,
-            payload:    ['campaign' => 'test'],
+            contact: $contact,
+            type: Activity::TYPE_EMAIL_OPENED,
+            payload: ['campaign' => 'test'],
             occurredAt: $occurredAt,
             externalId: 'evt_open_001',
         );
@@ -50,7 +50,7 @@ class EmeliaEventDispatcherTest extends TestCase
     {
         $contact = $this->makeContact();
 
-        $first  = EmeliaEventDispatcher::dispatch($contact, Activity::TYPE_EMAIL_OPENED, [], null, 'evt_dup');
+        $first = EmeliaEventDispatcher::dispatch($contact, Activity::TYPE_EMAIL_OPENED, [], null, 'evt_dup');
         $second = EmeliaEventDispatcher::dispatch($contact, Activity::TYPE_EMAIL_OPENED, [], null, 'evt_dup');
 
         $this->assertNotNull($first);
@@ -60,13 +60,13 @@ class EmeliaEventDispatcherTest extends TestCase
 
     public function test_replied_creates_followup_task(): void
     {
-        $owner   = User::createWithRole(['name' => 'Bob', 'email' => 'bob@crm.com', 'password' => 'x', 'role' => 'commercial']);
+        $owner = User::createWithRole(['name' => 'Bob', 'email' => 'bob@crm.com', 'password' => 'x', 'role' => 'commercial']);
         $contact = $this->makeContact(['owner_id' => $owner->id, 'emelia_campaign_name' => 'ma-campagne']);
 
         EmeliaEventDispatcher::dispatch(
-            contact:    $contact,
-            type:       Activity::TYPE_EMAIL_REPLIED,
-            payload:    [],
+            contact: $contact,
+            type: Activity::TYPE_EMAIL_REPLIED,
+            payload: [],
             occurredAt: now(),
             externalId: 'evt_reply_001',
         );
@@ -91,9 +91,9 @@ class EmeliaEventDispatcherTest extends TestCase
         $contact = $this->makeContact(['lifecycle_stage' => 'lead']);
 
         EmeliaEventDispatcher::dispatch(
-            contact:    $contact,
-            type:       Activity::TYPE_EMAIL_REPLIED,
-            payload:    [],
+            contact: $contact,
+            type: Activity::TYPE_EMAIL_REPLIED,
+            payload: [],
             occurredAt: now(),
             externalId: 'evt_reply_bump',
         );
@@ -106,9 +106,9 @@ class EmeliaEventDispatcherTest extends TestCase
         $contact = $this->makeContact(['lifecycle_stage' => 'mql']);
 
         EmeliaEventDispatcher::dispatch(
-            contact:    $contact,
-            type:       Activity::TYPE_EMAIL_REPLIED,
-            payload:    [],
+            contact: $contact,
+            type: Activity::TYPE_EMAIL_REPLIED,
+            payload: [],
             occurredAt: now(),
             externalId: 'evt_reply_nomql',
         );
@@ -121,9 +121,9 @@ class EmeliaEventDispatcherTest extends TestCase
         $contact = $this->makeContact();
 
         EmeliaEventDispatcher::dispatch(
-            contact:    $contact,
-            type:       Activity::TYPE_EMAIL_OPENED,
-            payload:    [],
+            contact: $contact,
+            type: Activity::TYPE_EMAIL_OPENED,
+            payload: [],
             occurredAt: now(),
             externalId: 'evt_open_notask',
         );
@@ -153,15 +153,15 @@ class EmeliaEventDispatcherTest extends TestCase
     public function test_type_from_emelia_event_maps_all_six(): void
     {
         $cases = [
-            'SENT'                  => Activity::TYPE_EMAIL_SENT,
-            'OPENED'                => Activity::TYPE_EMAIL_OPENED,
-            'FIRST_OPEN'            => Activity::TYPE_EMAIL_OPENED,
-            'CLICKED'               => Activity::TYPE_EMAIL_CLICKED,
-            'REPLIED'               => Activity::TYPE_EMAIL_REPLIED,
-            'BOUNCED'               => Activity::TYPE_EMAIL_BOUNCED,
-            'UNSUBSCRIBED'          => Activity::TYPE_EMAIL_UNSUBSCRIBED,
-            'CONTACT_UNSUBSCRIBED'  => Activity::TYPE_EMAIL_UNSUBSCRIBED,
-            'unknown_event'         => null,
+            'SENT' => Activity::TYPE_EMAIL_SENT,
+            'OPENED' => Activity::TYPE_EMAIL_OPENED,
+            'FIRST_OPEN' => Activity::TYPE_EMAIL_OPENED,
+            'CLICKED' => Activity::TYPE_EMAIL_CLICKED,
+            'REPLIED' => Activity::TYPE_EMAIL_REPLIED,
+            'BOUNCED' => Activity::TYPE_EMAIL_BOUNCED,
+            'UNSUBSCRIBED' => Activity::TYPE_EMAIL_UNSUBSCRIBED,
+            'CONTACT_UNSUBSCRIBED' => Activity::TYPE_EMAIL_UNSUBSCRIBED,
+            'unknown_event' => null,
         ];
 
         foreach ($cases as $input => $expected) {

@@ -20,7 +20,7 @@ class WebCompanyControllerTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -29,10 +29,10 @@ class WebCompanyControllerTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@test.com',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@test.com',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
@@ -57,13 +57,13 @@ class WebCompanyControllerTest extends TestCase
         $admin = $this->makeUser();
 
         $response = $this->withAuth($admin)->post('/companies', [
-            'name'    => 'StartupX',
-            '_token'  => 'test',
+            'name' => 'StartupX',
+            '_token' => 'test',
         ]);
 
         $company = Company::where('name', 'StartupX')->first();
         $this->assertNotNull($company);
-        $response->assertRedirect('/companies/' . $company->id);
+        $response->assertRedirect('/companies/'.$company->id);
     }
 
     public function test_store_fails_without_name(): void
@@ -80,42 +80,42 @@ class WebCompanyControllerTest extends TestCase
 
     public function test_show_renders_company(): void
     {
-        $admin   = $this->makeUser();
+        $admin = $this->makeUser();
         $company = Company::create(['name' => 'BigCo']);
 
-        $response = $this->withAuth($admin)->get('/companies/' . $company->id);
+        $response = $this->withAuth($admin)->get('/companies/'.$company->id);
         $response->assertStatus(200)->assertSee('BigCo');
     }
 
     public function test_edit_page_loads(): void
     {
-        $admin   = $this->makeUser();
+        $admin = $this->makeUser();
         $company = Company::create(['name' => 'OldName']);
 
-        $response = $this->withAuth($admin)->get('/companies/' . $company->id . '/edit');
+        $response = $this->withAuth($admin)->get('/companies/'.$company->id.'/edit');
         $response->assertStatus(200)->assertSeeText("Modifier l'entreprise");
     }
 
     public function test_update_modifies_company(): void
     {
-        $admin   = $this->makeUser();
+        $admin = $this->makeUser();
         $company = Company::create(['name' => 'OldName']);
 
-        $response = $this->withAuth($admin)->put('/companies/' . $company->id, [
-            'name'   => 'NewName',
+        $response = $this->withAuth($admin)->put('/companies/'.$company->id, [
+            'name' => 'NewName',
             '_token' => 'test',
         ]);
 
-        $response->assertRedirect('/companies/' . $company->id);
+        $response->assertRedirect('/companies/'.$company->id);
         $this->assertDatabaseHas('companies', ['id' => $company->id, 'name' => 'NewName']);
     }
 
     public function test_destroy_soft_deletes_company(): void
     {
-        $admin   = $this->makeUser();
+        $admin = $this->makeUser();
         $company = Company::create(['name' => 'ToDelete']);
 
-        $response = $this->withAuth($admin)->delete('/companies/' . $company->id, ['_token' => 'test']);
+        $response = $this->withAuth($admin)->delete('/companies/'.$company->id, ['_token' => 'test']);
 
         $response->assertRedirect('/companies');
         $this->assertSoftDeleted('companies', ['id' => $company->id]);
@@ -123,10 +123,10 @@ class WebCompanyControllerTest extends TestCase
 
     public function test_viewer_cannot_delete_company(): void
     {
-        $viewer  = $this->makeUser(User::ROLE_SALES);
+        $viewer = $this->makeUser(User::ROLE_SALES);
         $company = Company::create(['name' => 'Protected']);
 
-        $response = $this->withAuth($viewer)->delete('/companies/' . $company->id, ['_token' => 'test']);
+        $response = $this->withAuth($viewer)->delete('/companies/'.$company->id, ['_token' => 'test']);
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('companies', ['id' => $company->id, 'deleted_at' => null]);

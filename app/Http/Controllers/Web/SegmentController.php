@@ -17,22 +17,24 @@ class SegmentController extends Controller
     public function index()
     {
         $segments = Segment::with('creator')->orderByDesc('updated_at')->get();
+
         return view('pages.segments.index', compact('segments'));
     }
 
     public function create()
     {
         $fieldsByEntity = $this->loadAllFields();
+
         return view('pages.segments.create', ['segment' => null, 'fieldsByEntity' => $fieldsByEntity]);
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'entity_type' => ['required', 'in:contact,company,deal'],
-            'rules'       => ['required', 'json'],
+            'rules' => ['required', 'json'],
         ]);
 
         $rules = json_decode($data['rules'], true);
@@ -44,11 +46,11 @@ class SegmentController extends Controller
         }
 
         $segment = Segment::create([
-            'name'        => $data['name'],
+            'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'entity_type' => $data['entity_type'],
-            'rules'       => $rules,
-            'created_by'  => auth()->id(),
+            'rules' => $rules,
+            'created_by' => auth()->id(),
         ]);
 
         // Compute initial count
@@ -58,7 +60,7 @@ class SegmentController extends Controller
         } catch (\Throwable) {
         }
 
-        return redirect('/segments/' . $segment->id)
+        return redirect('/segments/'.$segment->id)
             ->with('flash_toast', ['message' => "Segment « {$segment->name} » créé.", 'type' => 'success']);
     }
 
@@ -70,11 +72,11 @@ class SegmentController extends Controller
         try {
             $membersQuery = $this->engine->buildQuery($segment);
             $total = $membersQuery->count();
-            $withRelations = match($segment->entity_type) {
-                'deal'    => ['stage'],
+            $withRelations = match ($segment->entity_type) {
+                'deal' => ['stage'],
                 'contact' => ['companies'],
                 'company' => ['contacts'],
-                default   => [],
+                default => [],
             };
             $members = $membersQuery->with($withRelations)->forPage($page, $perPage)->get();
 
@@ -84,7 +86,7 @@ class SegmentController extends Controller
             }
         } catch (\Throwable $e) {
             $members = collect();
-            $total   = 0;
+            $total = 0;
         }
 
         $lastPage = (int) ceil($total / $perPage);
@@ -95,22 +97,24 @@ class SegmentController extends Controller
     public function edit(Segment $segment)
     {
         $fieldsByEntity = $this->loadAllFields();
+
         return view('pages.segments.create', compact('segment', 'fieldsByEntity'));
     }
 
-    public function preview(\Illuminate\Http\Request $request)
+    public function preview(Request $request)
     {
         $data = $request->validate([
             'entity_type' => ['required', 'in:contact,company,deal'],
-            'rules'       => ['required', 'array'],
+            'rules' => ['required', 'array'],
         ]);
 
         try {
             $this->engine->validateTree($data['rules'], $data['entity_type']);
-            $segment = new \App\Models\Segment(['entity_type' => $data['entity_type'], 'rules' => $data['rules']]);
-            $query   = $this->engine->buildQuery($segment);
-            $count   = $query->count();
-            $sample  = (clone $query)->limit(20)->get();
+            $segment = new Segment(['entity_type' => $data['entity_type'], 'rules' => $data['rules']]);
+            $query = $this->engine->buildQuery($segment);
+            $count = $query->count();
+            $sample = (clone $query)->limit(20)->get();
+
             return response()->json(['count' => $count, 'sample' => $sample]);
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -127,16 +131,17 @@ class SegmentController extends Controller
                 $result[$et] = [];
             }
         }
+
         return $result;
     }
 
     public function update(Request $request, Segment $segment)
     {
         $data = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'entity_type' => ['required', 'in:contact,company,deal'],
-            'rules'       => ['required', 'json'],
+            'rules' => ['required', 'json'],
         ]);
 
         $rules = json_decode($data['rules'], true);
@@ -148,36 +153,36 @@ class SegmentController extends Controller
         }
 
         $segment->update([
-            'name'        => $data['name'],
+            'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'entity_type' => $data['entity_type'],
-            'rules'       => $rules,
+            'rules' => $rules,
         ]);
 
-        return redirect('/segments/' . $segment->id)
+        return redirect('/segments/'.$segment->id)
             ->with('flash_toast', ['message' => "Segment « {$segment->name} » mis à jour.", 'type' => 'success']);
     }
 
     public function export(Segment $segment): StreamedResponse
     {
-        $slug         = Str::slug($segment->name);
-        $date         = now()->format('Y-m-d');
-        $filename     = "segment-{$slug}-{$date}.csv";
-        $entityType   = $segment->entity_type;
+        $slug = Str::slug($segment->name);
+        $date = now()->format('Y-m-d');
+        $filename = "segment-{$slug}-{$date}.csv";
+        $entityType = $segment->entity_type;
         $customFields = CustomFieldRenderer::forEntity($entityType);
 
-        $relations = match($entityType) {
+        $relations = match ($entityType) {
             'contact' => ['companies:id,name', 'owner:id,name'],
             'company' => ['owner:id,name'],
-            'deal'    => ['stage:id,name', 'companies:id,name', 'contacts:id,first_name,last_name', 'owner:id,name'],
-            default   => [],
+            'deal' => ['stage:id,name', 'companies:id,name', 'contacts:id,first_name,last_name', 'owner:id,name'],
+            default => [],
         };
 
-        $standardHeaders = match($entityType) {
+        $standardHeaders = match ($entityType) {
             'contact' => ['id', 'prénom', 'nom', 'email', 'téléphone', 'poste', 'étape_lifecycle', 'statut_lead', 'propriétaire', 'entreprises', 'créé_le'],
             'company' => ['id', 'nom', 'domaine', 'secteur', 'téléphone', 'site_web', 'ville', 'pays', 'étape_lifecycle', 'statut_lead', 'propriétaire', 'créé_le'],
-            'deal'    => ['id', 'nom', 'montant', 'devise', 'statut', 'étape', 'date_clôture', 'propriétaire', 'entreprises', 'contacts', 'créé_le'],
-            default   => ['id', 'créé_le'],
+            'deal' => ['id', 'nom', 'montant', 'devise', 'statut', 'étape', 'date_clôture', 'propriétaire', 'entreprises', 'contacts', 'créé_le'],
+            default => ['id', 'créé_le'],
         };
 
         $headers = array_merge($standardHeaders, $customFields->pluck('label')->toArray());
@@ -191,7 +196,7 @@ class SegmentController extends Controller
                 ->with($relations)
                 ->chunk(200, function ($members) use ($out, $entityType, $customFields) {
                     foreach ($members as $m) {
-                        $row = match($entityType) {
+                        $row = match ($entityType) {
                             'contact' => [
                                 $m->id,
                                 $m->first_name,
@@ -229,14 +234,14 @@ class SegmentController extends Controller
                                 $m->close_date?->format('d/m/Y'),
                                 $m->owner?->name,
                                 $m->companies->pluck('name')->implode(', '),
-                                $m->contacts->map(fn($c) => $c->first_name . ' ' . $c->last_name)->implode(', '),
+                                $m->contacts->map(fn ($c) => $c->first_name.' '.$c->last_name)->implode(', '),
                                 $m->created_at?->format('d/m/Y'),
                             ],
                             default => [$m->id, $m->created_at?->format('d/m/Y')],
                         };
 
                         foreach ($customFields as $field) {
-                            $raw   = $m->custom_values[$field->key] ?? null;
+                            $raw = $m->custom_values[$field->key] ?? null;
                             $display = CustomFieldRenderer::displayValue($field, $raw);
                             $row[] = $display === '—' ? '' : $display;
                         }
@@ -247,7 +252,7 @@ class SegmentController extends Controller
 
             fclose($out);
         }, $filename, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
     }
@@ -255,6 +260,7 @@ class SegmentController extends Controller
     public function destroy(Segment $segment)
     {
         $segment->delete();
-        return redirect('/segments')->with('success', "Segment supprimé.");
+
+        return redirect('/segments')->with('success', 'Segment supprimé.');
     }
 }

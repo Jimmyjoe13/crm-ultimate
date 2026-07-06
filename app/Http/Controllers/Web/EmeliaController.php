@@ -9,6 +9,7 @@ use App\Models\Contact;
 use App\Models\EmeliaCampaign;
 use App\Services\EmeliaService;
 use App\Support\EmeliaEventDispatcher;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -26,10 +27,10 @@ class EmeliaController extends Controller
 
         $campaigns = $raw['campaigns'] ?? $raw;
 
-        $mapped = array_map(fn($c) => [
-            'id'             => $c['_id'] ?? $c['id'] ?? null,
-            'name'           => $c['name'] ?? $c['title'] ?? '',
-            'status'         => $c['status'] ?? '',
+        $mapped = array_map(fn ($c) => [
+            'id' => $c['_id'] ?? $c['id'] ?? null,
+            'name' => $c['name'] ?? $c['title'] ?? '',
+            'status' => $c['status'] ?? '',
             'contacts_count' => $c['contactsCount'] ?? 0,
         ], $campaigns);
 
@@ -57,11 +58,11 @@ class EmeliaController extends Controller
             ->get();
 
         $globalStats = [
-            'sent'         => $allActivities->where('type', Activity::TYPE_EMAIL_SENT)->count(),
-            'opened'       => $allActivities->where('type', Activity::TYPE_EMAIL_OPENED)->count(),
-            'clicked'      => $allActivities->where('type', Activity::TYPE_EMAIL_CLICKED)->count(),
-            'replied'      => $allActivities->where('type', Activity::TYPE_EMAIL_REPLIED)->count(),
-            'bounced'      => $allActivities->where('type', Activity::TYPE_EMAIL_BOUNCED)->count(),
+            'sent' => $allActivities->where('type', Activity::TYPE_EMAIL_SENT)->count(),
+            'opened' => $allActivities->where('type', Activity::TYPE_EMAIL_OPENED)->count(),
+            'clicked' => $allActivities->where('type', Activity::TYPE_EMAIL_CLICKED)->count(),
+            'replied' => $allActivities->where('type', Activity::TYPE_EMAIL_REPLIED)->count(),
+            'bounced' => $allActivities->where('type', Activity::TYPE_EMAIL_BOUNCED)->count(),
             'unsubscribed' => $allActivities->where('type', Activity::TYPE_EMAIL_UNSUBSCRIBED)->count(),
         ];
 
@@ -73,11 +74,11 @@ class EmeliaController extends Controller
                 $statsByCampaign[$key] = ['sent' => 0, 'opened' => 0, 'clicked' => 0, 'replied' => 0, 'bounced' => 0, 'unsubscribed' => 0];
             }
             $typeMap = [
-                Activity::TYPE_EMAIL_SENT         => 'sent',
-                Activity::TYPE_EMAIL_OPENED       => 'opened',
-                Activity::TYPE_EMAIL_CLICKED      => 'clicked',
-                Activity::TYPE_EMAIL_REPLIED      => 'replied',
-                Activity::TYPE_EMAIL_BOUNCED      => 'bounced',
+                Activity::TYPE_EMAIL_SENT => 'sent',
+                Activity::TYPE_EMAIL_OPENED => 'opened',
+                Activity::TYPE_EMAIL_CLICKED => 'clicked',
+                Activity::TYPE_EMAIL_REPLIED => 'replied',
+                Activity::TYPE_EMAIL_BOUNCED => 'bounced',
                 Activity::TYPE_EMAIL_UNSUBSCRIBED => 'unsubscribed',
             ];
             if (isset($typeMap[$act->type])) {
@@ -86,8 +87,8 @@ class EmeliaController extends Controller
         }
 
         // ─── Données live Emelia (1 appel par campagne, cache 10 min) ─────
-        $msToDate = fn(?string $ms): ?string => $ms
-            ? \Carbon\Carbon::createFromTimestampMs((int) $ms)->diffForHumans()
+        $msToDate = fn (?string $ms): ?string => $ms
+            ? Carbon::createFromTimestampMs((int) $ms)->diffForHumans()
             : null;
 
         $campaignsOutput = [];
@@ -107,6 +108,7 @@ class EmeliaController extends Controller
                                     return $data;
                                 }
                             }
+
                             return $emelia->getContactByEmail($contact->email, $camp->name);
                         } catch (\Exception) {
                             return null;
@@ -124,23 +126,23 @@ class EmeliaController extends Controller
                 $campaignStats = $statsByCampaign[$camp->id] ?? ['sent' => 0, 'opened' => 0, 'clicked' => 0, 'replied' => 0, 'bounced' => 0, 'unsubscribed' => 0];
 
                 $campaignsOutput[] = [
-                    'id'             => $camp->id,
-                    'emelia_id'      => $camp->emelia_id,
-                    'name'           => $camp->name,
-                    'client_name'    => $camp->client_name,
-                    'objective'      => $camp->objective,
-                    'pivot_status'   => $camp->pivot->status,
+                    'id' => $camp->id,
+                    'emelia_id' => $camp->emelia_id,
+                    'name' => $camp->name,
+                    'client_name' => $camp->client_name,
+                    'objective' => $camp->objective,
+                    'pivot_status' => $camp->pivot->status,
                     'first_event_at' => $camp->pivot->first_event_at
-                        ? \Carbon\Carbon::parse($camp->pivot->first_event_at)->diffForHumans()
+                        ? Carbon::parse($camp->pivot->first_event_at)->diffForHumans()
                         : null,
-                    'last_event_at'  => $camp->pivot->last_event_at
-                        ? \Carbon\Carbon::parse($camp->pivot->last_event_at)->diffForHumans()
+                    'last_event_at' => $camp->pivot->last_event_at
+                        ? Carbon::parse($camp->pivot->last_event_at)->diffForHumans()
                         : null,
-                    'emelia_status'  => $liveData['status'] ?? null,
+                    'emelia_status' => $liveData['status'] ?? null,
                     'last_contacted' => $msToDate($liveData['lastContacted'] ?? null),
-                    'last_open'      => $msToDate($liveData['lastOpen'] ?? null),
-                    'last_replied'   => $msToDate($liveData['lastReplied'] ?? null),
-                    'stats'          => $campaignStats,
+                    'last_open' => $msToDate($liveData['lastOpen'] ?? null),
+                    'last_replied' => $msToDate($liveData['lastReplied'] ?? null),
+                    'stats' => $campaignStats,
                 ];
             }
         } elseif ($inEmelia && $contact->email) {
@@ -157,6 +159,7 @@ class EmeliaController extends Controller
                             return $data;
                         }
                     }
+
                     return $emelia->getContactByEmail($contact->email, $contact->emelia_campaign_name);
                 } catch (\Exception) {
                     return null;
@@ -168,19 +171,19 @@ class EmeliaController extends Controller
             }
 
             $campaignsOutput[] = [
-                'id'             => null,
-                'emelia_id'      => $contact->emelia_campaign_id,
-                'name'           => $contact->emelia_campaign_name ?? $contact->emelia_campaign_id,
-                'client_name'    => null,
-                'objective'      => null,
-                'pivot_status'   => null,
+                'id' => null,
+                'emelia_id' => $contact->emelia_campaign_id,
+                'name' => $contact->emelia_campaign_name ?? $contact->emelia_campaign_id,
+                'client_name' => null,
+                'objective' => null,
+                'pivot_status' => null,
                 'first_event_at' => null,
-                'last_event_at'  => null,
-                'emelia_status'  => $liveData['status'] ?? null,
+                'last_event_at' => null,
+                'emelia_status' => $liveData['status'] ?? null,
                 'last_contacted' => $msToDate($liveData['lastContacted'] ?? null),
-                'last_open'      => $msToDate($liveData['lastOpen'] ?? null),
-                'last_replied'   => $msToDate($liveData['lastReplied'] ?? null),
-                'stats'          => $statsByCampaign['legacy'] ?? $globalStats,
+                'last_open' => $msToDate($liveData['lastOpen'] ?? null),
+                'last_replied' => $msToDate($liveData['lastReplied'] ?? null),
+                'stats' => $statsByCampaign['legacy'] ?? $globalStats,
             ];
         }
 
@@ -188,22 +191,22 @@ class EmeliaController extends Controller
         $primaryCampaign = $campaignsOutput[0] ?? null;
 
         return response()->json([
-            'in_emelia'        => $inEmelia,
+            'in_emelia' => $inEmelia,
             // Rétro-compat (1 campagne)
-            'campaign_id'      => $primaryCampaign['emelia_id'] ?? $contact->emelia_campaign_id,
-            'campaign_name'    => $primaryCampaign['name'] ?? $contact->emelia_campaign_name,
-            'contact_id'       => $contact->emelia_contact_id,
-            'emelia_status'    => $primaryCampaign['emelia_status'] ?? null,
-            'last_contacted'   => $primaryCampaign['last_contacted'] ?? null,
-            'last_open'        => $primaryCampaign['last_open'] ?? null,
-            'last_replied'     => $primaryCampaign['last_replied'] ?? null,
+            'campaign_id' => $primaryCampaign['emelia_id'] ?? $contact->emelia_campaign_id,
+            'campaign_name' => $primaryCampaign['name'] ?? $contact->emelia_campaign_name,
+            'contact_id' => $contact->emelia_contact_id,
+            'emelia_status' => $primaryCampaign['emelia_status'] ?? null,
+            'last_contacted' => $primaryCampaign['last_contacted'] ?? null,
+            'last_open' => $primaryCampaign['last_open'] ?? null,
+            'last_replied' => $primaryCampaign['last_replied'] ?? null,
             // Nouveau : liste de toutes les campagnes
-            'campaigns'        => $campaignsOutput,
+            'campaigns' => $campaignsOutput,
             // Compteurs globaux (toutes campagnes confondues)
-            'stats'            => $globalStats,
+            'stats' => $globalStats,
             'total_activities' => $allActivities->count(),
-            'last_activity'    => $allActivities->first()?->occurred_at?->diffForHumans(),
-            'webhook_active'   => $allActivities->count() > 0,
+            'last_activity' => $allActivities->first()?->occurred_at?->diffForHumans(),
+            'webhook_active' => $allActivities->count() > 0,
         ]);
     }
 
@@ -216,10 +219,10 @@ class EmeliaController extends Controller
         }
 
         $request->validate([
-            'campaign_ids'   => 'nullable|array',
+            'campaign_ids' => 'nullable|array',
             'campaign_ids.*' => 'string',
-            'campaign_id'    => 'nullable|string',
-            'campaign_name'  => 'nullable|string|max:255',
+            'campaign_id' => 'nullable|string',
+            'campaign_name' => 'nullable|string|max:255',
         ]);
 
         if (empty($campaignIds)) {
@@ -232,6 +235,7 @@ class EmeliaController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['error' => $msg], 422);
             }
+
             return back()->with('flash_toast', ['type' => 'error', 'message' => $msg]);
         }
 
@@ -242,12 +246,12 @@ class EmeliaController extends Controller
             return response()->json(['error' => $e->getMessage()], 502);
         }
 
-        $emeliaCampaignList = collect($raw['campaigns'] ?? $raw)->keyBy(fn($c) => $c['_id'] ?? $c['id'] ?? '');
+        $emeliaCampaignList = collect($raw['campaigns'] ?? $raw)->keyBy(fn ($c) => $c['_id'] ?? $c['id'] ?? '');
 
         $payload = [
-            'email'       => $contact->email,
-            'firstName'   => $contact->first_name ?? '',
-            'lastName'    => $contact->last_name ?? '',
+            'email' => $contact->email,
+            'firstName' => $contact->first_name ?? '',
+            'lastName' => $contact->last_name ?? '',
             'companyName' => $contact->companies->first()?->name ?? '',
         ];
 
@@ -261,11 +265,12 @@ class EmeliaController extends Controller
                 if ($request->expectsJson()) {
                     return response()->json(['error' => $e->getMessage()], 502);
                 }
+
                 return back()->with('flash_toast', ['type' => 'error', 'message' => 'Erreur Emelia : '.$e->getMessage()]);
             }
 
             $emeliaCampData = $emeliaCampaignList->get($campaignEmeliaId);
-            $campaignName   = $emeliaCampData['name'] ?? $emeliaCampData['title'] ?? $request->input('campaign_name') ?? $campaignEmeliaId;
+            $campaignName = $emeliaCampData['name'] ?? $emeliaCampData['title'] ?? $request->input('campaign_name') ?? $campaignEmeliaId;
 
             // Upsert dans le registre local + pivot
             $campaign = EmeliaCampaign::firstOrCreate(
@@ -281,7 +286,7 @@ class EmeliaController extends Controller
 
             $pivotData = [
                 'emelia_contact_id' => $emeliaCid,
-                'last_event_at'     => now(),
+                'last_event_at' => now(),
             ];
 
             if (! $contact->emeliaCampaigns()->whereKey($campaign->id)->exists()) {
@@ -292,23 +297,23 @@ class EmeliaController extends Controller
             }
 
             $addedNames[] = $campaignName;
-            $lastResult   = ['id' => $emeliaCid, 'campaign_name' => $campaignName, 'emelia_id' => $campaignEmeliaId];
+            $lastResult = ['id' => $emeliaCid, 'campaign_name' => $campaignName, 'emelia_id' => $campaignEmeliaId];
         }
 
         // Compat legacy : colonnes plates = dernière campagne ajoutée
         if ($lastResult) {
             $contact->update([
-                'emelia_contact_id'    => $lastResult['id'] ?? $contact->emelia_contact_id,
-                'emelia_campaign_id'   => $lastResult['emelia_id'],
+                'emelia_contact_id' => $lastResult['id'] ?? $contact->emelia_contact_id,
+                'emelia_campaign_id' => $lastResult['emelia_id'],
                 'emelia_campaign_name' => $lastResult['campaign_name'],
             ]);
         }
 
         if ($request->expectsJson()) {
             return response()->json([
-                'success'        => true,
+                'success' => true,
                 'campaign_names' => $addedNames,
-                'campaign_name'  => $lastResult['campaign_name'] ?? null,
+                'campaign_name' => $lastResult['campaign_name'] ?? null,
             ]);
         }
 
@@ -322,6 +327,7 @@ class EmeliaController extends Controller
     public function syncNow(): JsonResponse
     {
         SyncEmeliaCampaignJob::dispatch(onlyLinked: false);
+
         return response()->json(['message' => 'Synchronisation lancée en arrière-plan.']);
     }
 
@@ -361,7 +367,7 @@ class EmeliaController extends Controller
         }
 
         $created = 0;
-        $total   = 0;
+        $total = 0;
 
         foreach ($campaigns as $camp) {
             $emeliaCid = $camp->pivot->emelia_contact_id ?? $contact->emelia_contact_id;
@@ -384,14 +390,14 @@ class EmeliaController extends Controller
                 if (! $type) {
                     continue;
                 }
-                $date       = $event['date'];
-                $externalId = 'emelia:' . hash('sha256', "{$emeliaCid}:{$camp->emelia_id}:{$type}:{$date->toIso8601String()}");
-                $activity   = EmeliaEventDispatcher::dispatch(
-                    contact:          $contact,
-                    type:             $type,
-                    payload:          ['synthetic' => true, 'source_contact_id' => $emeliaCid],
-                    occurredAt:       $date,
-                    externalId:       $externalId,
+                $date = $event['date'];
+                $externalId = 'emelia:'.hash('sha256', "{$emeliaCid}:{$camp->emelia_id}:{$type}:{$date->toIso8601String()}");
+                $activity = EmeliaEventDispatcher::dispatch(
+                    contact: $contact,
+                    type: $type,
+                    payload: ['synthetic' => true, 'source_contact_id' => $emeliaCid],
+                    occurredAt: $date,
+                    externalId: $externalId,
                     emeliaCampaignId: $camp->id,
                 );
                 if ($activity !== null) {
