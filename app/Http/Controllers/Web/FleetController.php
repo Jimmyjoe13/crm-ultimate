@@ -336,6 +336,8 @@ class FleetController extends Controller
                 'logs'              => $julietteStatus['logs'] ?? [],
                 'last'              => $julietteLast,
                 'stale'             => $julietteStale,
+                // Tracking d'ouverture (calculé depuis les activités CRM, pas Redis).
+                'tracking'          => $this->collectJulietteTracking(),
             ],
             'generated_at'    => now()->toIso8601String(),
         ];
@@ -349,6 +351,79 @@ class FleetController extends Controller
             'josephStale'      => $josephStale,
             'josephLast'       => $josephLast,
             'live'             => $live,
+        ];
+    }
+
+    /**
+     * Statistiques d'ouverture des cold emails de Juliette, calculées depuis les activités CRM
+     * (Postgres) — indépendant de Redis. Alimente les KPI, le graphe et la table « par objet »
+     * de l'onglet monitoring. Les ouvertures robots/proxies sont exclues du taux « humain ».
+     */
+    private function collectJulietteTracking(): array
+    {
+        $base = fn () => \App\Models\Activity::where('source', 'juliette');
+
+        $sent        = (clone $base())->where('type', \App\Models\Activity::TYPE_EMAIL_SENT)->count();
+        $opened      = (clone $base())->where('type', \App\Models\Activity::TYPE_EMAIL_OPENED)->count();
+        $humanOpened = (clone $base())->where('type', \App\Models\Activity::TYPE_EMAIL_OPENED)
+            ->whereRaw("(metadata->>'is_bot')::boolean IS NOT TRUE")->count();
+
+        $openRate      = $sent > 0 ? round($opened / $sent * 100, 1) : 0.0;
+        $humanOpenRate = $sent > 0 ? round($humanOpened / $sent * 100, 1) : 0.0;
+
+        // ── Par objet : envoyés vs ouverts (humains) — boucle de feedback pour la rédaction ──
+        $sentBySubject = (clone $base())->where('type', \App\Models\Activity::TYPE_EMAIL_SENT)
+            ->selectRaw("COALESCE(NULLIF(metadata->>'subject',''),'(sans objet)') as subject, "
+                . "COALESCE(metadata->>'step','?') as step, count(*) as n")
+            ->groupByRaw('1, 2')->get();
+
+        $openedBySubject = (clone $base())->where('type', \App\Models\Activity::TYPE_EMAIL_OPENED)
+            ->whereRaw("(metadata->>'is_bot')::boolean IS NOT TRUE")
+            ->selectRaw("COALESCE(NULLIF(metadata->>'subject',''),'(sans objet)') as subject, count(*) as n")
+            ->groupByRaw('1')->get()->keyBy('subject');
+
+        $bySubject = $sentBySubject->map(function ($r) use ($openedBySubject) {
+            $n = (int) $r->n;
+            $o = (int) ($openedBySubject[$r->subject]->n ?? 0);
+
+            return [
+                'subject' => $r->subject,
+                'step'    => $r->step,
+                'sent'    => $n,
+                'opened'  => $o,
+                'rate'    => $n > 0 ? round($o / $n * 100, 1) : 0.0,
+            ];
+        })->sortByDesc('sent')->values()->take(15)->all();
+
+        // ── Timeline 14 jours : envois vs ouvertures humaines par jour ──
+        $since      = now()->subDays(13)->startOfDay();
+        $sentByDay  = (clone $base())->where('type', \App\Models\Activity::TYPE_EMAIL_SENT)
+            ->where('occurred_at', '>=', $since)
+            ->selectRaw('occurred_at::date as d, count(*) as n')->groupByRaw('1')->pluck('n', 'd');
+        $openByDay  = (clone $base())->where('type', \App\Models\Activity::TYPE_EMAIL_OPENED)
+            ->whereRaw("(metadata->>'is_bot')::boolean IS NOT TRUE")
+            ->where('occurred_at', '>=', $since)
+            ->selectRaw('occurred_at::date as d, count(*) as n')->groupByRaw('1')->pluck('n', 'd');
+
+        $timeline = [];
+        for ($i = 0; $i < 14; $i++) {
+            $day = now()->subDays(13 - $i)->toDateString();
+            $timeline[] = [
+                'date'   => $day,
+                'sent'   => (int) ($sentByDay[$day] ?? 0),
+                'opened' => (int) ($openByDay[$day] ?? 0),
+            ];
+        }
+
+        return [
+            'sent'            => $sent,
+            'opened'          => $opened,
+            'human_opened'    => $humanOpened,
+            'bot_opened'      => max(0, $opened - $humanOpened),
+            'open_rate'       => $openRate,
+            'human_open_rate' => $humanOpenRate,
+            'by_subject'      => $bySubject,
+            'timeline'        => $timeline,
         ];
     }
 

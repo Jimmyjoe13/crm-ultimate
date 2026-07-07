@@ -669,6 +669,52 @@
                 </template>
             </div>
 
+            <!-- Tracking d'ouverture (calculé depuis les activités CRM) -->
+            <div class="card p-5" style="background: var(--surface); border-color: var(--border);">
+                <div class="mono-label mb-3" style="font-size: 10px; color: #0284c7;">Ouvertures des cold emails</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <div class="p-3 bg-surface2 rounded text-center">
+                        <div class="text-lg font-bold" style="color: var(--accent);" x-text="(tk().open_rate ?? 0) + '%'"></div>
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Taux d'ouverture</div>
+                    </div>
+                    <div class="p-3 bg-surface2 rounded text-center">
+                        <div class="text-lg font-bold" style="color: var(--ok);" x-text="(tk().human_open_rate ?? 0) + '%'"></div>
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Taux humain</div>
+                    </div>
+                    <div class="p-3 bg-surface2 rounded text-center">
+                        <div class="text-lg font-bold text-primary" x-text="tk().human_opened ?? 0"></div>
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Ouv. humaines</div>
+                    </div>
+                    <div class="p-3 bg-surface2 rounded text-center">
+                        <div class="text-lg font-bold text-tertiary" x-text="tk().bot_opened ?? 0"></div>
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Robots filtrés</div>
+                    </div>
+                </div>
+                <div class="text-[10px] font-mono text-tertiary mb-4">
+                    <span x-text="tk().opened ?? 0"></span> ouverture(s) sur <span x-text="tk().sent ?? 0"></span> envoi(s) — ouvertures &lt; 10s ou proxy connu exclues du taux humain.
+                </div>
+                <!-- Timeline 14 jours (barres CSS : envois vs ouvertures) -->
+                <div class="mono-label mb-2" style="font-size: 10px; color: var(--text-tertiary, #94a3b8);">14 derniers jours</div>
+                <div class="flex items-end gap-1 h-28 relative">
+                    <template x-for="(d, i) in (tk().timeline || [])" :key="i">
+                        <div class="flex-1 flex flex-col items-center justify-end gap-0.5 h-full"
+                             :title="d.date + ' — ' + d.sent + ' envois / ' + d.opened + ' ouvertures'">
+                            <div class="w-full flex items-end justify-center gap-0.5" style="height: 90%;">
+                                <div class="w-1/2 rounded-t bg-slate-500/40 transition-all duration-500" :style="'height:' + barH(d.sent) + '%'"></div>
+                                <div class="w-1/2 rounded-t bg-sky-500 transition-all duration-500" :style="'height:' + barH(d.opened) + '%'"></div>
+                            </div>
+                            <span class="text-[7px] font-mono text-tertiary" x-text="(d.date || '').slice(8,10)"></span>
+                        </div>
+                    </template>
+                    <div x-show="(tk().timeline || []).every(d => (d.sent||0) === 0 && (d.opened||0) === 0)"
+                         class="absolute inset-0 flex items-center justify-center text-tertiary italic text-xs">Aucune donnée sur la période.</div>
+                </div>
+                <div class="flex items-center gap-3 mt-2 text-[9px] font-mono text-tertiary">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-slate-500/40"></span> Envois</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-sky-500"></span> Ouvertures</span>
+                </div>
+            </div>
+
             <!-- Table par campagne -->
             <div class="card p-0 overflow-hidden" style="border-color: var(--border);">
                 <div class="p-3" style="background: var(--surface2); border-bottom: 1px solid var(--border);">
@@ -699,6 +745,40 @@
                             </template>
                             <tr x-show="(live.juliette.campaigns || []).length === 0">
                                 <td colspan="6" class="p-6 text-center text-tertiary">📭 Aucune campagne active.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Taux d'ouverture par objet (boucle de feedback rédaction) -->
+            <div class="card p-0 overflow-hidden" style="border-color: var(--border);">
+                <div class="p-3" style="background: var(--surface2); border-bottom: 1px solid var(--border);">
+                    <div class="mono-label" style="font-size: 10px; color: #0284c7;">Taux d'ouverture par objet</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table-default w-full border-collapse text-left text-xs">
+                        <thead>
+                            <tr style="background: var(--surface2); border-bottom: 1px solid var(--border);">
+                                <th class="p-2.5 font-semibold text-secondary">Objet</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Étape</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Envoyés</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Ouverts</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Taux</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-default">
+                            <template x-for="(s, i) in (tk().by_subject || [])" :key="i">
+                                <tr class="hover:bg-surface2 transition-colors">
+                                    <td class="p-2.5 font-mono text-primary text-[11px] max-w-[220px] truncate" x-text="s.subject" :title="s.subject"></td>
+                                    <td class="p-2.5 text-center font-mono text-tertiary" x-text="s.step"></td>
+                                    <td class="p-2.5 text-center font-mono text-secondary" x-text="s.sent"></td>
+                                    <td class="p-2.5 text-center font-mono" style="color: var(--ok);" x-text="s.opened"></td>
+                                    <td class="p-2.5 text-center font-mono font-bold" x-text="(s.rate ?? 0) + '%'"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="(tk().by_subject || []).length === 0">
+                                <td colspan="5" class="p-6 text-center text-tertiary">Aucune donnée d'ouverture par objet pour l'instant.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -853,6 +933,17 @@ function fleetDashboard(seed) {
         },
         statusChip(s) {
             return ({ queued: '', in_progress: 'accent', done: 'ok', failed: 'err', awaiting_approval: 'warn' })[s] || '';
+        },
+        // Tracking d'ouverture Juliette (agrégats CRM injectés dans live.juliette.tracking)
+        tk() {
+            return (this.live && this.live.juliette && this.live.juliette.tracking) || {};
+        },
+        // Hauteur de barre (%) relative au max envois/ouvertures de la timeline
+        barH(v) {
+            const t = this.tk().timeline || [];
+            let max = 1;
+            t.forEach(d => { max = Math.max(max, d.sent || 0, d.opened || 0); });
+            return Math.round(((v || 0) / max) * 100);
         },
         barColor(p) {
             p = p || 0;

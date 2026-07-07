@@ -14,4 +14,10 @@ return [
         'base_url' => env('EMELIA_BASE_URL', 'https://api.emelia.io'),
         'timeout' => (int) env('EMELIA_TIMEOUT', 15),
     ],
+
+    // Tracking d'ouverture des cold emails de Juliette (pixel first-party hébergé sur le CRM).
+    // Secret PARTAGÉ avec le mailer de la flotte (config/acquisition.env → TRACKING_SECRET).
+    'tracking' => [
+        'secret' => env('TRACKING_SECRET'),
+    ],
 ];

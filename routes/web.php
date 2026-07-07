@@ -21,7 +21,12 @@ use App\Http\Controllers\Web\Settings\ConsoleController;
 use App\Http\Controllers\Web\Settings\CustomFieldController;
 use App\Http\Controllers\Web\Settings\StageController;
 use App\Http\Controllers\Web\TrashController;
+use App\Http\Controllers\Tracking\TrackingController;
 use Illuminate\Support\Facades\Route;
+
+// ─── Tracking d'ouverture cold email (pixel public : sans auth, GET donc exempt CSRF) ──
+// URL courte volontaire (/o/…) pour rester discret côté anti-spam. Le token est signé HMAC.
+Route::get('/o/{token}', [TrackingController::class, 'open'])->name('tracking.open');
 
 // ─── Auth (public) ───────────────────────────────────────────────────────────
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
