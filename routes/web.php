@@ -109,8 +109,12 @@ Route::middleware('web.auth')->group(function () {
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
         Route::get('/fleet', [FleetController::class, 'index'])->name('fleet.index');
+        Route::get('/fleet/data', [FleetController::class, 'data'])->name('fleet.data');
         Route::post('/fleet/trigger', [FleetController::class, 'triggerAction'])->name('fleet.trigger');
         Route::post('/fleet/approve/{taskId}', [FleetController::class, 'approveTask'])->name('fleet.approve');
+        Route::post('/fleet/reject/{taskId}', [FleetController::class, 'rejectTask'])->name('fleet.reject');
+        Route::post('/fleet/retry/{taskId}', [FleetController::class, 'retryTask'])->name('fleet.retry');
+        Route::post('/fleet/purge', [FleetController::class, 'purgeTasks'])->name('fleet.purge');
 
         Route::post('/contacts/{contact}/emelia', [EmeliaController::class, 'addContact'])->name('contacts.emelia.add');
         Route::delete('/contacts/{contact}', [ContactController::class, 'destroy']);

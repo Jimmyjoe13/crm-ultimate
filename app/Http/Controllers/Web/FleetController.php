@@ -108,13 +108,50 @@ class FleetController extends Controller
             'dept' => 'qa',
             'avatar_color' => 'bg-emerald-700',
         ],
+        'joseph' => [
+            'name' => 'Joseph',
+            'role' => 'Auto-remédiation & Infrastructure',
+            'description' => 'Surveille la santé du VPS, l\'espace disque, les verrous et résout les anomalies.',
+            'squad' => 'maintenance',
+            'dept' => 'maintenance',
+            'avatar_color' => 'bg-red-700',
+        ],
     ];
 
     public function index(Request $request)
     {
+        $data = $this->collectFleetData();
+
+        // Le journal d'audit (Postgres) n'est utilisé que pour le rendu initial (pas de polling).
+        $data['auditLogs'] = AuditLog::with('user')
+            ->orderBy('id', 'desc')
+            ->limit(10)
+            ->get();
+
+        return view('pages.fleet.index', $data);
+    }
+
+    /**
+     * Endpoint JSON léger pour le rafraîchissement temps réel (polling Alpine).
+     * Renvoie exactement le même « payload live » que celui utilisé pour amorcer
+     * la vue, afin que le JS patche l'état sans divergence de forme.
+     */
+    public function data(Request $request)
+    {
+        $data = $this->collectFleetData();
+        return response()->json($data['live']);
+    }
+
+    /**
+     * Collecte l'état de la flotte depuis Redis et construit :
+     *  - les variables de rendu Blade (agents complets, tâches, approbations, Joseph)
+     *  - un « payload live » compact réutilisé par index() (seed) et data() (polling).
+     */
+    private function collectFleetData(): array
+    {
         $fleetRedis = Redis::connection('fleet');
-        
-        // 1. Récupérer toutes les clés task:*
+
+        // 1. Récupérer toutes les tâches task:*
         $taskKeys = [];
         try {
             $taskKeys = $fleetRedis->keys('task:*') ?: [];
@@ -122,7 +159,7 @@ class FleetController extends Controller
             \Log::warning('[FleetController] Erreur de lecture des clés Redis : ' . $e->getMessage());
         }
 
-        $tasks = [];
+        $allTasks = [];
         foreach ($taskKeys as $key) {
             // Sous certains drivers phpredis, les clés ont parfois le préfixe de la base
             $cleanKey = str_replace(config('database.redis.options.prefix', ''), '', $key);
@@ -130,23 +167,40 @@ class FleetController extends Controller
             if ($raw) {
                 $taskDecoded = json_decode($raw, true);
                 if ($taskDecoded) {
-                    $tasks[] = $taskDecoded;
+                    $allTasks[] = $taskDecoded;
                 }
             }
         }
 
-        // Trier les tâches par date de création décroissante
-        usort($tasks, function ($a, $b) {
+        // Trier par date de création décroissante
+        usort($allTasks, function ($a, $b) {
             return strcmp($b['created_at'] ?? '', $a['created_at'] ?? '');
         });
 
-        // Limiter à 30 tâches
-        $tasks = array_slice($tasks, 0, 30);
+        // Compteurs de statut calculés sur l'ENSEMBLE des tâches (avant plafonnement d'affichage)
+        $stats = [
+            'total'         => count($allTasks),
+            'queued'        => 0,
+            'in_progress'   => 0,
+            'done'          => 0,
+            'failed'        => 0,
+            'other'         => 0,
+        ];
+        foreach ($allTasks as $t) {
+            $st = $t['status'] ?? 'queued';
+            if (isset($stats[$st])) {
+                $stats[$st]++;
+            } else {
+                $stats['other']++;
+            }
+        }
 
-        // 2. Récupérer les tâches de la queue d'approbation (approvals:pending)
+        // On n'affiche/transmet que les 30 dernières tâches
+        $tasks = array_slice($allTasks, 0, 30);
+
+        // 2. Récupérer les tâches en attente d'approbation (approvals:pending)
         $pendingApprovals = [];
         try {
-            // approvals:pending est stocké soit comme une liste Redis (LRANGE)
             $pendingKeys = $fleetRedis->lrange('approvals:pending', 0, -1) ?: [];
             foreach ($pendingKeys as $tid) {
                 $rawTask = $fleetRedis->get("task:{$tid}");
@@ -160,34 +214,106 @@ class FleetController extends Controller
         } catch (\Exception $e) {
             \Log::warning('[FleetController] Erreur approvals Redis : ' . $e->getMessage());
         }
+        $stats['pending_approvals'] = count($pendingApprovals);
 
-        // 3. Déduire le statut de santé des agents en fonction des tâches actives
+        // 3. Déduire le statut de chaque agent + lire son heartbeat (last_seen) s'il existe
         $agents = self::AGENTS;
+        $liveAgents = [];
         foreach ($agents as $key => &$agent) {
-            $agent['status'] = 'idle'; // par défaut : prêt / en veille
-            
-            // Si l'agent a une tâche in_progress, il est actif
+            $agent['status'] = 'idle'; // défaut : en veille
+
             foreach ($tasks as $t) {
-                if (($t['dept'] === $agent['dept']) && ($t['status'] === 'in_progress')) {
+                if (($t['dept'] ?? null) === $agent['dept'] && ($t['status'] ?? null) === 'in_progress') {
                     $agent['status'] = 'active';
                     break;
                 }
             }
+
+            // Heartbeat optionnel (écrit par les workers VPS — null tant que non déployé, sans casser l'UI)
+            $lastSeen = null;
+            try {
+                $lastSeen = $fleetRedis->get("fleet:agent:{$agent['dept']}:last_seen") ?: null;
+            } catch (\Exception $e) {
+                // silencieux : le heartbeat est une amélioration optionnelle
+            }
+            // « en ligne » si le dernier battement date de moins de 120s
+            $online = false;
+            if ($lastSeen) {
+                try {
+                    $online = \Carbon\Carbon::parse($lastSeen)->gt(now()->subSeconds(120));
+                } catch (\Exception $e) {
+                    $online = false;
+                }
+            }
+            $agent['last_seen'] = $lastSeen;
+            $agent['online'] = $online;
+
+            $liveAgents[$key] = [
+                'status'        => $agent['status'],
+                'last_seen'     => $lastSeen,
+                'online'        => $online,
+                'has_heartbeat' => $lastSeen !== null,
+            ];
+        }
+        unset($agent);
+
+        // 4. État de Joseph + fraîcheur du dernier diagnostic
+        $josephStatus = [];
+        try {
+            $rawStatus = $fleetRedis->get('fleet:joseph:status');
+            if ($rawStatus) {
+                $josephStatus = json_decode($rawStatus, true) ?: [];
+            }
+        } catch (\Exception $e) {
+            \Log::warning('[FleetController] Erreur lecture statut Joseph Redis : ' . $e->getMessage());
         }
 
-        // 4. Récupérer l'activité récente de la flotte à partir des logs d'audit
-        $auditLogs = AuditLog::with('user')
-            ->orderBy('id', 'desc')
-            ->limit(10)
-            ->get();
+        $josephLast = $josephStatus['timestamp'] ?? null;
+        $josephStale = false;
+        if ($josephLast) {
+            try {
+                $josephStale = \Carbon\Carbon::parse($josephLast)->lt(now()->subHours(24));
+            } catch (\Exception $e) {
+                $josephStale = false;
+            }
+        } else {
+            // Aucun diagnostic connu => considéré comme périmé
+            $josephStale = true;
+        }
 
-        return view('pages.fleet.index', compact('agents', 'tasks', 'pendingApprovals', 'auditLogs'));
+        // Payload « live » compact (seed + polling), forme stable
+        $live = [
+            'stats'           => $stats,
+            'agents'          => $liveAgents,
+            'tasks'           => $tasks,
+            'approvals_count' => count($pendingApprovals),
+            'joseph'          => [
+                'status'   => $josephStatus['status'] ?? 'healthy',
+                'system'   => $josephStatus['system'] ?? null,
+                'services' => $josephStatus['services'] ?? null,
+                'logs'     => $josephStatus['logs'] ?? [],
+                'last'     => $josephLast,
+                'stale'    => $josephStale,
+            ],
+            'generated_at'    => now()->toIso8601String(),
+        ];
+
+        return [
+            'agents'           => $agents,
+            'tasks'            => $tasks,
+            'pendingApprovals' => $pendingApprovals,
+            'josephStatus'     => $josephStatus,
+            'stats'            => $stats,
+            'josephStale'      => $josephStale,
+            'josephLast'       => $josephLast,
+            'live'             => $live,
+        ];
     }
 
     public function triggerAction(Request $request)
     {
         $data = $request->validate([
-            'agent' => 'required|string|in:richard,sam,nora,mia,juliette,siteweb,lea,alex,vera,caro,lin,max',
+            'agent' => 'required|string|in:richard,sam,nora,mia,juliette,siteweb,lea,alex,vera,caro,lin,max,joseph',
             'action_type' => 'required|string',
         ]);
 
@@ -204,6 +330,7 @@ class FleetController extends Controller
                 'finance', 'sales', 'content' => 'G',
                 'acquisition' => 'A',
                 'web-lead', 'seo', 'devops', 'watch', 'cro', 'linking', 'qa' => 'W',
+                'maintenance' => 'M',
                 default => 'T',
             };
 
@@ -223,6 +350,8 @@ class FleetController extends Controller
                 $payload = ['check_all' => true];
             } elseif (in_array($actionType, ['web_quality_audit', 'seo_audit', 'competitor_scan', 'conversion_audit', 'backlink_check', 'non_regression_test', 'deploy_build'])) {
                 $payload = ['target' => 'nana-intelligence.fr', 'depth' => 2, 'initiated_by' => 'crm_ultimate'];
+            } elseif ($actionType === 'infra_diagnostic') {
+                $payload = ['target' => 'vps', 'initiated_by' => 'crm_ultimate'];
             }
 
             $task = [
@@ -292,6 +421,163 @@ class FleetController extends Controller
 
             return redirect()->route('fleet.index')->with('flash_toast', [
                 'message' => "Tâche {$taskId} approuvée et relancée !",
+                'type' => 'success',
+            ]);
+
+        } catch (\Exception $e) {
+            return redirect()->route('fleet.index')->with('flash_toast', [
+                'message' => "Erreur Redis : " . $e->getMessage(),
+                'type' => 'danger',
+            ]);
+        }
+    }
+
+    /**
+     * Rejette une tâche en attente de validation : la retire de approvals:pending
+     * et marque son statut « rejected » (miroir de bus.reject côté flotte).
+     */
+    public function rejectTask(Request $request, $taskId)
+    {
+        try {
+            $fleetRedis = Redis::connection('fleet');
+
+            $raw = $fleetRedis->get("task:{$taskId}");
+            if (!$raw) {
+                return redirect()->route('fleet.index')->with('flash_toast', [
+                    'message' => "Tâche {$taskId} introuvable.",
+                    'type' => 'danger',
+                ]);
+            }
+
+            $task = json_decode($raw, true);
+            $task['status'] = 'rejected';
+            if (isset($task['approval']) && is_array($task['approval'])) {
+                $task['approval']['status'] = 'rejected';
+            }
+
+            $fleetRedis->set("task:{$taskId}", json_encode($task, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $fleetRedis->lrem('approvals:pending', 0, $taskId);
+            // Cohérence avec le GC de la flotte (phase 4) : une tâche terminée expire à 7j.
+            $fleetRedis->expire("task:{$taskId}", 7 * 24 * 3600);
+
+            return redirect()->route('fleet.index')->with('flash_toast', [
+                'message' => "Tâche {$taskId} rejetée.",
+                'type' => 'success',
+            ]);
+
+        } catch (\Exception $e) {
+            return redirect()->route('fleet.index')->with('flash_toast', [
+                'message' => "Erreur Redis : " . $e->getMessage(),
+                'type' => 'danger',
+            ]);
+        }
+    }
+
+    /**
+     * Relance une tâche en échec : repasse le statut à « queued », efface le résultat
+     * précédent et ré-empile la tâche dans le stream de son département.
+     */
+    public function retryTask(Request $request, $taskId)
+    {
+        try {
+            $fleetRedis = Redis::connection('fleet');
+
+            $raw = $fleetRedis->get("task:{$taskId}");
+            if (!$raw) {
+                return redirect()->route('fleet.index')->with('flash_toast', [
+                    'message' => "Tâche {$taskId} introuvable.",
+                    'type' => 'danger',
+                ]);
+            }
+
+            $task = json_decode($raw, true);
+            $currentStatus = $task['status'] ?? 'queued';
+            if ($currentStatus !== 'failed') {
+                return redirect()->route('fleet.index')->with('flash_toast', [
+                    'message' => "Seules les tâches en échec sont relançables (tâche {$taskId} : {$currentStatus}).",
+                    'type' => 'danger',
+                ]);
+            }
+
+            $dept = $task['dept'] ?? null;
+            if (!$dept) {
+                return redirect()->route('fleet.index')->with('flash_toast', [
+                    'message' => "Tâche {$taskId} sans département : relance impossible.",
+                    'type' => 'danger',
+                ]);
+            }
+
+            // Réinitialiser pour ré-exécution
+            $task['status'] = 'queued';
+            $task['result'] = null;
+            $fleetRedis->set("task:{$taskId}", json_encode($task, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
+            // Ré-empiler dans le stream du dépt (XADD brut pour éviter les bugs de conversion d'arguments)
+            $fleetRedis->executeRaw(['XADD', "tasks:{$dept}", '*', 'id', $taskId]);
+
+            return redirect()->route('fleet.index')->with('flash_toast', [
+                'message' => "Tâche {$taskId} relancée dans le bus ({$dept}).",
+                'type' => 'success',
+            ]);
+
+        } catch (\Exception $e) {
+            return redirect()->route('fleet.index')->with('flash_toast', [
+                'message' => "Erreur Redis : " . $e->getMessage(),
+                'type' => 'danger',
+            ]);
+        }
+    }
+
+    /**
+     * Purge les tâches terminées du bus Redis (done et/ou failed), en préservant
+     * systématiquement celles en attente d'approbation. Recoupe le GC automatique
+     * prévu côté flotte (phase 4) mais reste déclenchable manuellement depuis l'UI.
+     */
+    public function purgeTasks(Request $request)
+    {
+        $data = $request->validate([
+            'scope' => 'nullable|string|in:terminated,failed,done',
+        ]);
+        $scope = $data['scope'] ?? 'terminated';
+        $targetStatuses = match ($scope) {
+            'failed' => ['failed'],
+            'done'   => ['done'],
+            default  => ['done', 'failed'],
+        };
+
+        try {
+            $fleetRedis = Redis::connection('fleet');
+            $prefix = config('database.redis.options.prefix', '');
+
+            $taskKeys = $fleetRedis->keys('task:*') ?: [];
+
+            // Ne jamais purger une tâche en attente de validation
+            $pending = $fleetRedis->lrange('approvals:pending', 0, -1) ?: [];
+            $pendingSet = array_flip($pending);
+
+            $purged = 0;
+            foreach ($taskKeys as $key) {
+                $cleanKey = str_replace($prefix, '', $key);
+                $rawTask = $fleetRedis->get($cleanKey);
+                if (!$rawTask) {
+                    continue;
+                }
+                $t = json_decode($rawTask, true);
+                if (!$t) {
+                    continue;
+                }
+                $id = $t['id'] ?? null;
+                if ($id !== null && isset($pendingSet[$id])) {
+                    continue;
+                }
+                if (in_array($t['status'] ?? '', $targetStatuses, true)) {
+                    $fleetRedis->del($cleanKey);
+                    $purged++;
+                }
+            }
+
+            return redirect()->route('fleet.index')->with('flash_toast', [
+                'message' => "{$purged} tâche(s) purgée(s) ({$scope}).",
                 'type' => 'success',
             ]);
 
