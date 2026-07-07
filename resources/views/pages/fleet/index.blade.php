@@ -86,6 +86,10 @@
             🛡️ Infrastructure & Maintenance (Joseph)
             <span class="led pulse" x-show="live.joseph.status !== 'healthy' || live.joseph.stale" style="background-color: var(--warn); box-shadow: 0 0 8px var(--warn); width: 6px; height: 6px;" x-cloak></span>
         </button>
+        <button @click="activeTab = 'juliette'" :class="activeTab === 'juliette' ? 'border-b-2 border-accent text-primary font-bold' : 'text-secondary'" class="pb-3 text-sm font-semibold transition-all flex items-center gap-2">
+            📧 Acquisition & Cold Email (Juliette)
+            <span class="led pulse" x-show="live.juliette.status !== 'healthy' || live.juliette.stale" style="background-color: var(--warn); box-shadow: 0 0 8px var(--warn); width: 6px; height: 6px;" x-cloak></span>
+        </button>
         <!-- Indicateur de rafraîchissement live -->
         <span class="ml-auto flex items-center gap-1.5 text-[10px] font-mono text-tertiary pb-3" title="Rafraîchissement automatique toutes les 12s">
             <span class="led green" style="width:6px;height:6px;"></span>
@@ -160,9 +164,9 @@
                                     🎨 Créer un post
                                 </button>
                             @elseif($key === 'juliette')
-                                <input type="hidden" name="action_type" value="inbox_sync">
+                                <input type="hidden" name="action_type" value="poll_inbox">
                                 <button type="submit" class="btn primary sm w-full justify-center text-xs">
-                                    ⚡ Sync Campaign & Inbox
+                                    📥 Relever la boîte mail
                                 </button>
                             @endif
                         </form>
@@ -545,6 +549,225 @@
                     <div class="text-slate-500 italic" x-show="(live.joseph.logs || []).length === 0">Console vide. Aucun historique de diagnostic disponible.</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Conteneur Juliette (Acquisition & Cold Email) -->
+    <div x-show="activeTab === 'juliette'" class="px-7 pb-12 grid grid-cols-12 gap-6" x-cloak>
+        <!-- Colonne Gauche : Carte Juliette + actions + envois du jour -->
+        <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+            <!-- Carte Juliette -->
+            <div class="agent-card p-5 flex flex-col justify-between" style="background: var(--surface);">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <span class="av sm text-white font-bold" style="background: #0284c7; width: 36px; height: 36px;">JU</span>
+                            <div>
+                                <h3 class="text-sm font-bold m-0">{{ $agents['juliette']['name'] }}</h3>
+                                <span class="text-[9px] text-tertiary font-mono uppercase tracking-wider">acquisition squad</span>
+                            </div>
+                        </div>
+                        <span class="led" :class="(live.agents['juliette'] && live.agents['juliette'].online) ? 'green' : 'off'"
+                              :title="(live.agents['juliette'] && live.agents['juliette'].online) ? 'Worker en ligne' : 'Worker hors-ligne'"></span>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-[11px] font-bold uppercase font-mono mb-1" style="color: #0284c7;">{{ $agents['juliette']['role'] }}</div>
+                        <p class="text-xs text-secondary leading-relaxed">{{ $agents['juliette']['description'] }}</p>
+                        <div class="mt-2 flex items-center gap-1.5 text-[10px] font-mono">
+                            <span x-show="live.juliette.stale" class="chip warn text-[9px] uppercase font-bold py-0.5 px-1.5 rounded" x-cloak>⚠️ Statut périmé</span>
+                            <span class="text-tertiary" x-text="live.juliette.last ? ('Statut : ' + fmtDate(live.juliette.last)) : 'Aucun statut exporté'"></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Actions rapides -->
+                <div class="mt-4 pt-3 border-t border-default flex flex-col gap-2">
+                    <form method="POST" action="{{ route('fleet.trigger') }}" onsubmit="return confirm('Déclencher une relève de la boîte mail (réponses / bounces) ?');">
+                        @csrf
+                        <input type="hidden" name="agent" value="juliette">
+                        <input type="hidden" name="action_type" value="poll_inbox">
+                        <button type="submit" class="btn sm w-full justify-center text-xs" style="background: var(--surface2); border-color: var(--border);">📥 Scanner la boîte mail</button>
+                    </form>
+                    <form method="POST" action="{{ route('fleet.trigger') }}">
+                        @csrf
+                        <input type="hidden" name="agent" value="juliette">
+                        <input type="hidden" name="action_type" value="refresh_status">
+                        <button type="submit" class="btn sm w-full justify-center text-xs" style="background: var(--surface2); border-color: var(--border);">🔄 Rafraîchir le statut</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Envois du jour vs cap -->
+            <div class="card p-5 flex flex-col gap-4" style="background: var(--surface); border-color: var(--border);">
+                <div class="mono-label" style="font-size: 10px; color: #0284c7;">Envois du jour</div>
+                <div>
+                    <div class="flex justify-between text-xs font-mono mb-1">
+                        <span class="text-secondary">Cold emails envoyés</span>
+                        <span class="font-bold text-primary"><span x-text="live.juliette.sends.today ?? 0"></span> / <span x-text="live.juliette.sends.cap ?? 45"></span></span>
+                    </div>
+                    <div class="w-full bg-surface2 rounded-full h-2 overflow-hidden">
+                        <div class="h-2 rounded-full transition-all duration-500 bg-emerald-600"
+                             :style="'width:' + Math.min(100, Math.round(((live.juliette.sends.today ?? 0) / (live.juliette.sends.cap || 45)) * 100)) + '%'"></div>
+                    </div>
+                </div>
+                <!-- Compteurs -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="p-2.5 bg-surface2 rounded text-xs font-mono flex flex-col gap-0.5">
+                        <span class="text-tertiary text-[10px] uppercase">Batch en attente</span>
+                        <span class="font-bold text-primary" x-text="live.juliette.pending_batch_size ?? 0"></span>
+                    </div>
+                    <div class="p-2.5 bg-surface2 rounded text-xs font-mono flex flex-col gap-0.5">
+                        <span class="text-tertiary text-[10px] uppercase">Suppression</span>
+                        <span class="font-bold text-primary" x-text="live.juliette.suppression_count ?? 0"></span>
+                    </div>
+                    <div class="p-2.5 bg-surface2 rounded text-xs font-mono flex flex-col gap-0.5 col-span-2">
+                        <span class="text-tertiary text-[10px] uppercase">Dernière campagne planifiée</span>
+                        <span class="font-bold text-primary" x-text="live.juliette.last_plan_date || '—'"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne Droite : Funnel + campagnes + feed emails -->
+        <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+            <!-- Funnel de séquence -->
+            <div class="card p-5" style="background: var(--surface); border-color: var(--border);">
+                <div class="mono-label mb-3" style="font-size: 10px; color: #0284c7;">Funnel de séquence</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div class="p-3 bg-surface2 rounded text-center">
+                        <div class="text-lg font-bold" style="color: var(--accent);" x-text="(live.juliette.funnel && live.juliette.funnel.active) || 0"></div>
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Actifs</div>
+                    </div>
+                    <div class="p-3 bg-surface2 rounded text-center">
+                        <div class="text-lg font-bold" style="color: var(--ok);" x-text="(live.juliette.funnel && live.juliette.funnel.replied) || 0"></div>
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Réponses</div>
+                    </div>
+                    <div class="p-3 bg-surface2 rounded text-center">
+                        <div class="text-lg font-bold" style="color: var(--err);" x-text="(live.juliette.funnel && live.juliette.funnel.bounced) || 0"></div>
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Bounces</div>
+                    </div>
+                    <div class="p-3 bg-surface2 rounded text-center">
+                        <div class="text-lg font-bold text-primary" x-text="(live.juliette.funnel && live.juliette.funnel.completed) || 0"></div>
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Complétés</div>
+                    </div>
+                </div>
+                <!-- Actifs par étape -->
+                <template x-if="live.juliette.funnel && live.juliette.funnel.active_by_step">
+                    <div class="flex flex-col gap-2">
+                        <template x-for="step in ['1','2','3']" :key="step">
+                            <div>
+                                <div class="flex justify-between text-[11px] font-mono mb-1">
+                                    <span class="text-secondary">Étape <span x-text="step"></span></span>
+                                    <span class="font-bold text-primary" x-text="(live.juliette.funnel.active_by_step[step]) || 0"></span>
+                                </div>
+                                <div class="w-full bg-surface2 rounded-full h-1.5 overflow-hidden">
+                                    <div class="h-1.5 rounded-full bg-sky-600 transition-all duration-500"
+                                         :style="'width:' + Math.min(100, ((live.juliette.funnel.active_by_step[step]||0) / Math.max(1,(live.juliette.funnel.active||1))) * 100) + '%'"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Table par campagne -->
+            <div class="card p-0 overflow-hidden" style="border-color: var(--border);">
+                <div class="p-3" style="background: var(--surface2); border-bottom: 1px solid var(--border);">
+                    <div class="mono-label" style="font-size: 10px; color: #0284c7;">Par campagne</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="table-default w-full border-collapse text-left text-xs">
+                        <thead>
+                            <tr style="background: var(--surface2); border-bottom: 1px solid var(--border);">
+                                <th class="p-2.5 font-semibold text-secondary">Campagne</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Inscrits</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Actifs</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Rép.</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Bnc.</th>
+                                <th class="p-2.5 font-semibold text-secondary text-center">Envoyés</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-default">
+                            <template x-for="c in (live.juliette.campaigns || [])" :key="c.campaign">
+                                <tr class="hover:bg-surface2 transition-colors">
+                                    <td class="p-2.5 font-mono text-primary text-[11px]" x-text="c.campaign"></td>
+                                    <td class="p-2.5 text-center font-mono" x-text="c.enrolled"></td>
+                                    <td class="p-2.5 text-center font-mono" x-text="c.active"></td>
+                                    <td class="p-2.5 text-center font-mono" style="color: var(--ok);" x-text="c.replied"></td>
+                                    <td class="p-2.5 text-center font-mono" style="color: var(--err);" x-text="c.bounced"></td>
+                                    <td class="p-2.5 text-center font-mono text-secondary" x-text="c.sent_total"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="(live.juliette.campaigns || []).length === 0">
+                                <td colspan="6" class="p-6 text-center text-tertiary">📭 Aucune campagne active.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Feed des derniers emails (rendu serveur) -->
+            <div class="card p-5" style="background: var(--surface); border-color: var(--border);">
+                <div class="mono-label mb-3" style="font-size: 10px; color: #0284c7;">Derniers emails ({{ count($julietteFeed) }})</div>
+                <div class="flex flex-col divide-y divide-default">
+                    @forelse($julietteFeed as $a)
+                        @php
+                            $emoji = match($a->type) {
+                                'email_sent' => '📤',
+                                'email_replied' => '💬',
+                                'email_bounced' => '⚠️',
+                                default => '📧',
+                            };
+                            $camp = $a->metadata['campaign'] ?? null;
+                            $subj = $a->metadata['subject'] ?? null;
+                        @endphp
+                        <div class="py-2.5 flex items-start gap-3 text-xs">
+                            <span class="text-base leading-none">{{ $emoji }}</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-semibold text-primary truncate">{{ $a->title }}</span>
+                                    <span class="font-mono text-tertiary text-[10px] whitespace-nowrap">{{ optional($a->occurred_at ?? $a->created_at)->format('d/m H:i') }}</span>
+                                </div>
+                                @if($subj)
+                                    <div class="text-[11px] text-secondary truncate">Objet : {{ $subj }}</div>
+                                @endif
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    @if($camp)<span class="chip font-mono text-[8px] uppercase bg-surface1">{{ $camp }}</span>@endif
+                                    @if($a->subject_id)
+                                        <a href="{{ route('contacts.show', $a->subject_id) }}" class="text-[10px] font-mono hover:underline" style="color: var(--accent);">Voir le contact →</a>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center text-tertiary italic py-6 text-xs">📭 Aucun email cold-email journalisé pour l'instant.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Approbations acquisition en attente -->
+            @php $acqApprovals = collect($pendingApprovals)->filter(fn($a) => ($a['dept'] ?? null) === 'acquisition'); @endphp
+            @if($acqApprovals->count() > 0)
+                <div class="card p-4 border-l-4" style="border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 4%, var(--surface));">
+                    <div class="mono-label mb-2" style="font-size: 10px; color: var(--warn);">Réponses / envois en attente de validation ({{ $acqApprovals->count() }})</div>
+                    <div class="flex flex-col gap-2">
+                        @foreach($acqApprovals as $app)
+                            <div class="flex items-center justify-between p-2.5 bg-surface2 rounded text-xs">
+                                <span class="font-mono text-secondary">{{ $app['id'] }} — {{ $app['type'] }}</span>
+                                <div class="flex gap-1.5">
+                                    <form method="POST" action="{{ route('fleet.approve', $app['id']) }}">
+                                        @csrf
+                                        <button type="submit" class="btn primary sm text-[10px]" style="padding:2px 8px;">Approuver ✓</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('fleet.reject', $app['id']) }}" onsubmit="return confirm('Rejeter {{ $app['id'] }} ?');">
+                                        @csrf
+                                        <button type="submit" class="btn sm text-[10px]" style="padding:2px 8px; background: var(--surface1); color: var(--err);">Rejeter ✕</button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 

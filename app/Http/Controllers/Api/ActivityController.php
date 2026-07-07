@@ -37,7 +37,8 @@ class ActivityController extends Controller
         $required = $operation === 'store' ? 'required' : 'sometimes';
 
         return [
-            'type' => [$required, 'in:note,task,call,email'],
+            // note/task/call/email = saisie manuelle ; email_* = journalisation cold-email (Juliette)
+            'type' => [$required, 'in:note,task,call,email,email_sent,email_replied,email_bounced'],
             'title' => [$required, 'string', 'max:255'],
             'body' => ['nullable', 'string'],
             'status' => ['in:open,done,cancelled'],
@@ -46,6 +47,11 @@ class ActivityController extends Controller
             'subject_type' => ['nullable', 'string', 'in:App\\Models\\Company,App\\Models\\Contact,App\\Models\\Deal'],
             'subject_id' => ['nullable', 'integer'],
             'owner_id' => ['nullable', 'exists:users,id'],
+            // Champs de journalisation automatisée (cold-email / intégrations)
+            'source' => ['nullable', 'string', 'max:50'],
+            'occurred_at' => ['nullable', 'date'],
+            'metadata' => ['nullable', 'array'],
+            'external_id' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

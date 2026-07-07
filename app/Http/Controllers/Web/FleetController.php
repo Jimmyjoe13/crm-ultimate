@@ -128,6 +128,13 @@ class FleetController extends Controller
             ->limit(10)
             ->get();
 
+        // Feed des derniers emails cold-email de Juliette (rendu initial, hors polling léger).
+        $data['julietteFeed'] = \App\Models\Activity::where('source', 'juliette')
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get();
+
         return view('pages.fleet.index', $data);
     }
 
@@ -281,6 +288,28 @@ class FleetController extends Controller
             $josephStale = true;
         }
 
+        // 5. État de Juliette (acquisition / cold email) — écrit par juliette_status.py
+        $julietteStatus = [];
+        try {
+            $rawJuliette = $fleetRedis->get('fleet:juliette:status');
+            if ($rawJuliette) {
+                $julietteStatus = json_decode($rawJuliette, true) ?: [];
+            }
+        } catch (\Exception $e) {
+            \Log::warning('[FleetController] Erreur lecture statut Juliette Redis : ' . $e->getMessage());
+        }
+
+        $julietteLast = $julietteStatus['timestamp'] ?? null;
+        $julietteStale = true; // par défaut périmé si aucun export connu
+        if ($julietteLast) {
+            try {
+                // L'exporteur tourne toutes les 10 min : > 30 min => périmé
+                $julietteStale = \Carbon\Carbon::parse($julietteLast)->lt(now()->subMinutes(30));
+            } catch (\Exception $e) {
+                $julietteStale = false;
+            }
+        }
+
         // Payload « live » compact (seed + polling), forme stable
         $live = [
             'stats'           => $stats,
@@ -294,6 +323,19 @@ class FleetController extends Controller
                 'logs'     => $josephStatus['logs'] ?? [],
                 'last'     => $josephLast,
                 'stale'    => $josephStale,
+            ],
+            'juliette'        => [
+                'status'            => $julietteStatus['status'] ?? 'healthy',
+                'sends'             => $julietteStatus['sends'] ?? ['today' => 0, 'cap' => 45],
+                'funnel'            => $julietteStatus['funnel'] ?? null,
+                'campaigns'         => $julietteStatus['campaigns'] ?? [],
+                'suppression_count' => $julietteStatus['suppression_count'] ?? 0,
+                'inbox'             => $julietteStatus['inbox'] ?? null,
+                'last_plan_date'    => $julietteStatus['last_plan_date'] ?? null,
+                'pending_batch_size' => $julietteStatus['pending_batch_size'] ?? 0,
+                'logs'              => $julietteStatus['logs'] ?? [],
+                'last'              => $julietteLast,
+                'stale'             => $julietteStale,
             ],
             'generated_at'    => now()->toIso8601String(),
         ];
@@ -352,6 +394,9 @@ class FleetController extends Controller
                 $payload = ['target' => 'nana-intelligence.fr', 'depth' => 2, 'initiated_by' => 'crm_ultimate'];
             } elseif ($actionType === 'infra_diagnostic') {
                 $payload = ['target' => 'vps', 'initiated_by' => 'crm_ultimate'];
+            } elseif (in_array($actionType, ['poll_inbox', 'refresh_status'])) {
+                // Actions rapides Juliette (déterministes, sans LLM) traitées par le worker acquisition
+                $payload = ['initiated_by' => 'crm_ultimate'];
             }
 
             $task = [

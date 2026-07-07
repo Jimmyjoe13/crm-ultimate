@@ -119,6 +119,7 @@
                     <option value="all">Toutes</option>
                     <option value="manual">Manuel</option>
                     <option value="emelia">Emelia (Sync)</option>
+                    <option value="juliette">📧 Cold email (Juliette)</option>
                 </select>
             </div>
             @endif
