@@ -250,7 +250,7 @@ class CriticalSecurityTest extends TestCase
         // Entre deux utilisateurs AUTORISÉS (managers), un export reste cloisonné par
         // user_id : l'export d'autrui renvoie 404 (ownedJobOrFail → findOrFail scopé).
         $manager = $this->makeUser(User::ROLE_MANAGER);
-        $other   = $this->makeUser(User::ROLE_MANAGER);
+        $other = $this->makeUser(User::ROLE_MANAGER);
 
         $otherJob = ExportJob::create([
             'user_id' => $other->id,

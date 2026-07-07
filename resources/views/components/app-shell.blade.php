@@ -60,6 +60,12 @@
         <x-rail-icon href="/reports" :active="$active === 'reports'" tooltip="Rapports">
             <svg class="ic" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
         </x-rail-icon>
+        <x-rail-icon href="/audit" :active="$active === 'audit'" tooltip="Journal d'audit">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </x-rail-icon>
+        <x-rail-icon href="/fleet" :active="$active === 'fleet'" tooltip="Flotte d'agents">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 2a5 5 0 100 10 5 5 0 000-10zM17 14h-1.3a6.7 6.7 0 01-7.4 0H7a4 4 0 00-4 4v2h18v-2a4 4 0 00-4-4z"/></svg>
+        </x-rail-icon>
         @endif
 
         <div class="my-2 h-px w-6" style="background: var(--border);"></div>
@@ -72,6 +78,9 @@
         </x-rail-icon>
         <x-rail-icon route="fields.index" :active="$active === 'fields'" tooltip="Champs perso">
             <svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </x-rail-icon>
+        <x-rail-icon route="email-templates.index" :active="$active === 'email-templates'" tooltip="Modèles d'email">
+            <svg class="ic" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
         </x-rail-icon>
         @if(in_array(auth()->user()?->role, ['admin','manager']))
         <x-rail-icon route="trash.index" :active="$active === 'trash'" tooltip="Corbeille">

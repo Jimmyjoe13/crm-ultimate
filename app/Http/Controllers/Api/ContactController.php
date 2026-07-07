@@ -51,10 +51,10 @@ class ContactController extends Controller
 
         return response()->json([
             'data' => [
-                'total'         => (clone $base)->count(),
-                'contactable'   => (clone $base)->contactable()->count(),
-                'blacklisted'   => (clone $base)->blacklisted()->count(),
-                'by_lifecycle'  => (clone $base)
+                'total' => (clone $base)->count(),
+                'contactable' => (clone $base)->contactable()->count(),
+                'blacklisted' => (clone $base)->blacklisted()->count(),
+                'by_lifecycle' => (clone $base)
                     ->selectRaw('lifecycle_stage, COUNT(*) as count')
                     ->groupBy('lifecycle_stage')
                     ->pluck('count', 'lifecycle_stage'),

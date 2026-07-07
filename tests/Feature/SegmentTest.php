@@ -15,7 +15,9 @@ class SegmentTest extends TestCase
     use RefreshDatabase;
 
     private string $adminToken;
+
     private string $commercialToken;
+
     private User $admin;
 
     protected function setUp(): void
@@ -23,17 +25,17 @@ class SegmentTest extends TestCase
         parent::setUp();
 
         $this->admin = User::createWithRole([
-            'name'     => 'Admin',
-            'email'    => 'admin@example.com',
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
             'password' => Hash::make('password'),
-            'role'     => User::ROLE_ADMIN,
+            'role' => User::ROLE_ADMIN,
         ]);
 
         $commercial = User::createWithRole([
-            'name'     => 'Commercial',
-            'email'    => 'commercial@example.com',
+            'name' => 'Commercial',
+            'email' => 'commercial@example.com',
             'password' => Hash::make('password'),
-            'role'     => User::ROLE_SALES,
+            'role' => User::ROLE_SALES,
         ]);
 
         $this->adminToken = $this->postJson('/api/v1/auth/login', [
@@ -56,9 +58,9 @@ class SegmentTest extends TestCase
     {
         $this->withToken($this->adminToken)
             ->postJson('/api/v1/segments', [
-                'name'        => 'Customers',
+                'name' => 'Customers',
                 'entity_type' => 'contact',
-                'rules'       => $this->simpleRules(),
+                'rules' => $this->simpleRules(),
             ])
             ->assertStatus(201)
             ->assertJsonPath('data.name', 'Customers');
@@ -70,9 +72,9 @@ class SegmentTest extends TestCase
     {
         $this->withToken($this->commercialToken)
             ->postJson('/api/v1/segments', [
-                'name'        => 'Leak',
+                'name' => 'Leak',
                 'entity_type' => 'contact',
-                'rules'       => $this->simpleRules(),
+                'rules' => $this->simpleRules(),
             ])
             ->assertStatus(403);
     }
@@ -108,9 +110,9 @@ class SegmentTest extends TestCase
     {
         $this->withToken($this->adminToken)
             ->postJson('/api/v1/segments', [
-                'name'        => 'Bad',
+                'name' => 'Bad',
                 'entity_type' => 'contact',
-                'rules'       => ['op' => 'AND', 'rules' => [['field' => 'email', 'operator' => 'HACK', 'value' => 'x']]],
+                'rules' => ['op' => 'AND', 'rules' => [['field' => 'email', 'operator' => 'HACK', 'value' => 'x']]],
             ])
             ->assertStatus(422);
     }
@@ -119,9 +121,9 @@ class SegmentTest extends TestCase
     {
         $this->withToken($this->adminToken)
             ->postJson('/api/v1/segments', [
-                'name'        => 'Bad',
+                'name' => 'Bad',
                 'entity_type' => 'contact',
-                'rules'       => ['op' => 'AND', 'rules' => [['field' => 'nonexistent', 'operator' => 'eq', 'value' => 'x']]],
+                'rules' => ['op' => 'AND', 'rules' => [['field' => 'nonexistent', 'operator' => 'eq', 'value' => 'x']]],
             ])
             ->assertStatus(422);
     }
@@ -130,9 +132,9 @@ class SegmentTest extends TestCase
     {
         $this->withToken($this->adminToken)
             ->postJson('/api/v1/segments', [
-                'name'        => 'Bad',
+                'name' => 'Bad',
                 'entity_type' => 'contact',
-                'rules'       => ['op' => 'AND', 'rules' => [['field' => 'custom.nonexistent', 'operator' => 'eq', 'value' => 'x']]],
+                'rules' => ['op' => 'AND', 'rules' => [['field' => 'custom.nonexistent', 'operator' => 'eq', 'value' => 'x']]],
             ])
             ->assertStatus(422);
     }
@@ -212,7 +214,7 @@ class SegmentTest extends TestCase
         $this->withToken($this->adminToken)
             ->postJson('/api/v1/segments/preview', [
                 'entity_type' => 'contact',
-                'rules'       => $this->simpleRules(),
+                'rules' => $this->simpleRules(),
             ])
             ->assertOk()
             ->assertJsonPath('count', 1);
@@ -225,7 +227,7 @@ class SegmentTest extends TestCase
     public function test_user_delete_nullifies_created_by(): void
     {
         $user = User::createWithRole([
-            'name'     => 'Temp', 'email' => 'temp@example.com',
+            'name' => 'Temp', 'email' => 'temp@example.com',
             'password' => Hash::make('password'), 'role' => User::ROLE_ADMIN,
         ]);
         $seg = Segment::query()->create([

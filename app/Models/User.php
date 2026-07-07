@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -36,8 +37,8 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'password'                  => 'hashed',
-            'emelia_replies_last_seen'  => 'datetime',
+            'password' => 'hashed',
+            'emelia_replies_last_seen' => 'datetime',
         ];
     }
 
@@ -51,7 +52,7 @@ class User extends Authenticatable
      */
     public static function createWithRole(array $attributes): self
     {
-        $user = new self();
+        $user = new self;
         $user->forceFill($attributes);
         $user->save();
 
@@ -71,7 +72,7 @@ class User extends Authenticatable
     /**
      * Commerciaux rattachés à ce manager (users.manager_id = id).
      */
-    public function subordinates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function subordinates(): HasMany
     {
         return $this->hasMany(self::class, 'manager_id');
     }
@@ -83,7 +84,7 @@ class User extends Authenticatable
      * - manager     : son propre id + ceux des commerciaux dont il est le manager.
      * - commercial  : uniquement son propre id.
      *
-     * @return array<int>|null  null = aucun filtre (voit tout)
+     * @return array<int>|null null = aucun filtre (voit tout)
      */
     public function accessibleOwnerIds(): ?array
     {

@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RunConsoleCommandJob;
 use App\Models\ConsoleRun;
 use App\Models\User;
 use App\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class ConsoleControllerTest extends TestCase
@@ -16,13 +18,14 @@ class ConsoleControllerTest extends TestCase
     private function withAuth(User $user): static
     {
         $jwt = app(JwtService::class)->encode(['sub' => $user->id, 'exp' => time() + 3600]);
+
         return $this->withCookies(['crm_jwt' => $jwt])->withSession(['_token' => 'test']);
     }
 
-    private function postConsole(User $user, string $command): \Illuminate\Testing\TestResponse
+    private function postConsole(User $user, string $command): TestResponse
     {
         return $this->withAuth($user)->post('/settings/console/run', [
-            '_token'  => 'test',
+            '_token' => 'test',
             'command' => $command,
         ]);
     }
@@ -77,7 +80,7 @@ class ConsoleControllerTest extends TestCase
     {
         Queue::fake();
 
-        $admin    = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $response = $this->postConsole($admin, 'emelia-sync');
 
         $response->assertOk();
@@ -87,18 +90,18 @@ class ConsoleControllerTest extends TestCase
         $this->assertTrue($data['async']);
 
         $this->assertDatabaseHas('console_runs', [
-            'user_id'     => $admin->id,
+            'user_id' => $admin->id,
             'command_key' => 'emelia-sync',
-            'status'      => 'pending',
+            'status' => 'pending',
         ]);
 
-        Queue::assertPushed(\App\Jobs\RunConsoleCommandJob::class);
+        Queue::assertPushed(RunConsoleCommandJob::class);
     }
 
     // T6 — commande sync (cache:clear) → exécution immédiate
     public function test_sync_command_runs_immediately(): void
     {
-        $admin    = $this->makeAdmin();
+        $admin = $this->makeAdmin();
         $response = $this->postConsole($admin, 'cache-clear');
 
         $response->assertOk();
@@ -108,7 +111,7 @@ class ConsoleControllerTest extends TestCase
 
         $this->assertDatabaseHas('console_runs', [
             'command_key' => 'cache-clear',
-            'status'      => 'done',
+            'status' => 'done',
         ]);
     }
 
@@ -116,18 +119,18 @@ class ConsoleControllerTest extends TestCase
     public function test_status_endpoint_returns_run(): void
     {
         $admin = $this->makeAdmin();
-        $run   = ConsoleRun::create([
-            'user_id'       => $admin->id,
-            'command_key'   => 'cache-clear',
+        $run = ConsoleRun::create([
+            'user_id' => $admin->id,
+            'command_key' => 'cache-clear',
             'command_label' => 'Vider le cache',
-            'status'        => 'done',
-            'output'        => 'Cache cleared.',
-            'exit_code'     => 0,
-            'started_at'    => now()->subSecond(),
-            'finished_at'   => now(),
+            'status' => 'done',
+            'output' => 'Cache cleared.',
+            'exit_code' => 0,
+            'started_at' => now()->subSecond(),
+            'finished_at' => now(),
         ]);
 
-        $response = $this->withAuth($admin)->get('/settings/console/run/' . $run->id);
+        $response = $this->withAuth($admin)->get('/settings/console/run/'.$run->id);
 
         $response->assertOk();
         $data = $response->json();
@@ -140,11 +143,11 @@ class ConsoleControllerTest extends TestCase
     {
         $admin = $this->makeAdmin();
         ConsoleRun::create([
-            'user_id'       => $admin->id,
-            'command_key'   => 'cache-clear',
+            'user_id' => $admin->id,
+            'command_key' => 'cache-clear',
             'command_label' => 'Vider le cache',
-            'status'        => 'done',
-            'exit_code'     => 0,
+            'status' => 'done',
+            'exit_code' => 0,
         ]);
 
         $response = $this->withAuth($admin)->get('/settings/console');

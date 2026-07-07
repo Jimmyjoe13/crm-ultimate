@@ -16,19 +16,21 @@ class AiController extends Controller
 
     public function dealInsight(Request $request, int $id, string $action): JsonResponse
     {
-        $fresh = $request->boolean('fresh') && in_array(auth()->user()?->role, ['admin', 'manager']);
+        $user = $request->user();
+        $fresh = $request->boolean('fresh') && in_array($user?->role, ['admin', 'manager']);
 
         try {
             $result = match ($action) {
-                'summarize'   => $this->ai->summarizeDeal($id, $fresh),
-                'next-action' => $this->ai->nextActionDeal($id, $fresh),
-                'score'       => $this->ai->scoreDeal($id, $fresh),
-                default       => null,
+                'summarize' => $this->ai->summarizeDeal($id, $fresh, $user),
+                'next-action' => $this->ai->nextActionDeal($id, $fresh, $user),
+                'score' => $this->ai->scoreDeal($id, $fresh, $user),
+                default => null,
             };
         } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Ressource introuvable.'], 404);
         } catch (RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+
             return response()->json(['message' => $e->getMessage()], $status);
         }
 
@@ -41,14 +43,16 @@ class AiController extends Controller
 
     public function contactInsight(Request $request, int $id): JsonResponse
     {
-        $fresh = $request->boolean('fresh') && in_array(auth()->user()?->role, ['admin', 'manager']);
+        $user = $request->user();
+        $fresh = $request->boolean('fresh') && in_array($user?->role, ['admin', 'manager']);
 
         try {
-            $result = $this->ai->summarizeContact($id, $fresh);
+            $result = $this->ai->summarizeContact($id, $fresh, $user);
         } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Ressource introuvable.'], 404);
         } catch (RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+
             return response()->json(['message' => $e->getMessage()], $status);
         }
 
@@ -57,14 +61,16 @@ class AiController extends Controller
 
     public function companyInsight(Request $request, int $id): JsonResponse
     {
-        $fresh = $request->boolean('fresh') && in_array(auth()->user()?->role, ['admin', 'manager']);
+        $user = $request->user();
+        $fresh = $request->boolean('fresh') && in_array($user?->role, ['admin', 'manager']);
 
         try {
-            $result = $this->ai->summarizeCompany($id, $fresh);
+            $result = $this->ai->summarizeCompany($id, $fresh, $user);
         } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Ressource introuvable.'], 404);
         } catch (RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+
             return response()->json(['message' => $e->getMessage()], $status);
         }
 
@@ -75,8 +81,8 @@ class AiController extends Controller
     {
         $validated = $request->validate([
             'contact_id' => ['nullable', 'integer', 'exists:contacts,id'],
-            'deal_id'    => ['nullable', 'integer', 'exists:deals,id'],
-            'intent'     => ['nullable', 'string', 'max:200'],
+            'deal_id' => ['nullable', 'integer', 'exists:deals,id'],
+            'intent' => ['nullable', 'string', 'max:200'],
         ]);
 
         if (empty($validated['contact_id']) && empty($validated['deal_id'])) {
@@ -87,12 +93,14 @@ class AiController extends Controller
             $draft = $this->ai->draftEmail(
                 $validated['contact_id'] ?? null,
                 $validated['deal_id'] ?? null,
-                $validated['intent'] ?? ''
+                $validated['intent'] ?? '',
+                $request->user()
             );
         } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Ressource introuvable.'], 404);
         } catch (RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+
             return response()->json(['message' => $e->getMessage()], $status);
         }
 
@@ -107,6 +115,7 @@ class AiController extends Controller
             $result = $this->ai->dailySuggestions(auth()->user(), $fresh);
         } catch (RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+
             return response()->json(['message' => $e->getMessage()], $status);
         }
 
@@ -123,6 +132,7 @@ class AiController extends Controller
             $result = $this->ai->analyzeReports($reportData, $fresh);
         } catch (RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+
             return response()->json(['message' => $e->getMessage()], $status);
         }
 
@@ -141,14 +151,17 @@ class AiController extends Controller
         $user = auth()->user();
         $filtered = array_filter($alerts, function ($alert) use ($user) {
             // Alertes globales (pipeline_stagnant etc.) → visibles par tous
-            if (!isset($alert['owner_id'])) return true;
+            if (! isset($alert['owner_id'])) {
+                return true;
+            }
+
             // Alertes owner-specific → visible par le owner ou admin/manager
             return $alert['owner_id'] === $user->id || in_array($user->role, ['admin', 'manager']);
         });
 
         return response()->json([
-            'alerts'   => array_values($filtered),
-            'total'    => count($filtered),
+            'alerts' => array_values($filtered),
+            'total' => count($filtered),
             'critical' => count(array_filter($filtered, fn ($a) => ($a['severity'] ?? '') === 'critical')),
             'fetched_at' => now()->toIso8601String(),
         ]);

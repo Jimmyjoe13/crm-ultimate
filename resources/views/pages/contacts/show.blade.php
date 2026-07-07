@@ -247,6 +247,11 @@
                         Emelia ({{ $emeliaCnt }})
                     </button>
                     @endif
+                    <button @click="activeTab='audit'"
+                            :class="activeTab==='audit' ? 'chip font-mono text-[11px]' : 'btn ghost sm'"
+                            style="font-size:11px;padding:2px 8px;">
+                        Historique ({{ $auditLogs->count() }})
+                    </button>
                 </div>
             </div>
         </div>
@@ -273,6 +278,79 @@
             />
         </div>
         @endif
+
+        {{-- Section Historique d'audit --}}
+        <div x-show="activeTab==='audit'" x-cloak>
+            <div class="card p-4" style="border-color: var(--border);">
+                <div class="mono-label mb-3">Historique des modifications</div>
+                <div class="relative pl-6 border-l border-default space-y-4">
+                    @forelse($auditLogs as $log)
+                        @php
+                            $actionLabel = match($log->event) {
+                                'created'     => 'Créé',
+                                'updated'     => 'Modifié',
+                                'deleted'     => 'Supprimé',
+                                'associated'  => 'Associé',
+                                'dissociated' => 'Dissocié',
+                                default       => ucfirst($log->event),
+                            };
+                            $actionColor = match($log->event) {
+                                'created'     => 'var(--ok)',
+                                'updated'     => 'var(--accent)',
+                                'deleted'     => 'var(--err)',
+                                'associated'  => 'var(--info)',
+                                'dissociated' => 'var(--warn)',
+                                default       => 'var(--text-tertiary)',
+                            };
+                            $userName = $log->user?->name ?? 'Système';
+                        @endphp
+                        <div class="relative text-xs">
+                            <div class="absolute -left-[30px] top-0.5 w-2 h-2 rounded-full border-2 bg-surface" style="border-color: {{ $actionColor }};"></div>
+                            
+                            <div class="flex items-center justify-between text-[11px] text-secondary mb-1">
+                                <div>
+                                    <span class="font-bold text-primary">{{ $userName }}</span> 
+                                    <span class="px-1.5 py-0.2 rounded text-[9px] uppercase tracking-wider font-mono" style="background: color-mix(in srgb, {{ $actionColor }} 12%, transparent); color: {{ $actionColor }}; font-weight: 600;">
+                                        {{ $actionLabel }}
+                                    </span>
+                                </div>
+                                <span class="font-mono text-tertiary">{{ $log->created_at->format('d/m/Y H:i') }}</span>
+                            </div>
+
+                            <div class="pl-2 border-l border-default space-y-1">
+                                @if($log->event === 'updated')
+                                    @foreach($log->new_values as $key => $newValue)
+                                        @php
+                                            $oldValue = $log->old_values[$key] ?? '—';
+                                            if (is_array($newValue) || is_object($newValue)) $newValue = json_encode($newValue);
+                                            if (is_array($oldValue) || is_object($oldValue)) $oldValue = json_encode($oldValue);
+                                        @endphp
+                                        <div class="font-mono text-[10.5px] leading-relaxed text-secondary">
+                                            <span class="text-tertiary font-semibold">{{ $key }}:</span>
+                                            <span class="line-through bg-surface1 px-1 rounded text-[9.5px]">{{ $oldValue }}</span>
+                                            <span class="text-tertiary font-bold">➔</span>
+                                            <span class="px-1 rounded" style="background: var(--ok-soft); border-left: 2px solid var(--ok); font-size:10px;">{{ $newValue }}</span>
+                                        </div>
+                                    @endforeach
+                                @elseif($log->event === 'created')
+                                    <div class="text-[10px] text-tertiary italic">Valeurs initiales de création enregistrées dans le journal d'audit global.</div>
+                                @elseif($log->event === 'associated')
+                                    <div class="font-mono text-[10.5px] text-secondary">
+                                        Liaison : relation <span class="text-primary font-semibold">{{ $log->new_values['relation'] ?? '—' }}</span> liée à {{ basename(str_replace('\\', '/', $log->new_values['child_type'] ?? '—')) }} #{{ $log->new_values['child_id'] ?? '—' }}
+                                    </div>
+                                @elseif($log->event === 'dissociated')
+                                    <div class="font-mono text-[10.5px] text-secondary">
+                                        Détachement : relation <span class="text-primary font-semibold">{{ $log->old_values['relation'] ?? '—' }}</span> retirée de {{ basename(str_replace('\\', '/', $log->old_values['child_type'] ?? '—')) }} #{{ $log->old_values['child_id'] ?? '—' }}
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="py-4 text-center text-tertiary italic">Aucun historique de modification pour l'instant.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- Colonne Droite : Deals, IA, Emelia --}}

@@ -6,30 +6,31 @@ use App\Http\Controllers\Controller;
 use App\Services\AiInsightService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use RuntimeException;
 
 class AiController extends Controller
 {
     public function __construct(private readonly AiInsightService $ai) {}
 
-    public function summarizeDeal(int $id): JsonResponse
+    public function summarizeDeal(Request $request, int $id): JsonResponse
     {
-        return $this->wrap(fn () => $this->ai->summarizeDeal($id));
+        return $this->wrap(fn () => $this->ai->summarizeDeal($id, false, $request->user()));
     }
 
-    public function summarizeContact(int $id): JsonResponse
+    public function summarizeContact(Request $request, int $id): JsonResponse
     {
-        return $this->wrap(fn () => $this->ai->summarizeContact($id));
+        return $this->wrap(fn () => $this->ai->summarizeContact($id, false, $request->user()));
     }
 
-    public function nextActionDeal(int $id): JsonResponse
+    public function nextActionDeal(Request $request, int $id): JsonResponse
     {
-        return $this->wrap(fn () => $this->ai->nextActionDeal($id));
+        return $this->wrap(fn () => $this->ai->nextActionDeal($id, false, $request->user()));
     }
 
-    public function scoreDeal(int $id): JsonResponse
+    public function scoreDeal(Request $request, int $id): JsonResponse
     {
-        return $this->wrap(fn () => $this->ai->scoreDeal($id));
+        return $this->wrap(fn () => $this->ai->scoreDeal($id, false, $request->user()));
     }
 
     private function wrap(callable $fn): JsonResponse
@@ -40,6 +41,7 @@ class AiController extends Controller
             return response()->json(['message' => 'Ressource introuvable.'], 404);
         } catch (RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not configured') ? 503 : 500;
+
             return response()->json(['message' => $e->getMessage()], $status);
         }
 

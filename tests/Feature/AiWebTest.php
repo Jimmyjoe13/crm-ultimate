@@ -2,14 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Models\Deal;
-use App\Models\Contact;
 use App\Models\Company;
+use App\Models\Contact;
+use App\Models\Deal;
 use App\Models\Pipeline;
 use App\Models\User;
+use App\Services\JwtService;
 use App\Services\LlmService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Services\JwtService;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class AiWebTest extends TestCase
@@ -24,7 +25,7 @@ class AiWebTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -33,10 +34,10 @@ class AiWebTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@ai.test',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@ai.test',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
@@ -47,7 +48,7 @@ class AiWebTest extends TestCase
         });
     }
 
-    private function aiPost(string $url): \Illuminate\Testing\TestResponse
+    private function aiPost(string $url): TestResponse
     {
         return $this->post($url, ['_token' => 'test'], ['Accept' => 'application/json']);
     }
@@ -57,10 +58,10 @@ class AiWebTest extends TestCase
         $this->mockAi();
         $user = $this->makeUser();
         $pipeline = Pipeline::create(['name' => 'Test', 'is_default' => true]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
-        $deal     = Deal::create(['name' => 'AI Deal', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 1000]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $deal = Deal::create(['name' => 'AI Deal', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 1000]);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/deal/' . $deal->id . '/summarize');
+        $response = $this->withAuth($user)->aiPost('/web/ai/deal/'.$deal->id.'/summarize');
 
         $response->assertStatus(200);
         $response->assertJsonStructure(['data', 'cached', 'generated_at']);
@@ -71,10 +72,10 @@ class AiWebTest extends TestCase
         $this->mockAi();
         $user = $this->makeUser();
         $pipeline = Pipeline::create(['name' => 'Test2', 'is_default' => false]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
-        $deal     = Deal::create(['name' => 'AI Deal2', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 500]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $deal = Deal::create(['name' => 'AI Deal2', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 500]);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/deal/' . $deal->id . '/next-action');
+        $response = $this->withAuth($user)->aiPost('/web/ai/deal/'.$deal->id.'/next-action');
 
         $response->assertStatus(200);
         $response->assertJsonStructure(['data', 'cached']);
@@ -89,16 +90,16 @@ class AiWebTest extends TestCase
                 'reasons' => ['Bonne activité'],
                 'green_flags' => ['Contact engagé'],
                 'red_flags' => ['Pas de décideur'],
-                'recommendations' => ['Trouver le décideur']
+                'recommendations' => ['Trouver le décideur'],
             ]));
         });
 
         $user = $this->makeUser();
         $pipeline = Pipeline::create(['name' => 'Test3', 'is_default' => false]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
-        $deal     = Deal::create(['name' => 'AI Deal3', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 200]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $deal = Deal::create(['name' => 'AI Deal3', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 200]);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/deal/' . $deal->id . '/score');
+        $response = $this->withAuth($user)->aiPost('/web/ai/deal/'.$deal->id.'/score');
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -110,7 +111,7 @@ class AiWebTest extends TestCase
                 'red_flags',
                 'recommendations',
             ],
-            'cached'
+            'cached',
         ]);
         $response->assertJsonPath('data.score', 85);
         $response->assertJsonPath('data.trend', 'warming');
@@ -119,10 +120,10 @@ class AiWebTest extends TestCase
     public function test_contact_summarize_returns_json(): void
     {
         $this->mockAi();
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $contact = Contact::create(['first_name' => 'AI', 'last_name' => 'User', 'email' => 'ai@contact.test']);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/contact/' . $contact->id . '/summarize');
+        $response = $this->withAuth($user)->aiPost('/web/ai/contact/'.$contact->id.'/summarize');
 
         $response->assertStatus(200);
         $response->assertJsonStructure(['data', 'cached']);
@@ -131,10 +132,10 @@ class AiWebTest extends TestCase
     public function test_company_summarize_returns_json(): void
     {
         $this->mockAi();
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $company = Company::create(['name' => 'AI Corp']);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/company/' . $company->id . '/summarize');
+        $response = $this->withAuth($user)->aiPost('/web/ai/company/'.$company->id.'/summarize');
 
         $response->assertStatus(200);
         $response->assertJsonStructure(['data', 'cached']);
@@ -151,10 +152,69 @@ class AiWebTest extends TestCase
         $response->assertJsonStructure(['data', 'cached']);
     }
 
+    /**
+     * Régression IDOR : un commercial ne doit PAS pouvoir obtenir d'insight IA
+     * sur un deal appartenant à un autre commercial (scoping owner via visibleTo).
+     */
+    public function test_commercial_cannot_get_ai_insight_on_foreign_deal(): void
+    {
+        $this->mockAi();
+
+        $owner = $this->makeUser(User::ROLE_SALES);
+        $attacker = $this->makeUser(User::ROLE_SALES);
+
+        $pipeline = Pipeline::create(['name' => 'IDOR', 'is_default' => false]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $deal = Deal::create([
+            'name' => 'Deal privé',
+            'pipeline_id' => $pipeline->id,
+            'pipeline_stage_id' => $stage->id,
+            'status' => 'open',
+            'amount' => 9999,
+            'owner_id' => $owner->id,
+        ]);
+
+        // L'attaquant (autre commercial) doit recevoir un 404, pas les données du deal.
+        $this->withAuth($attacker)
+            ->aiPost('/web/ai/deal/'.$deal->id.'/summarize')
+            ->assertStatus(404);
+
+        // Le propriétaire, lui, y accède normalement.
+        $this->withAuth($owner)
+            ->aiPost('/web/ai/deal/'.$deal->id.'/summarize')
+            ->assertStatus(200);
+    }
+
+    /**
+     * Régression IDOR : idem pour un contact d'un autre owner.
+     */
+    public function test_commercial_cannot_get_ai_insight_on_foreign_contact(): void
+    {
+        $this->mockAi();
+
+        $owner = $this->makeUser(User::ROLE_SALES);
+        $attacker = $this->makeUser(User::ROLE_SALES);
+
+        $contact = Contact::create([
+            'first_name' => 'Privé',
+            'last_name' => 'Contact',
+            'email' => 'prive@contact.test',
+            'owner_id' => $owner->id,
+        ]);
+
+        $this->withAuth($attacker)
+            ->aiPost('/web/ai/contact/'.$contact->id.'/summarize')
+            ->assertStatus(404);
+
+        $this->withAuth($owner)
+            ->aiPost('/web/ai/contact/'.$contact->id.'/summarize')
+            ->assertStatus(200);
+    }
+
     public function test_unauthenticated_returns_redirect(): void
     {
         $response = $this->withSession(['_token' => 'test'])
-                         ->post('/web/ai/dashboard/suggestions', ['_token' => 'test']);
+            ->post('/web/ai/dashboard/suggestions', ['_token' => 'test']);
         $response->assertRedirect('/login');
     }
 
@@ -163,10 +223,10 @@ class AiWebTest extends TestCase
         $this->mockAi();
         $user = $this->makeUser();
         $pipeline = Pipeline::create(['name' => 'Test4', 'is_default' => false]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
-        $deal     = Deal::create(['name' => 'AI Deal4', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 0]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $deal = Deal::create(['name' => 'AI Deal4', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 0]);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/deal/' . $deal->id . '/unknown');
+        $response = $this->withAuth($user)->aiPost('/web/ai/deal/'.$deal->id.'/unknown');
 
         $response->assertStatus(422);
     }

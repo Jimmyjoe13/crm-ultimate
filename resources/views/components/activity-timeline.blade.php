@@ -119,6 +119,7 @@
                     <option value="all">Toutes</option>
                     <option value="manual">Manuel</option>
                     <option value="emelia">Emelia (Sync)</option>
+                    <option value="juliette">📧 Cold email (Juliette)</option>
                 </select>
             </div>
             @endif
@@ -162,7 +163,14 @@
             default               => '➕',
         };
         $isTask = $activity->type === 'task';
-        $subjectUrl = match($activity->subject_type) {
+        $normalizedSubjectType = match(strtolower($subjectType)) {
+            'contact', \App\Models\Contact::class => \App\Models\Contact::class,
+            'company', \App\Models\Company::class => \App\Models\Company::class,
+            'deal', \App\Models\Deal::class => \App\Models\Deal::class,
+            default => $subjectType,
+        };
+        $isCurrentSubject = ($activity->subject_type === $normalizedSubjectType && $activity->subject_id == $subjectId);
+        $subjectUrl = $isCurrentSubject ? null : match($activity->subject_type) {
             \App\Models\Contact::class => route('contacts.show', $activity->subject_id),
             \App\Models\Company::class => route('companies.show', $activity->subject_id),
             \App\Models\Deal::class    => route('deals.show', $activity->subject_id),
@@ -246,32 +254,28 @@
                 </form>
                 @endif
             </div>
-            @if($activity->type === 'email_replied')
             @php
-                $replyBody = $activity->body ?? '';
-                $isLong    = mb_strlen($replyBody) > 220;
-                $isSynth   = $activity->metadata['synthetic'] ?? false;
+                $activityContent = $activity->body ?: ($activity->metadata['reply_text'] ?? '');
+                $isLong = mb_strlen($activityContent) > 220;
+                $isSynth = $activity->metadata['synthetic'] ?? false;
             @endphp
-            @if($replyBody)
+            @if($activityContent)
             <div x-data="{ expanded: false }" class="mt-1.5">
                 <div class="ts leading-relaxed"
                      style="white-space: pre-wrap; word-break: break-word;"
-                     :class="expanded ? '' : 'line-clamp-4'">{{ $replyBody }}</div>
+                     :class="expanded ? '' : 'line-clamp-4'">{{ $activityContent }}</div>
                 @if($isLong)
                 <button type="button"
                         @click="expanded = !expanded"
-                        class="text-[10px] mt-1 hover:underline"
+                        class="text-[10px] mt-1 hover:underline font-semibold"
                         style="color: var(--accent);">
-                    <span x-show="!expanded">↓ Voir la réponse complète</span>
+                    <span x-show="!expanded">↓ Voir la suite</span>
                     <span x-show="expanded">↑ Réduire</span>
                 </button>
                 @endif
             </div>
-            @elseif($isSynth)
+            @elseif($activity->type === 'email_replied' && $isSynth)
             <div class="ts text-tertiary italic mt-1" style="font-size:10px;">Corps de la réponse non disponible (importé via sync)</div>
-            @endif
-            @elseif($activity->body)
-            <div class="ts">{{ Str::limit($activity->body, 120) }}</div>
             @endif
         </div>
     </div>

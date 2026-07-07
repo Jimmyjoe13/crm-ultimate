@@ -19,13 +19,28 @@
         </a>
         @endif
         <x-button href="/companies/create" size="sm">Nouvelle entreprise</x-button>
-        <form method="GET" action="{{ '/companies' }}" class="flex items-center gap-2">
-            <input type="text" name="search" value="{{ $search }}" placeholder="Rechercher…"
-                   style="padding:6px 10px; border:1px solid var(--border); border-radius:7px; font-size:13px; background:var(--surface); color:var(--text);">
-            <button type="submit" class="btn sm">Chercher</button>
-        </form>
     </div>
 </div>
+
+@php
+    $companyFilters = [
+        ['name' => 'lifecycle_stage', 'label' => 'Lifecycle', 'value' => $lifecycle, 'options' => [
+            'lead' => 'Lead', 'mql' => 'MQL', 'sql' => 'SQL', 'opportunity' => 'Opportunité',
+            'customer' => 'Client', 'evangelist' => 'Évangéliste', 'other' => 'Autre',
+        ]],
+    ];
+    if ($industries->count()) {
+        $companyFilters[] = ['name' => 'industry', 'label' => 'Industrie', 'value' => $industry,
+            'options' => $industries->mapWithKeys(fn ($i) => [$i => $i])->all()];
+    }
+    if ($owners->count() > 1) {
+        $companyFilters[] = ['name' => 'owner_id', 'label' => 'Propriétaire', 'value' => $ownerId,
+            'options' => $owners->pluck('name', 'id')->all()];
+    }
+@endphp
+
+<x-filter-bar action="/companies" :search="$search" placeholder="Rechercher une entreprise…"
+              :filters="$companyFilters" :preserve="['sort' => $sort, 'dir' => $dir]" />
 
 <div class="px-7 pb-12">
     <div class="card overflow-hidden">
@@ -76,7 +91,16 @@
                     <td><span class="num-mono text-[12px] text-tertiary">{{ $company->created_at->format('d/m/Y') }}</span></td>
                 </tr>
                 @empty
-                <tr><td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 6 : 5 }}" class="text-center py-12 text-tertiary text-sm">Aucune entreprise.</td></tr>
+                @php $hasFilters = request()->hasAny(['search', 'industry', 'lifecycle_stage', 'owner_id']); @endphp
+                <tr><td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 6 : 5 }}">
+                    @if($hasFilters)
+                        <x-empty-state title="Aucune entreprise ne correspond" subtitle="Élargis ta recherche ou réinitialise les filtres." ctaLabel="Réinitialiser" ctaHref="/companies" />
+                    @else
+                        <x-empty-state title="Aucune entreprise" subtitle="Crée ta première entreprise ou importe un fichier CSV."
+                                       icon='<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>'
+                                       ctaLabel="Nouvelle entreprise" ctaHref="/companies/create" />
+                    @endif
+                </td></tr>
                 @endforelse
             </tbody>
         </table>

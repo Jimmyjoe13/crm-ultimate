@@ -3,14 +3,15 @@
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\InfoController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\CustomFieldController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DealController;
+use App\Http\Controllers\Api\EmailTemplateController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\ImportController;
+use App\Http\Controllers\Api\InfoController;
 use App\Http\Controllers\Api\PipelineController;
 use App\Http\Controllers\Api\PipelineStageController;
 use App\Http\Controllers\Api\SavedViewController;
@@ -18,8 +19,8 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\SegmentController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Webhook\EmeliaWebhookController;
 use App\Http\Controllers\Webhook\EmeliaIntentWebhookController;
+use App\Http\Controllers\Webhook\EmeliaWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Webhooks (sans JWT, sans CSRF) ──────────────────────────────────────────
@@ -76,6 +77,10 @@ Route::prefix('v1')->name('api.')->group(function (): void {
         Route::apiResource('activities', ActivityController::class);
         Route::apiResource('tasks', TaskController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
         Route::apiResource('saved-views', SavedViewController::class);
+
+        // Modèles d'email — cloisonnés par owner + partage (is_shared), tous rôles
+        Route::post('/email-templates/{id}/render', [EmailTemplateController::class, 'render']);
+        Route::apiResource('email-templates', EmailTemplateController::class);
 
         // Segments — lecture pour tous les authentifiés
         Route::get('/segments/fields/{entityType}', [SegmentController::class, 'fields']);

@@ -1,4 +1,6 @@
 import Alpine from 'alpinejs';
+import { initReportCharts } from './charts/reports.js';
+import { initKanban } from './kanban.js';
 
 window.Alpine = Alpine;
 
@@ -195,4 +197,17 @@ Alpine.data('aiAlerts', () => ({
 }));
 
 Alpine.start();
+
+// Initialisation des modules de page (graphiques rapports, kanban).
+// Les <script type="module"> sont différés → le DOM est prêt, mais on garde un garde.
+function bootPageModules() {
+    initReportCharts();
+    initKanban();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootPageModules);
+} else {
+    bootPageModules();
+}
 

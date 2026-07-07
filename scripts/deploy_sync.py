@@ -9,9 +9,12 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-hostname = "51.38.99.226"
-username = "jimmy"
-password = "<purge-crm-20260713>\u00f9891234kfp"
+# Secrets lus depuis l'environnement \u2014 ne JAMAIS coder en dur (le repo est versionn\u00e9).
+hostname = os.environ.get("VPS_SSH_HOST", "51.38.99.226")
+username = os.environ.get("VPS_SSH_USER", "jimmy")
+password = os.environ.get("VPS_SSH_PASSWORD")
+if not password:
+    sys.exit("VPS_SSH_PASSWORD non d\u00e9fini \u2014 exporte la variable avant de lancer ce script.")
 remote_base_dir = "/home/jimmy/crm-ultimate"
 
 # Get the list of modified files in the last commit

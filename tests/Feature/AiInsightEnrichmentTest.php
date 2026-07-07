@@ -7,9 +7,10 @@ use App\Models\Contact;
 use App\Models\Deal;
 use App\Models\Pipeline;
 use App\Models\User;
+use App\Services\JwtService;
 use App\Services\LlmService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Services\JwtService;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class AiInsightEnrichmentTest extends TestCase
@@ -24,7 +25,7 @@ class AiInsightEnrichmentTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -33,14 +34,14 @@ class AiInsightEnrichmentTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@enrichment.test',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@enrichment.test',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
-    private function aiPost(string $url): \Illuminate\Testing\TestResponse
+    private function aiPost(string $url): TestResponse
     {
         return $this->post($url, ['_token' => 'test'], ['Accept' => 'application/json']);
     }
@@ -52,44 +53,45 @@ class AiInsightEnrichmentTest extends TestCase
         $capturedPrompt = null;
         $this->mock(LlmService::class, function ($mock) use (&$capturedPrompt) {
             $mock->shouldReceive('complete')
-                 ->once()
-                 ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
-                     $capturedPrompt = $prompt;
-                     return true;
-                 })
-                 ->andReturn('Résumé IA simulé.');
+                ->once()
+                ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
+                    $capturedPrompt = $prompt;
+
+                    return true;
+                })
+                ->andReturn('Résumé IA simulé.');
         });
 
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $contact = Contact::create([
-            'first_name'           => 'Test',
-            'last_name'            => 'Emelia',
-            'email'                => 'test@emelia.test',
-            'lifecycle_stage'      => 'mql',
-            'emelia_campaign_id'   => 'camp-abc123',
+            'first_name' => 'Test',
+            'last_name' => 'Emelia',
+            'email' => 'test@emelia.test',
+            'lifecycle_stage' => 'mql',
+            'emelia_campaign_id' => 'camp-abc123',
             'emelia_campaign_name' => 'Acquisition Agence',
         ]);
 
         Activity::create([
-            'type'         => Activity::TYPE_EMAIL_OPENED,
-            'source'       => 'emelia',
-            'title'        => 'Email ouvert',
-            'status'       => 'done',
+            'type' => Activity::TYPE_EMAIL_OPENED,
+            'source' => 'emelia',
+            'title' => 'Email ouvert',
+            'status' => 'done',
             'subject_type' => Contact::class,
-            'subject_id'   => $contact->id,
-            'occurred_at'  => now()->subDays(3),
+            'subject_id' => $contact->id,
+            'occurred_at' => now()->subDays(3),
         ]);
         Activity::create([
-            'type'         => Activity::TYPE_EMAIL_REPLIED,
-            'source'       => 'emelia',
-            'title'        => 'Réponse reçue',
-            'status'       => 'done',
+            'type' => Activity::TYPE_EMAIL_REPLIED,
+            'source' => 'emelia',
+            'title' => 'Réponse reçue',
+            'status' => 'done',
             'subject_type' => Contact::class,
-            'subject_id'   => $contact->id,
-            'occurred_at'  => now()->subDay(),
+            'subject_id' => $contact->id,
+            'occurred_at' => now()->subDay(),
         ]);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/contact/' . $contact->id . '/summarize');
+        $response = $this->withAuth($user)->aiPost('/web/ai/contact/'.$contact->id.'/summarize');
 
         $response->assertStatus(200);
         $this->assertNotNull($capturedPrompt, 'Le LLM devrait avoir été appelé.');
@@ -103,23 +105,24 @@ class AiInsightEnrichmentTest extends TestCase
         $capturedPrompt = null;
         $this->mock(LlmService::class, function ($mock) use (&$capturedPrompt) {
             $mock->shouldReceive('complete')
-                 ->once()
-                 ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
-                     $capturedPrompt = $prompt;
-                     return true;
-                 })
-                 ->andReturn('Résumé IA simulé.');
+                ->once()
+                ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
+                    $capturedPrompt = $prompt;
+
+                    return true;
+                })
+                ->andReturn('Résumé IA simulé.');
         });
 
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $contact = Contact::create([
-            'first_name'      => 'Lifecycle',
-            'last_name'       => 'User',
-            'email'           => 'lifecycle@test.test',
+            'first_name' => 'Lifecycle',
+            'last_name' => 'User',
+            'email' => 'lifecycle@test.test',
             'lifecycle_stage' => 'sql',
         ]);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/contact/' . $contact->id . '/summarize');
+        $response = $this->withAuth($user)->aiPost('/web/ai/contact/'.$contact->id.'/summarize');
 
         $response->assertStatus(200);
         $this->assertStringContainsString('sql', $capturedPrompt);
@@ -130,22 +133,23 @@ class AiInsightEnrichmentTest extends TestCase
         $capturedPrompt = null;
         $this->mock(LlmService::class, function ($mock) use (&$capturedPrompt) {
             $mock->shouldReceive('complete')
-                 ->once()
-                 ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
-                     $capturedPrompt = $prompt;
-                     return true;
-                 })
-                 ->andReturn('Résumé IA simulé.');
+                ->once()
+                ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
+                    $capturedPrompt = $prompt;
+
+                    return true;
+                })
+                ->andReturn('Résumé IA simulé.');
         });
 
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $contact = Contact::create([
             'first_name' => 'No',
-            'last_name'  => 'Emelia',
-            'email'      => 'noemelia@test.test',
+            'last_name' => 'Emelia',
+            'email' => 'noemelia@test.test',
         ]);
 
-        $response = $this->withAuth($user)->aiPost('/web/ai/contact/' . $contact->id . '/summarize');
+        $response = $this->withAuth($user)->aiPost('/web/ai/contact/'.$contact->id.'/summarize');
 
         $response->assertStatus(200);
         $this->assertStringNotContainsString('Engagement email', $capturedPrompt);
@@ -159,8 +163,8 @@ class AiInsightEnrichmentTest extends TestCase
         $this->mock(LlmService::class, function ($mock) {
             $mock->shouldReceive('complete')->andReturn(json_encode([
                 'suggestions' => ['Contacter le prospect stagnant'],
-                'alerts'      => ['Deal à clôturer demain'],
-                'priorities'  => ['Rappeler Jean Dupont'],
+                'alerts' => ['Deal à clôturer demain'],
+                'priorities' => ['Rappeler Jean Dupont'],
             ]));
         });
 
@@ -180,25 +184,26 @@ class AiInsightEnrichmentTest extends TestCase
         $capturedPrompt = null;
         $this->mock(LlmService::class, function ($mock) use (&$capturedPrompt) {
             $mock->shouldReceive('complete')
-                 ->once()
-                 ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
-                     $capturedPrompt = $prompt;
-                     return true;
-                 })
-                 ->andReturn(json_encode(['suggestions' => [], 'alerts' => [], 'priorities' => []]));
+                ->once()
+                ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
+                    $capturedPrompt = $prompt;
+
+                    return true;
+                })
+                ->andReturn(json_encode(['suggestions' => [], 'alerts' => [], 'priorities' => []]));
         });
 
-        $user     = $this->makeUser();
+        $user = $this->makeUser();
         $pipeline = Pipeline::create(['name' => 'Enrich', 'is_default' => true]);
-        $stage    = $pipeline->stages()->create(['name' => 'Closing', 'position' => 1, 'probability' => 90]);
+        $stage = $pipeline->stages()->create(['name' => 'Closing', 'position' => 1, 'probability' => 90]);
 
         Deal::create([
-            'name'              => 'Deal Urgent',
-            'pipeline_id'       => $pipeline->id,
+            'name' => 'Deal Urgent',
+            'pipeline_id' => $pipeline->id,
             'pipeline_stage_id' => $stage->id,
-            'status'            => 'open',
-            'amount'            => 5000,
-            'close_date'        => now()->addDays(3),
+            'status' => 'open',
+            'amount' => 5000,
+            'close_date' => now()->addDays(3),
         ]);
 
         $response = $this->withAuth($user)->aiPost('/web/ai/dashboard/suggestions');
@@ -213,24 +218,25 @@ class AiInsightEnrichmentTest extends TestCase
         $capturedPrompt = null;
         $this->mock(LlmService::class, function ($mock) use (&$capturedPrompt) {
             $mock->shouldReceive('complete')
-                 ->once()
-                 ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
-                     $capturedPrompt = $prompt;
-                     return true;
-                 })
-                 ->andReturn(json_encode(['suggestions' => [], 'alerts' => [], 'priorities' => []]));
+                ->once()
+                ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
+                    $capturedPrompt = $prompt;
+
+                    return true;
+                })
+                ->andReturn(json_encode(['suggestions' => [], 'alerts' => [], 'priorities' => []]));
         });
 
         $user = $this->makeUser();
 
         Activity::create([
-            'type'     => Activity::TYPE_TASK,
-            'title'    => 'Rappel urgent overdue',
-            'status'   => 'open',
+            'type' => Activity::TYPE_TASK,
+            'title' => 'Rappel urgent overdue',
+            'status' => 'open',
             'owner_id' => $user->id,
-            'due_at'   => now()->subDays(2),
+            'due_at' => now()->subDays(2),
             'subject_type' => Contact::class,
-            'subject_id'   => 9999,
+            'subject_id' => 9999,
         ]);
 
         $response = $this->withAuth($user)->aiPost('/web/ai/dashboard/suggestions');
@@ -245,28 +251,29 @@ class AiInsightEnrichmentTest extends TestCase
         $capturedPrompt = null;
         $this->mock(LlmService::class, function ($mock) use (&$capturedPrompt) {
             $mock->shouldReceive('complete')
-                 ->once()
-                 ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
-                     $capturedPrompt = $prompt;
-                     return true;
-                 })
-                 ->andReturn(json_encode(['suggestions' => [], 'alerts' => [], 'priorities' => []]));
+                ->once()
+                ->withArgs(function ($system, $prompt) use (&$capturedPrompt) {
+                    $capturedPrompt = $prompt;
+
+                    return true;
+                })
+                ->andReturn(json_encode(['suggestions' => [], 'alerts' => [], 'priorities' => []]));
         });
 
-        $user    = $this->makeUser();
+        $user = $this->makeUser();
         $contact = Contact::create([
             'first_name' => 'Marie',
-            'last_name'  => 'Curie',
-            'email'      => 'marie@curie.test',
+            'last_name' => 'Curie',
+            'email' => 'marie@curie.test',
         ]);
 
         Activity::create([
-            'type'         => Activity::TYPE_EMAIL_REPLIED,
-            'source'       => 'emelia',
-            'title'        => 'Réponse Emelia',
-            'status'       => 'done',
+            'type' => Activity::TYPE_EMAIL_REPLIED,
+            'source' => 'emelia',
+            'title' => 'Réponse Emelia',
+            'status' => 'done',
             'subject_type' => Contact::class,
-            'subject_id'   => $contact->id,
+            'subject_id' => $contact->id,
         ]);
 
         $response = $this->withAuth($user)->aiPost('/web/ai/dashboard/suggestions');

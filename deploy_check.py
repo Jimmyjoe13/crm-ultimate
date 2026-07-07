@@ -1,10 +1,13 @@
-import paramiko, sys
+import paramiko, sys, os
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-host = '51.38.99.226'
-user = 'jimmy'
-pwd  = '<purge-crm-20260713>ù891234kfp'
+# Secrets lus depuis l'environnement — ne JAMAIS coder en dur (le repo est versionné).
+host = os.environ.get('VPS_SSH_HOST', '51.38.99.226')
+user = os.environ.get('VPS_SSH_USER', 'jimmy')
+pwd  = os.environ.get('VPS_SSH_PASSWORD')
+if not pwd:
+    sys.exit('VPS_SSH_PASSWORD non défini — exporte la variable avant de lancer ce script.')
 
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())

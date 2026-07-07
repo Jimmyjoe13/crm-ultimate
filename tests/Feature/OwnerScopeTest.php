@@ -32,9 +32,9 @@ class OwnerScopeTest extends TestCase
         // JwtMiddleware via bearerToken()). Le cookie `crm_jwt`, lui, est attendu
         // CHIFFRÉ (Crypt::decrypt) et ne convient donc pas à un JWT brut.
         $jwt = app(JwtService::class)->encode([
-            'sub'  => $user->id,
+            'sub' => $user->id,
             'role' => $user->role,
-            'exp'  => time() + 3600,
+            'exp' => time() + 3600,
         ]);
 
         return $this->withToken($jwt);
@@ -46,10 +46,10 @@ class OwnerScopeTest extends TestCase
         $seq++;
 
         return User::createWithRole([
-            'name'       => ucfirst($role) . " {$seq}",
-            'email'      => "{$role}-{$seq}-scope@example.test",
-            'password'   => bcrypt('password'),
-            'role'       => $role,
+            'name' => ucfirst($role)." {$seq}",
+            'email' => "{$role}-{$seq}-scope@example.test",
+            'password' => bcrypt('password'),
+            'role' => $role,
             'manager_id' => $managerId,
         ]);
     }
@@ -61,8 +61,8 @@ class OwnerScopeTest extends TestCase
         $sales = $this->makeUser(User::ROLE_SALES);
         $other = $this->makeUser(User::ROLE_SALES);
 
-        $mine    = Contact::factory()->create(['owner_id' => $sales->id]);
-        $theirs  = Contact::factory()->create(['owner_id' => $other->id]);
+        $mine = Contact::factory()->create(['owner_id' => $sales->id]);
+        $theirs = Contact::factory()->create(['owner_id' => $other->id]);
 
         $response = $this->withAuth($sales)
             ->getJson('/api/v1/contacts')
@@ -95,10 +95,10 @@ class OwnerScopeTest extends TestCase
     public function test_manager_index_returns_team_contacts_but_not_others(): void
     {
         $manager = $this->makeUser(User::ROLE_MANAGER);
-        $sub     = $this->makeUser(User::ROLE_SALES, $manager->id);
+        $sub = $this->makeUser(User::ROLE_SALES, $manager->id);
         $outside = $this->makeUser(User::ROLE_SALES);
 
-        $own     = Contact::factory()->create(['owner_id' => $manager->id]);
+        $own = Contact::factory()->create(['owner_id' => $manager->id]);
         $teamOne = Contact::factory()->create(['owner_id' => $sub->id]);
         $foreign = Contact::factory()->create(['owner_id' => $outside->id]);
 
@@ -130,7 +130,7 @@ class OwnerScopeTest extends TestCase
     public function test_sales_can_show_own_contact(): void
     {
         $sales = $this->makeUser(User::ROLE_SALES);
-        $mine  = Contact::factory()->create(['owner_id' => $sales->id]);
+        $mine = Contact::factory()->create(['owner_id' => $sales->id]);
 
         $this->withAuth($sales)
             ->getJson("/api/v1/contacts/{$mine->id}")
@@ -150,7 +150,7 @@ class OwnerScopeTest extends TestCase
             ->assertNotFound();
 
         $this->assertDatabaseHas('contacts', [
-            'id'         => $theirs->id,
+            'id' => $theirs->id,
             'first_name' => 'Original',
         ]);
     }
@@ -190,7 +190,7 @@ class OwnerScopeTest extends TestCase
         $sales = $this->makeUser(User::ROLE_SALES);
         $other = $this->makeUser(User::ROLE_SALES);
 
-        $mine   = Deal::factory()->create(['owner_id' => $sales->id]);
+        $mine = Deal::factory()->create(['owner_id' => $sales->id]);
         $theirs = Deal::factory()->create(['owner_id' => $other->id]);
 
         $response = $this->withAuth($sales)
@@ -218,7 +218,7 @@ class OwnerScopeTest extends TestCase
     public function test_manager_can_show_subordinate_deal(): void
     {
         $manager = $this->makeUser(User::ROLE_MANAGER);
-        $sub     = $this->makeUser(User::ROLE_SALES, $manager->id);
+        $sub = $this->makeUser(User::ROLE_SALES, $manager->id);
 
         $deal = Deal::factory()->create(['owner_id' => $sub->id]);
 
@@ -235,7 +235,7 @@ class OwnerScopeTest extends TestCase
         $sales = $this->makeUser(User::ROLE_SALES);
         $other = $this->makeUser(User::ROLE_SALES);
 
-        $mine   = Company::factory()->create(['owner_id' => $sales->id]);
+        $mine = Company::factory()->create(['owner_id' => $sales->id]);
         $theirs = Company::factory()->create(['owner_id' => $other->id]);
 
         $response = $this->withAuth($sales)

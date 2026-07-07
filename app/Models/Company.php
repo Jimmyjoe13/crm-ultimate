@@ -23,7 +23,7 @@ class Company extends Model
     protected static function boot(): void
     {
         parent::boot();
-        $flush = fn() => Cache::tags(['companies.index'])->flush();
+        $flush = fn () => Cache::tags(['companies.index'])->flush();
         static::saved($flush);
         static::deleted($flush);
     }

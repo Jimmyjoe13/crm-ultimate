@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ImportJob;
 use App\Models\User;
 use App\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,16 +22,16 @@ class ImportRequiredFieldsTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function createAdmin(): User
     {
         return User::createWithRole([
-            'name'     => 'Admin',
-            'email'    => 'admin@test.com',
+            'name' => 'Admin',
+            'email' => 'admin@test.com',
             'password' => bcrypt('password'),
-            'role'     => User::ROLE_ADMIN,
+            'role' => User::ROLE_ADMIN,
         ]);
     }
 
@@ -46,9 +45,9 @@ class ImportRequiredFieldsTest extends TestCase
         );
 
         $response = $this->withAuth($admin)->post('/imports/preview', [
-            '_token'      => 'test',
+            '_token' => 'test',
             'entity_type' => 'contact',
-            'file'        => $csv,
+            'file' => $csv,
         ]);
 
         $response->assertOk();
@@ -65,9 +64,9 @@ class ImportRequiredFieldsTest extends TestCase
         );
 
         $response = $this->withAuth($admin)->post('/imports/preview', [
-            '_token'      => 'test',
+            '_token' => 'test',
             'entity_type' => 'company',
-            'file'        => $csv,
+            'file' => $csv,
         ]);
 
         $response->assertOk();
@@ -84,12 +83,12 @@ class ImportRequiredFieldsTest extends TestCase
         $response = $this->withAuth($admin)
             ->withHeaders(['Accept' => 'application/json'])
             ->post('/imports', [
-                '_token'        => 'test',
-                'entity_type'   => 'contact',
+                '_token' => 'test',
+                'entity_type' => 'contact',
                 'preview_token' => $path,
-                'mapping'       => [
+                'mapping' => [
                     'first_name' => 'first_name',
-                    'last_name'  => 'last_name',
+                    'last_name' => 'last_name',
                     // email intentionally not mapped
                 ],
             ]);
@@ -110,10 +109,10 @@ class ImportRequiredFieldsTest extends TestCase
         $response = $this->withAuth($admin)
             ->withHeaders(['Accept' => 'application/json'])
             ->post('/imports', [
-                '_token'        => 'test',
-                'entity_type'   => 'company',
+                '_token' => 'test',
+                'entity_type' => 'company',
                 'preview_token' => $path,
-                'mapping'       => ['domain' => 'domain'],
+                'mapping' => ['domain' => 'domain'],
             ]);
 
         $response->assertStatus(422);
@@ -133,18 +132,18 @@ class ImportRequiredFieldsTest extends TestCase
         $response = $this->withAuth($admin)
             ->withHeaders(['Accept' => 'application/json'])
             ->post('/imports', [
-                '_token'        => 'test',
-                'entity_type'   => 'contact',
+                '_token' => 'test',
+                'entity_type' => 'contact',
                 'preview_token' => $path,
-                'mapping'       => [
-                    'email'      => 'email',
+                'mapping' => [
+                    'email' => 'email',
                     'first_name' => 'first_name',
                 ],
             ]);
 
         $response->assertStatus(202);
 
-        Storage::disk('local')->delete('imports/' . basename($path));
+        Storage::disk('local')->delete('imports/'.basename($path));
     }
 
     public function test_store_validates_duplicate_strategy_enum(): void
@@ -157,10 +156,10 @@ class ImportRequiredFieldsTest extends TestCase
         $response = $this->withAuth($admin)
             ->withHeaders(['Accept' => 'application/json'])
             ->post('/imports', [
-                '_token'             => 'test',
-                'entity_type'        => 'contact',
-                'preview_token'      => $path,
-                'mapping'            => ['email' => 'email'],
+                '_token' => 'test',
+                'entity_type' => 'contact',
+                'preview_token' => $path,
+                'mapping' => ['email' => 'email'],
                 'duplicate_strategy' => 'invalid_value',
             ]);
 

@@ -22,6 +22,46 @@
     copiedSubject: false,
     copiedBody: false,
     copiedAll: false,
+    templates: [],
+    selectedTemplate: '',
+
+    async fetchTemplates() {
+        try {
+            const resp = await fetch('/email-templates/options', {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            });
+            if (!resp.ok) return;
+            this.templates = await resp.json();
+        } catch (e) { /* silencieux : la fonctionnalité reste optionnelle */ }
+    },
+
+    async applyTemplate() {
+        if (!this.selectedTemplate) return;
+        this.error = '';
+        try {
+            const payload = {};
+            if (this.entityType === 'contact') payload.contact_id = this.entityId;
+            else payload.deal_id = this.entityId;
+
+            const resp = await fetch('/email-templates/' + this.selectedTemplate + '/render', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+            });
+            const json = await resp.json();
+            if (!resp.ok) { this.error = json.message ?? 'Erreur serveur'; return; }
+            this.subject = json.subject ?? '';
+            this.body    = json.body ?? '';
+        } catch (e) {
+            this.error = 'Impossible de charger le modèle.';
+        }
+    },
 
     async generate() {
         this.loading = true;
@@ -61,7 +101,7 @@
         });
     },
 }"
-     @open-email-draft-modal.window="open = true"
+     @open-email-draft-modal.window="open = true; fetchTemplates()"
      x-show="open"
      x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center"
@@ -85,9 +125,20 @@
             </button>
         </div>
 
+        {{-- Partir d'un modèle (optionnel) --}}
+        <div class="field mb-3" x-show="templates.length > 0">
+            <label class="text-[10px] text-tertiary font-mono uppercase tracking-wider mb-1 block">Partir d'un modèle</label>
+            <select x-model="selectedTemplate" @change="applyTemplate()" class="select-arrow" style="font-size:13px;">
+                <option value="">— Aucun (rédaction libre / IA) —</option>
+                <template x-for="t in templates" :key="t.id">
+                    <option :value="t.id" x-text="t.name + (t.category ? ' · ' + t.category : '')"></option>
+                </template>
+            </select>
+        </div>
+
         {{-- Sélecteur d'objectif --}}
         <div class="field mb-4">
-            <label class="text-[10px] text-tertiary font-mono uppercase tracking-wider mb-1 block">Objectif</label>
+            <label class="text-[10px] text-tertiary font-mono uppercase tracking-wider mb-1 block">Objectif (IA)</label>
             <select x-model="intent" class="select-arrow" style="font-size:13px;">
                 <template x-for="opt in intents" :key="opt.value">
                     <option :value="opt.value" x-text="opt.label"></option>

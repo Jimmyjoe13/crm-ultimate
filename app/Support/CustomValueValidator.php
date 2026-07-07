@@ -13,17 +13,17 @@ class CustomValueValidator
     public static function validationRules(string $entityType): array
     {
         $fields = CustomFieldRenderer::forEntity($entityType);
-        $rules  = ['custom_values' => ['sometimes', 'nullable', 'array']];
+        $rules = ['custom_values' => ['sometimes', 'nullable', 'array']];
 
         foreach ($fields as $field) {
             $base = $field->is_required ? ['required'] : ['sometimes', 'nullable'];
 
             $typeRules = match ($field->field_type) {
-                'number'  => ['numeric'],
-                'date'    => ['date'],
+                'number' => ['numeric'],
+                'date' => ['date'],
                 'boolean' => ['in:0,1'],
-                'select'  => $field->options ? [Rule::in($field->options)] : ['string'],
-                default   => ['string', 'max:65535'],
+                'select' => $field->options ? [Rule::in($field->options)] : ['string'],
+                default => ['string', 'max:65535'],
             };
 
             $rules["custom_values.{$field->key}"] = array_merge($base, $typeRules);
@@ -49,14 +49,15 @@ class CustomValueValidator
 
             if ($raw === null || $raw === '') {
                 $result[$key] = null;
+
                 continue;
             }
 
             $result[$key] = match ($field->field_type) {
-                'number'  => (float) $raw,
-                'date'    => date('Y-m-d', strtotime((string) $raw)),
+                'number' => (float) $raw,
+                'date' => date('Y-m-d', strtotime((string) $raw)),
                 'boolean' => is_bool($raw) ? $raw : in_array(strtolower((string) $raw), ['1', 'true', 'oui', 'yes', 'on'], true),
-                default   => trim((string) $raw),
+                default => trim((string) $raw),
             };
         }
 

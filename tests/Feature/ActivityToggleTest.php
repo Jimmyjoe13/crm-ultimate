@@ -3,11 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Activity;
-use App\Models\Deal;
-use App\Models\Pipeline;
 use App\Models\User;
 use App\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class ActivityToggleTest extends TestCase
@@ -22,7 +21,7 @@ class ActivityToggleTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -31,33 +30,33 @@ class ActivityToggleTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@toggle.test',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@toggle.test',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
     private function makeActivity(User $user, string $status = 'open'): Activity
     {
         return Activity::create([
-            'type'     => 'task',
-            'title'    => 'Test task',
-            'status'   => $status,
+            'type' => 'task',
+            'title' => 'Test task',
+            'status' => $status,
             'owner_id' => $user->id,
         ]);
     }
 
-    private function togglePost(Activity $activity): \Illuminate\Testing\TestResponse
+    private function togglePost(Activity $activity): TestResponse
     {
-        return $this->post('/activities/' . $activity->id . '/toggle-done', ['_token' => 'test'], [
+        return $this->post('/activities/'.$activity->id.'/toggle-done', ['_token' => 'test'], [
             'Accept' => 'application/json',
         ]);
     }
 
     public function test_owner_can_toggle_task_done(): void
     {
-        $user     = $this->makeUser(User::ROLE_SALES);
+        $user = $this->makeUser(User::ROLE_SALES);
         $activity = $this->makeActivity($user);
 
         $response = $this->withAuth($user)->togglePost($activity);
@@ -69,7 +68,7 @@ class ActivityToggleTest extends TestCase
 
     public function test_owner_can_toggle_task_back_to_open(): void
     {
-        $user     = $this->makeUser(User::ROLE_SALES);
+        $user = $this->makeUser(User::ROLE_SALES);
         $activity = $this->makeActivity($user, 'completed');
 
         $response = $this->withAuth($user)->togglePost($activity);
@@ -81,8 +80,8 @@ class ActivityToggleTest extends TestCase
 
     public function test_admin_can_toggle_others_task(): void
     {
-        $owner    = $this->makeUser(User::ROLE_SALES);
-        $admin    = $this->makeUser(User::ROLE_ADMIN);
+        $owner = $this->makeUser(User::ROLE_SALES);
+        $admin = $this->makeUser(User::ROLE_ADMIN);
         $activity = $this->makeActivity($owner);
 
         $response = $this->withAuth($admin)->togglePost($activity);
@@ -93,8 +92,8 @@ class ActivityToggleTest extends TestCase
 
     public function test_sales_cannot_toggle_others_task(): void
     {
-        $owner    = $this->makeUser(User::ROLE_SALES);
-        $other    = $this->makeUser(User::ROLE_SALES);
+        $owner = $this->makeUser(User::ROLE_SALES);
+        $other = $this->makeUser(User::ROLE_SALES);
         $activity = $this->makeActivity($owner);
 
         $response = $this->withAuth($other)->togglePost($activity);

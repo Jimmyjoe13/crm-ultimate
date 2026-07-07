@@ -20,10 +20,10 @@ class ImportCustomFieldsTest extends TestCase
     private function makeUser(): User
     {
         return User::createWithRole([
-            'name'     => 'Admin',
-            'email'    => 'admin@test.com',
+            'name' => 'Admin',
+            'email' => 'admin@test.com',
             'password' => Hash::make('password'),
-            'role'     => User::ROLE_ADMIN,
+            'role' => User::ROLE_ADMIN,
         ]);
     }
 
@@ -35,11 +35,11 @@ class ImportCustomFieldsTest extends TestCase
         Storage::disk('local')->put($path, $csv);
 
         $job = ImportJob::query()->create([
-            'user_id'     => $user->id,
+            'user_id' => $user->id,
             'entity_type' => $entityType,
-            'filename'    => 'test_cf.csv',
-            'status'      => 'pending',
-            'mapping'     => $mapping,
+            'filename' => 'test_cf.csv',
+            'status' => 'pending',
+            'mapping' => $mapping,
         ]);
 
         ProcessCsvImport::dispatchSync($job->id, $path);
@@ -52,17 +52,17 @@ class ImportCustomFieldsTest extends TestCase
         $user = $this->makeUser();
         CustomField::create([
             'entity_type' => 'contact',
-            'key'         => 'linkedin_url',
-            'label'       => 'LinkedIn',
-            'field_type'  => 'text',
-            'position'    => 1,
+            'key' => 'linkedin_url',
+            'label' => 'LinkedIn',
+            'field_type' => 'text',
+            'position' => 1,
         ]);
 
         $csv = "first_name,email,LinkedIn\nJane,jane@test.com,https://linkedin.com/in/jane";
         $job = $this->runJob($user, $csv, [
             'first_name' => 'first_name',
-            'email'      => 'email',
-            'LinkedIn'   => 'linkedin_url',
+            'email' => 'email',
+            'LinkedIn' => 'linkedin_url',
         ]);
 
         $this->assertSame('completed', $job->status);
@@ -76,17 +76,17 @@ class ImportCustomFieldsTest extends TestCase
         $user = $this->makeUser();
         CustomField::create([
             'entity_type' => 'contact',
-            'key'         => 'budget',
-            'label'       => 'Budget',
-            'field_type'  => 'number',
-            'position'    => 1,
+            'key' => 'budget',
+            'label' => 'Budget',
+            'field_type' => 'number',
+            'position' => 1,
         ]);
 
         $csv = "first_name,email,Budget\nClient,client@test.com,42.5";
         $job = $this->runJob($user, $csv, [
             'first_name' => 'first_name',
-            'email'      => 'email',
-            'Budget'     => 'budget',
+            'email' => 'email',
+            'Budget' => 'budget',
         ]);
 
         $contact = Contact::first();
@@ -99,16 +99,16 @@ class ImportCustomFieldsTest extends TestCase
         $user = $this->makeUser();
         CustomField::create([
             'entity_type' => 'contact',
-            'key'         => 'renewal_date',
-            'label'       => 'Date renouvellement',
-            'field_type'  => 'date',
-            'position'    => 1,
+            'key' => 'renewal_date',
+            'label' => 'Date renouvellement',
+            'field_type' => 'date',
+            'position' => 1,
         ]);
 
         $csv = "first_name,email,Date renouvellement\nClient,client@test.com,2026-05-15";
         $job = $this->runJob($user, $csv, [
-            'first_name'        => 'first_name',
-            'email'             => 'email',
+            'first_name' => 'first_name',
+            'email' => 'email',
             'Date renouvellement' => 'renewal_date',
         ]);
 
@@ -123,8 +123,8 @@ class ImportCustomFieldsTest extends TestCase
 
         $csv = "first_name,email,UnknownField\nClient,client@test.com,somevalue";
         $job = $this->runJob($user, $csv, [
-            'first_name'   => 'first_name',
-            'email'        => 'email',
+            'first_name' => 'first_name',
+            'email' => 'email',
             'UnknownField' => 'unknown_key_xyz',
         ]);
 

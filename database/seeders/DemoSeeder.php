@@ -44,7 +44,7 @@ class DemoSeeder extends Seeder
         $outboundStages = $this->createStages($outbound, [
             ['name' => 'Prospection',     'position' => 10, 'probability' => 5],
             ['name' => 'Premier contact', 'position' => 20, 'probability' => 15],
-            ['name' => 'Intérêt confirmé','position' => 30, 'probability' => 40],
+            ['name' => 'Intérêt confirmé', 'position' => 30, 'probability' => 40],
             ['name' => 'Offre envoyée',   'position' => 40, 'probability' => 65],
             ['name' => 'Closing',         'position' => 50, 'probability' => 85],
             ['name' => 'Gagné',           'position' => 90, 'probability' => 100, 'is_won' => true],
@@ -54,7 +54,7 @@ class DemoSeeder extends Seeder
         $partnerStages = $this->createStages($partners, [
             ['name' => 'Discussion',      'position' => 10, 'probability' => 20],
             ['name' => 'Accord verbal',   'position' => 20, 'probability' => 60],
-            ['name' => 'Contrat en cours','position' => 30, 'probability' => 80],
+            ['name' => 'Contrat en cours', 'position' => 30, 'probability' => 80],
             ['name' => 'Signé',           'position' => 90, 'probability' => 100, 'is_won' => true],
             ['name' => 'Abandonné',       'position' => 95, 'probability' => 0, 'is_lost' => true],
         ]);
@@ -153,13 +153,13 @@ class DemoSeeder extends Seeder
 
         foreach ($contactsData as $i => $c) {
             $company = $companies[$i % $companies->count()];
-            $email = strtolower($c['first_name']) . '.' . strtolower(str_replace(' ', '', $c['last_name'])) . '@' . $company->domain;
+            $email = strtolower($c['first_name']).'.'.strtolower(str_replace(' ', '', $c['last_name'])).'@'.$company->domain;
 
             $contact = Contact::query()->firstOrCreate(
                 ['email' => $email],
                 array_merge($c, [
                     'email' => $email,
-                    'phone' => '+33 6 ' . str_pad(rand(10000000, 99999999), 8, '0', STR_PAD_LEFT),
+                    'phone' => '+33 6 '.str_pad(rand(10000000, 99999999), 8, '0', STR_PAD_LEFT),
                     'lifecycle_stage' => $lifecycles[array_rand($lifecycles)],
                     'owner_id' => $owners[array_rand($owners)],
                 ]),
@@ -197,7 +197,7 @@ class DemoSeeder extends Seeder
 
             $wonStage = collect($stages)->firstWhere('is_won', true);
             $lostStage = collect($stages)->firstWhere('is_lost', true);
-            $openStages = collect($stages)->filter(fn ($s) => !$s->is_won && !$s->is_lost);
+            $openStages = collect($stages)->filter(fn ($s) => ! $s->is_won && ! $s->is_lost);
 
             // 20% won, 10% lost, 70% open
             if ($i % 10 < 7) {
@@ -214,9 +214,9 @@ class DemoSeeder extends Seeder
             $amount = collect([3500, 5000, 8000, 12000, 15000, 22000, 35000, 50000, 75000, 120000])->random();
 
             $deal = Deal::query()->firstOrCreate(
-                ['name' => $dealNames[$i] . ' — ' . $companies[$i % 20]->name],
+                ['name' => $dealNames[$i].' — '.$companies[$i % 20]->name],
                 [
-                    'name' => $dealNames[$i] . ' — ' . $companies[$i % 20]->name,
+                    'name' => $dealNames[$i].' — '.$companies[$i % 20]->name,
                     'amount' => $amount,
                     'currency' => 'EUR',
                     'status' => $status,
@@ -320,6 +320,7 @@ class DemoSeeder extends Seeder
                 $data,
             );
         }
+
         return $stages;
     }
 }

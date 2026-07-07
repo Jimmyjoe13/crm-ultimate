@@ -8,6 +8,9 @@ use App\Models\Company;
 use App\Models\Contact;
 use App\Models\Deal;
 use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -20,87 +23,92 @@ class AiInsightService
     //  API PUBLIQUE
     // ──────────────────────────────────────────────
 
-    public function summarizeDeal(int $id, bool $fresh = false): array
+    public function summarizeDeal(int $id, bool $fresh = false, ?User $user = null): array
     {
-        $deal = Deal::with(['companies', 'contacts', 'pipeline', 'stage', 'owner'])->findOrFail($id);
+        $deal = $this->findScoped(Deal::class, $id, ['companies', 'contacts', 'pipeline', 'stage', 'owner'], $user);
+
         return $this->resolve('summarize-deal', 'deal', $id, $fresh, function () use ($deal) {
             $activities = Activity::where('subject_type', Deal::class)->where('subject_id', $deal->id)->latest()->limit(10)->get();
-            $auditLogs  = AuditLog::where('auditable_type', Deal::class)->where('auditable_id', $deal->id)->latest()->limit(5)->get();
+            $auditLogs = AuditLog::where('auditable_type', Deal::class)->where('auditable_id', $deal->id)->latest()->limit(5)->get();
 
             return [
                 'context' => $this->dealContext($deal, $activities->toArray(), $auditLogs->toArray()),
-                'hash'    => md5((string) $deal->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
-                'prompt'  => 'summarize',
+                'hash' => md5((string) $deal->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
+                'prompt' => 'summarize',
             ];
         }, $this->ttlFor('summarize-deal', $deal));
     }
 
-    public function nextActionDeal(int $id, bool $fresh = false): array
+    public function nextActionDeal(int $id, bool $fresh = false, ?User $user = null): array
     {
-        $deal = Deal::with(['companies', 'contacts', 'pipeline', 'stage', 'owner'])->findOrFail($id);
+        $deal = $this->findScoped(Deal::class, $id, ['companies', 'contacts', 'pipeline', 'stage', 'owner'], $user);
+
         return $this->resolve('next-action-deal', 'deal', $id, $fresh, function () use ($deal) {
             $activities = Activity::where('subject_type', Deal::class)->where('subject_id', $deal->id)->latest()->limit(10)->get();
 
             return [
                 'context' => $this->dealContext($deal, $activities->toArray(), []),
-                'hash'    => md5('next-action'.(string) $deal->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
-                'prompt'  => 'next-action',
+                'hash' => md5('next-action'.(string) $deal->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
+                'prompt' => 'next-action',
             ];
         }, $this->ttlFor('next-action-deal', $deal));
     }
 
-    public function scoreDeal(int $id, bool $fresh = false): array
+    public function scoreDeal(int $id, bool $fresh = false, ?User $user = null): array
     {
-        $deal = Deal::with(['stage'])->findOrFail($id);
+        $deal = $this->findScoped(Deal::class, $id, ['stage'], $user);
+
         return $this->resolve('score-deal', 'deal', $id, $fresh, function () use ($deal) {
             $activities = Activity::where('subject_type', Deal::class)->where('subject_id', $deal->id)->latest()->limit(5)->get();
 
             return [
                 'context' => $this->dealContext($deal, $activities->toArray(), []),
-                'hash'    => md5('score'.(string) $deal->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
-                'prompt'  => 'score',
+                'hash' => md5('score'.(string) $deal->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
+                'prompt' => 'score',
             ];
         }, $this->ttlFor('score-deal', $deal));
     }
 
-    public function summarizeContact(int $id, bool $fresh = false): array
+    public function summarizeContact(int $id, bool $fresh = false, ?User $user = null): array
     {
-        $contact = Contact::with(['companies', 'owner'])->findOrFail($id);
+        $contact = $this->findScoped(Contact::class, $id, ['companies', 'owner'], $user);
+
         return $this->resolve('summarize-contact', 'contact', $id, $fresh, function () use ($contact) {
             $activities = Activity::where('subject_type', Contact::class)->where('subject_id', $contact->id)->latest()->limit(10)->get();
 
             return [
                 'context' => $this->contactContext($contact, $activities->toArray()),
-                'hash'    => md5((string) $contact->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
-                'prompt'  => 'summarize',
+                'hash' => md5((string) $contact->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
+                'prompt' => 'summarize',
             ];
         }, $this->ttlFor('summarize-contact'));
     }
 
-    public function summarizeCompany(int $id, bool $fresh = false): array
+    public function summarizeCompany(int $id, bool $fresh = false, ?User $user = null): array
     {
-        $company = Company::with(['contacts', 'deals'])->findOrFail($id);
+        $company = $this->findScoped(Company::class, $id, ['contacts', 'deals'], $user);
+
         return $this->resolve('summarize-company', 'company', $id, $fresh, function () use ($company) {
             $activities = Activity::where('subject_type', Company::class)->where('subject_id', $company->id)->latest()->limit(10)->get();
 
             return [
                 'context' => $this->companyContext($company, $activities->toArray()),
-                'hash'    => md5((string) $company->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
-                'prompt'  => 'summarize',
+                'hash' => md5((string) $company->updated_at.$activities->count().($activities->first()?->created_at ?? '')),
+                'prompt' => 'summarize',
             ];
         }, $this->ttlFor('summarize-company'));
     }
 
-    public function scoreContact(int $id, bool $fresh = false): array
+    public function scoreContact(int $id, bool $fresh = false, ?User $user = null): array
     {
-        return $this->resolve('score-contact', 'contact', $id, $fresh, function () use ($id) {
-            $contact    = Contact::with(['companies', 'owner', 'deals'])->findOrFail($id);
+        return $this->resolve('score-contact', 'contact', $id, $fresh, function () use ($id, $user) {
+            $contact = $this->findScoped(Contact::class, $id, ['companies', 'owner', 'deals'], $user);
             $activities = Activity::where('subject_type', Contact::class)->where('subject_id', $id)->latest()->limit(10)->get();
 
             return [
                 'context' => $this->contactContext($contact, $activities->toArray()),
-                'hash'    => md5('score-contact'.(string) $contact->updated_at.$activities->count()),
-                'prompt'  => 'score-contact',
+                'hash' => md5('score-contact'.(string) $contact->updated_at.$activities->count()),
+                'prompt' => 'score-contact',
             ];
         }, $this->ttlFor('score-contact'));
     }
@@ -109,22 +117,22 @@ class AiInsightService
     //  RÉDACTION EMAIL
     // ──────────────────────────────────────────────
 
-    public function draftEmail(?int $contactId, ?int $dealId, string $intent = ''): array
+    public function draftEmail(?int $contactId, ?int $dealId, string $intent = '', ?User $user = null): array
     {
         $context = '';
 
         if ($contactId) {
-            $contact    = Contact::with(['companies', 'owner', 'deals'])->findOrFail($contactId);
+            $contact = $this->findScoped(Contact::class, $contactId, ['companies', 'owner', 'deals'], $user);
             $activities = Activity::where('subject_type', Contact::class)->where('subject_id', $contactId)->latest()->limit(5)->get();
-            $context    = $this->contactContext($contact, $activities->toArray());
+            $context = $this->contactContext($contact, $activities->toArray());
         } elseif ($dealId) {
-            $deal       = Deal::with(['companies', 'contacts', 'stage', 'pipeline', 'owner'])->findOrFail($dealId);
+            $deal = $this->findScoped(Deal::class, $dealId, ['companies', 'contacts', 'stage', 'pipeline', 'owner'], $user);
             $activities = Activity::where('subject_type', Deal::class)->where('subject_id', $dealId)->latest()->limit(5)->get();
-            $context    = $this->dealContext($deal, $activities->toArray(), []);
+            $context = $this->dealContext($deal, $activities->toArray(), []);
         }
 
         $intentLine = $intent ? "\nObjectif de l'email : {$intent}" : '';
-        $prompt     = $context.$intentLine."\n\nRédige un email professionnel B2B en français (maximum 200 mots). Objet accrocheur. Signature générique (prénom seulement). Réponds UNIQUEMENT en JSON valide : {\"subject\": \"Objet\", \"body\": \"Corps\"}";
+        $prompt = $context.$intentLine."\n\nRédige un email professionnel B2B en français (maximum 200 mots). Objet accrocheur. Signature générique (prénom seulement). Réponds UNIQUEMENT en JSON valide : {\"subject\": \"Objet\", \"body\": \"Corps\"}";
 
         $raw = $this->llm->complete(
             $this->systemPrompt('draft'),
@@ -158,7 +166,7 @@ class AiInsightService
     {
         $cacheKey = 'ai:daily-suggestions:user:'.$user->id.':'.now()->format('Y-m-d');
 
-        if (!$fresh && Cache::has($cacheKey)) {
+        if (! $fresh && Cache::has($cacheKey)) {
             return ['data' => Cache::get($cacheKey), 'cached' => true];
         }
 
@@ -192,22 +200,19 @@ class AiInsightService
         $contextParts = [];
 
         if ($stagnantDeals->isNotEmpty()) {
-            $lines = $stagnantDeals->map(fn ($d) =>
-                '- '.$d->name.' ('.$d->stage?->name.') : '.number_format($d->amount, 0, ',', ' ').' € — stagnant depuis '.now()->diffInDays($d->updated_at).' j'
+            $lines = $stagnantDeals->map(fn ($d) => '- '.$d->name.' ('.$d->stage?->name.') : '.number_format($d->amount, 0, ',', ' ').' € — stagnant depuis '.now()->diffInDays($d->updated_at).' j'
             )->join("\n");
             $contextParts[] = "Deals stagnants (>7j sans modification) :\n{$lines}";
         }
 
         if ($closingSoon->isNotEmpty()) {
-            $lines = $closingSoon->map(fn ($d) =>
-                '- '.$d->name.' : '.number_format($d->amount, 0, ',', ' ').' € — close le '.$d->close_date?->format('d/m/Y')
+            $lines = $closingSoon->map(fn ($d) => '- '.$d->name.' : '.number_format($d->amount, 0, ',', ' ').' € — close le '.$d->close_date?->format('d/m/Y')
             )->join("\n");
             $contextParts[] = "Deals qui closent dans les 7 prochains jours :\n{$lines}";
         }
 
         if ($overdueTasks->isNotEmpty()) {
-            $lines = $overdueTasks->map(fn ($t) =>
-                '- '.$t->title.' (due le '.($t->due_at?->format('d/m/Y') ?? '?').')'
+            $lines = $overdueTasks->map(fn ($t) => '- '.$t->title.' (due le '.($t->due_at?->format('d/m/Y') ?? '?').')'
             )->join("\n");
             $contextParts[] = "Tâches en retard (overdue) :\n{$lines}";
         }
@@ -215,7 +220,8 @@ class AiInsightService
         if ($recentReplies->isNotEmpty()) {
             $lines = $recentReplies->map(function ($a) {
                 $subject = $a->subject;
-                $name = $subject ? (($subject->first_name ?? '').' '.($subject->last_name ?? $subject->name ?? '')): 'contact inconnu';
+                $name = $subject ? (($subject->first_name ?? '').' '.($subject->last_name ?? $subject->name ?? '')) : 'contact inconnu';
+
                 return '- '.trim($name).' a répondu à une campagne Emelia';
             })->join("\n");
             $contextParts[] = "Contacts ayant répondu à Emelia dans les 48h (à relancer) :\n{$lines}";
@@ -224,6 +230,7 @@ class AiInsightService
         if (empty($contextParts)) {
             $data = ['suggestions' => ['Aucune action urgente détectée. Bonne journée !'], 'alerts' => [], 'priorities' => []];
             Cache::put($cacheKey, $data, now()->addHours(12));
+
             return ['data' => $data, 'cached' => false];
         }
 
@@ -256,7 +263,7 @@ class AiInsightService
     {
         $cacheKey = 'ai:report-insights';
 
-        if (!$fresh && Cache::has($cacheKey)) {
+        if (! $fresh && Cache::has($cacheKey)) {
             return ['data' => Cache::get($cacheKey), 'cached' => true];
         }
 
@@ -265,27 +272,27 @@ class AiInsightService
         // CA mensuel — dernier mois vs mois précédent
         $caMensuel = $reportData['ca_mensuel'] ?? [];
         if (count($caMensuel) >= 2) {
-            $last    = end($caMensuel);
-            $prev    = $caMensuel[count($caMensuel) - 2];
-            $delta   = $prev['ca_gagne'] > 0 ? round(($last['ca_gagne'] - $prev['ca_gagne']) / $prev['ca_gagne'] * 100, 1) : null;
-            $lines[] = "CA gagné ce mois ({$last['mois']}) : " . number_format($last['ca_gagne'], 0, ',', ' ') . ' €'
-                       . ($delta !== null ? " ({$delta}% vs mois précédent)" : '');
-            $lines[] = "Pipeline ouvert ce mois : " . number_format($last['pipeline'], 0, ',', ' ') . ' €';
+            $last = end($caMensuel);
+            $prev = $caMensuel[count($caMensuel) - 2];
+            $delta = $prev['ca_gagne'] > 0 ? round(($last['ca_gagne'] - $prev['ca_gagne']) / $prev['ca_gagne'] * 100, 1) : null;
+            $lines[] = "CA gagné ce mois ({$last['mois']}) : ".number_format($last['ca_gagne'], 0, ',', ' ').' €'
+                       .($delta !== null ? " ({$delta}% vs mois précédent)" : '');
+            $lines[] = 'Pipeline ouvert ce mois : '.number_format($last['pipeline'], 0, ',', ' ').' €';
         }
 
         // Entonnoir
         $entonnoir = $reportData['entonnoir'] ?? [];
-        if (!empty($entonnoir['stages'])) {
-            $lines[] = "Taux de conversion global : " . ($entonnoir['taux_conversion_global'] ?? '?') . '%';
-            $stagesStr = collect($entonnoir['stages'])->map(fn($s) => "{$s['name']} : {$s['count']} deal(s)")->join(', ');
+        if (! empty($entonnoir['stages'])) {
+            $lines[] = 'Taux de conversion global : '.($entonnoir['taux_conversion_global'] ?? '?').'%';
+            $stagesStr = collect($entonnoir['stages'])->map(fn ($s) => "{$s['name']} : {$s['count']} deal(s)")->join(', ');
             $lines[] = "Entonnoir : {$stagesStr}";
         }
 
         // Classement commerciaux
         $classement = $reportData['classement'] ?? [];
-        if (!empty($classement)) {
+        if (! empty($classement)) {
             $top = $classement[0];
-            $lines[] = "Top commercial ce mois : {$top['commercial']} — {$top['nb_deals']} deal(s), " . number_format($top['ca'], 0, ',', ' ') . ' €';
+            $lines[] = "Top commercial ce mois : {$top['commercial']} — {$top['nb_deals']} deal(s), ".number_format($top['ca'], 0, ',', ' ').' €';
             if (count($classement) > 1) {
                 $bottom = end($classement);
                 $lines[] = "Dernier classé : {$bottom['commercial']} — {$bottom['nb_deals']} deal(s)";
@@ -294,21 +301,22 @@ class AiInsightService
 
         // Activité hebdo
         $activiteHebdo = $reportData['activite_hebdo'] ?? [];
-        if (!empty($activiteHebdo)) {
+        if (! empty($activiteHebdo)) {
             $lastWeek = end($activiteHebdo);
-            $lines[]  = "Activité semaine du {$lastWeek['semaine']} : {$lastWeek['total']} action(s) enregistrée(s)";
+            $lines[] = "Activité semaine du {$lastWeek['semaine']} : {$lastWeek['total']} action(s) enregistrée(s)";
         }
 
         if (empty($lines)) {
             $data = ['insights' => ['Pas encore de données suffisantes pour générer des insights.'], 'alerts' => [], 'recommendations' => []];
             Cache::put($cacheKey, $data, now()->addHour());
+
             return ['data' => $data, 'cached' => false];
         }
 
         $context = implode("\n", $lines);
-        $prompt  = "Tu es un analyste CRM qui détecte les tendances, anomalies et opportunités. Voici les métriques clés du CRM :\n\n{$context}\n\n"
-                   . "Génère 3 à 5 insights actionnables basés sur ces données. Détecte les tendances, anomalies et opportunités. "
-                   . "Réponds UNIQUEMENT en JSON valide : {\"insights\": [\"insight 1\"], \"alerts\": [\"alerte urgente 1\"], \"recommendations\": [\"recommandation 1\"]}";
+        $prompt = "Tu es un analyste CRM qui détecte les tendances, anomalies et opportunités. Voici les métriques clés du CRM :\n\n{$context}\n\n"
+                   .'Génère 3 à 5 insights actionnables basés sur ces données. Détecte les tendances, anomalies et opportunités. '
+                   .'Réponds UNIQUEMENT en JSON valide : {"insights": ["insight 1"], "alerts": ["alerte urgente 1"], "recommendations": ["recommandation 1"]}';
 
         try {
             $raw = $this->llm->complete(
@@ -336,17 +344,17 @@ class AiInsightService
      * Score N contacts en batch — 1 appel LLM pour 10 contacts.
      * Utilisé par ai:score-contacts pour remplacer 50 appels individuels.
      *
-     * @param \Illuminate\Support\Collection<int, Contact> $contacts
-     * @return array<int, array{score: int, rationale: string}>  keyed by contact id
+     * @param  Collection<int, Contact>  $contacts
+     * @return array<int, array{score: int, rationale: string}> keyed by contact id
      */
-    public function batchScoreContacts(\Illuminate\Support\Collection $contacts): array
+    public function batchScoreContacts(Collection $contacts): array
     {
         $batches = $contacts->chunk(10);
         $results = [];
 
         foreach ($batches as $batch) {
             $entries = $batch->map(fn ($c) => sprintf(
-                "ID:%d | %s %s | lifecycle:%s | emelia:%s | deals_ouverts:%d | activite_30j:%d",
+                'ID:%d | %s %s | lifecycle:%s | emelia:%s | deals_ouverts:%d | activite_30j:%d',
                 $c->id,
                 $c->first_name,
                 $c->last_name,
@@ -360,10 +368,10 @@ class AiInsightService
             ))->implode("\n");
 
             $prompt = "Score chaque contact de 0 à 100 sur son engagement commercial.\n"
-                    . "Critères : lifecycle (0-30pts), interactions email (0-30pts), activité 30j (0-20pts), deals ouverts (0-20pts).\n"
-                    . "Un score >70 est excellent (top 20%).\n\n"
-                    . "Réponds UNIQUEMENT en JSON : [{\"id\": 1, \"score\": 65, \"rationale\": \"...\"}, ...]\n\n"
-                    . $entries;
+                    ."Critères : lifecycle (0-30pts), interactions email (0-30pts), activité 30j (0-20pts), deals ouverts (0-20pts).\n"
+                    ."Un score >70 est excellent (top 20%).\n\n"
+                    ."Réponds UNIQUEMENT en JSON : [{\"id\": 1, \"score\": 65, \"rationale\": \"...\"}, ...]\n\n"
+                    .$entries;
 
             $raw = $this->llm->complete(
                 $this->systemPrompt('score-contact'),
@@ -377,7 +385,7 @@ class AiInsightService
                 foreach ($parsed as $item) {
                     if (isset($item['id'], $item['score'])) {
                         $results[(int) $item['id']] = [
-                            'score'     => (int) $item['score'],
+                            'score' => (int) $item['score'],
                             'rationale' => $item['rationale'] ?? '',
                         ];
                     }
@@ -393,15 +401,37 @@ class AiInsightService
     // ──────────────────────────────────────────────
 
     /**
+     * Charge une entité en appliquant le cloisonnement owner (visibleTo) lorsqu'un
+     * utilisateur est fourni. Empêche un commercial d'obtenir des insights IA sur des
+     * deals/contacts/sociétés hors de son périmètre (IDOR).
+     *
+     * $user null = contexte système (commandes cron, précompute) → aucun filtrage.
+     * Si l'entité n'est pas accessible, findOrFail lève ModelNotFoundException → 404.
+     *
+     * @param  class-string<Model>  $model
+     * @param  array<int, string>  $with
+     */
+    private function findScoped(string $model, int $id, array $with, ?User $user)
+    {
+        $query = $model::query()->with($with);
+
+        if ($user !== null) {
+            $query->visibleTo($user);
+        }
+
+        return $query->findOrFail($id);
+    }
+
+    /**
      * Résout le cache + génération LLM.
      * Le TTL est adaptatif selon le type d'entité et son état.
      */
     private function resolve(string $endpoint, string $type, int $id, bool $fresh, callable $builder, ?int $ttl = null): array
     {
-        $built    = $builder();
+        $built = $builder();
         $cacheKey = "ai:{$endpoint}:{$type}:{$id}:{$built['hash']}";
 
-        if (!$fresh && Cache::has($cacheKey)) {
+        if (! $fresh && Cache::has($cacheKey)) {
             return ['data' => Cache::get($cacheKey), 'cached' => true];
         }
 
@@ -421,19 +451,19 @@ class AiInsightService
         $isJson = in_array($promptType, ['next-action', 'score', 'score-contact']);
 
         $user = match ($promptType) {
-            'summarize'    => $context."\n\nGénère un brief synthétique de 4 à 6 lignes pour aider le commercial à reprendre ce dossier.",
-            'next-action'  => $context."\n\nSuggère la prochaine action commerciale concrète. Réponds UNIQUEMENT en JSON valide : {\"action\": \"...\", \"rationale\": \"...\", \"priority\": \"high\"}",
-            'score'        => $context."\n\nÉvalue la santé de ce deal. Donne un score sur 100, une tendance ('warming', 'cooling', 'stable'), des raisons clés, des points forts (green_flags), des risques ou points de vigilance (red_flags) et des recommandations d'action concrètes pour le commercial. Réponds UNIQUEMENT en JSON valide : {\"score\": 75, \"trend\": \"warming\", \"reasons\": [\"raison 1\"], \"green_flags\": [\"point fort 1\"], \"red_flags\": [\"point de vigilance 1\"], \"recommendations\": [\"recommandation 1\"]}",
+            'summarize' => $context."\n\nGénère un brief synthétique de 4 à 6 lignes pour aider le commercial à reprendre ce dossier.",
+            'next-action' => $context."\n\nSuggère la prochaine action commerciale concrète. Réponds UNIQUEMENT en JSON valide : {\"action\": \"...\", \"rationale\": \"...\", \"priority\": \"high\"}",
+            'score' => $context."\n\nÉvalue la santé de ce deal. Donne un score sur 100, une tendance ('warming', 'cooling', 'stable'), des raisons clés, des points forts (green_flags), des risques ou points de vigilance (red_flags) et des recommandations d'action concrètes pour le commercial. Réponds UNIQUEMENT en JSON valide : {\"score\": 75, \"trend\": \"warming\", \"reasons\": [\"raison 1\"], \"green_flags\": [\"point fort 1\"], \"red_flags\": [\"point de vigilance 1\"], \"recommendations\": [\"recommandation 1\"]}",
             'score-contact' => $context."\n\nÉvalue l'engagement commercial de ce contact sur 100. Tiens compte du lifecycle, des interactions Emelia (ouvertures, réponses) et de l'activité CRM récente. Réponds UNIQUEMENT en JSON valide : {\"score\": 75, \"rationale\": \"Justification en 1-2 phrases.\"}",
-            default        => $context,
+            default => $context,
         };
 
         $options = match ($promptType) {
-            'summarize'    => [],
-            'next-action'  => ['max_tokens' => 300],
-            'score'        => ['max_tokens' => 600],
+            'summarize' => [],
+            'next-action' => ['max_tokens' => 300],
+            'score' => ['max_tokens' => 600],
             'score-contact' => ['max_tokens' => 250],
-            default        => [],
+            default => [],
         };
 
         // Pour les endpoints JSON on demande un format structuré
@@ -479,7 +509,7 @@ class AiInsightService
         // 3. Fallback : extraire le premier { ... } avec gestion de profondeur
         $depth = 0;
         $start = null;
-        $len   = strlen($cleaned);
+        $len = strlen($cleaned);
 
         for ($i = 0; $i < $len; $i++) {
             $ch = $cleaned[$i];
@@ -529,7 +559,7 @@ class AiInsightService
                     ? 3600    // 1h si close bientôt
                     : 21600), // 6h sinon
             'summarize-contact' => 43200, // 12h
-            'score-contact'     => 86400, // 24h — recalculé la nuit en batch
+            'score-contact' => 86400, // 24h — recalculé la nuit en batch
             'summarize-company' => 86400, // 24h — données quasi-statiques
             default => 86400,
         };
@@ -542,47 +572,47 @@ class AiInsightService
     private function systemPrompt(string $task): string
     {
         return match ($task) {
-            'summarize' => "Tu es un assistant CRM commercial qui prépare des briefs de dossiers pour des commerciaux. "
-                         . "Sois synthétique (4-6 lignes max), va à l'essentiel. Structure : contexte, statut, prochaine action implicite.",
+            'summarize' => 'Tu es un assistant CRM commercial qui prépare des briefs de dossiers pour des commerciaux. '
+                         ."Sois synthétique (4-6 lignes max), va à l'essentiel. Structure : contexte, statut, prochaine action implicite.",
 
-            'next-action' => "Tu es un coach commercial senior. Tu suggères LA prochaine action concrète "
-                           . "qui ferait avancer ce deal. Sois spécifique : \"Appelle X pour relancer sur Y\" "
-                           . "pas \"Relance le contact\". Réponds UNIQUEMENT en JSON valide.",
+            'next-action' => 'Tu es un coach commercial senior. Tu suggères LA prochaine action concrète '
+                           .'qui ferait avancer ce deal. Sois spécifique : "Appelle X pour relancer sur Y" '
+                           .'pas "Relance le contact". Réponds UNIQUEMENT en JSON valide.',
 
-            'score' => "Tu es un analyste commercial qui score les deals CRM de 0 à 100. "
-                     . "Critères : montant, probabilité de closing, activité récente, durée dans le pipeline. "
-                     . "Sois exigeant : un score >70 est rare (top 20%). "
-                     . "Détecte les vrais signaux : un deal avec activités récentes et réponses email "
-                     . "vaut plus qu'un deal avec juste un montant élevé. Réponds UNIQUEMENT en JSON valide.",
+            'score' => 'Tu es un analyste commercial qui score les deals CRM de 0 à 100. '
+                     .'Critères : montant, probabilité de closing, activité récente, durée dans le pipeline. '
+                     .'Sois exigeant : un score >70 est rare (top 20%). '
+                     .'Détecte les vrais signaux : un deal avec activités récentes et réponses email '
+                     ."vaut plus qu'un deal avec juste un montant élevé. Réponds UNIQUEMENT en JSON valide.",
 
             'score-contact' => "Tu évalues l'engagement commercial d'un contact de 0 à 100. "
-                            . "Pondération : lifecycle (0-30pts), interactions email (0-30pts), "
-                            . "activité CRM récente (0-20pts), deals associés (0-20pts). "
-                            . "Un contact sans activité depuis 30 jours ne peut pas dépasser 30. "
-                            . "Réponds UNIQUEMENT en JSON valide.",
+                            .'Pondération : lifecycle (0-30pts), interactions email (0-30pts), '
+                            .'activité CRM récente (0-20pts), deals associés (0-20pts). '
+                            .'Un contact sans activité depuis 30 jours ne peut pas dépasser 30. '
+                            .'Réponds UNIQUEMENT en JSON valide.',
 
-            'draft' => "Tu es un rédacteur commercial B2B expert. Tu rédiges des emails percutants "
-                     . "et personnalisés en français. Max 200 mots. Ton but : obtenir une réponse "
-                     . "ou une action du prospect. Personnalise selon le contexte. "
-                     . "Réponds UNIQUEMENT en JSON valide {\"subject\": \"...\", \"body\": \"...\"}.",
+            'draft' => 'Tu es un rédacteur commercial B2B expert. Tu rédiges des emails percutants '
+                     .'et personnalisés en français. Max 200 mots. Ton but : obtenir une réponse '
+                     .'ou une action du prospect. Personnalise selon le contexte. '
+                     .'Réponds UNIQUEMENT en JSON valide {"subject": "...", "body": "..."}.',
 
-            'sentiment' => "Tu es un expert en analyse de communication. Tu détectes le vrai sentiment "
-                         . "derrière un email. Ne conclus POSITIF que si : demande de démo, question "
-                         . "sur le prix ou l'offre, mention d'un besoin explicite. Ne conclus NÉGATIF "
-                         . "que si : objection ferme, refus poli, absence d'intérêt marqué. "
-                         . "Par défaut : neutre. Réponds UNIQUEMENT en JSON valide.",
+            'sentiment' => 'Tu es un expert en analyse de communication. Tu détectes le vrai sentiment '
+                         .'derrière un email. Ne conclus POSITIF que si : demande de démo, question '
+                         ."sur le prix ou l'offre, mention d'un besoin explicite. Ne conclus NÉGATIF "
+                         ."que si : objection ferme, refus poli, absence d'intérêt marqué. "
+                         .'Par défaut : neutre. Réponds UNIQUEMENT en JSON valide.',
 
-            'suggestions' => "Tu es un directeur commercial qui prépare le brief du matin pour son équipe. "
-                          . "Tu vois le pipeline, les deals qui stagnent, les tâches en retard, les réponses "
-                          . "Emelia. Priorise ce qui est URGENT vs IMPORTANT. Sois actionnable. "
-                          . "Réponds UNIQUEMENT en JSON valide.",
+            'suggestions' => 'Tu es un directeur commercial qui prépare le brief du matin pour son équipe. '
+                          .'Tu vois le pipeline, les deals qui stagnent, les tâches en retard, les réponses '
+                          .'Emelia. Priorise ce qui est URGENT vs IMPORTANT. Sois actionnable. '
+                          .'Réponds UNIQUEMENT en JSON valide.',
 
-            'analyze' => "Tu es un analyste CRM qui détecte les tendances, anomalies et opportunités "
-                      . "dans les données. Regarde les variations mois/mois, les goulots d'étranglement "
-                      . "dans le pipeline, les écarts de performance entre les commerciaux. "
-                      . "Réponds UNIQUEMENT en JSON valide.",
+            'analyze' => 'Tu es un analyste CRM qui détecte les tendances, anomalies et opportunités '
+                      ."dans les données. Regarde les variations mois/mois, les goulots d'étranglement "
+                      .'dans le pipeline, les écarts de performance entre les commerciaux. '
+                      .'Réponds UNIQUEMENT en JSON valide.',
 
-            default => "Tu es un assistant CRM commercial B2B expert, concis et précis.",
+            default => 'Tu es un assistant CRM commercial B2B expert, concis et précis.',
         };
     }
 
@@ -593,7 +623,7 @@ class AiInsightService
     private function dealContext(Deal $deal, array $activities, array $auditLogs): string
     {
         $daysOld = $deal->updated_at ? now()->diffInDays($deal->updated_at) : '?';
-        $trend   = $this->buildActivityTrends(Deal::class, $deal->id);
+        $trend = $this->buildActivityTrends(Deal::class, $deal->id);
 
         $lines = [
             "=== DEAL : {$deal->name} ===",
@@ -657,14 +687,14 @@ class AiInsightService
             $emeliaStats = Activity::where('subject_type', Contact::class)
                 ->where('subject_id', $contact->id)
                 ->where('source', 'emelia')
-                ->selectRaw("type, COUNT(*) as cnt, MAX(occurred_at) as last_at")
+                ->selectRaw('type, COUNT(*) as cnt, MAX(occurred_at) as last_at')
                 ->groupBy('type')
                 ->get();
 
             if ($emeliaStats->isNotEmpty()) {
                 $lines[] = "\nEngagement email (Emelia) :";
                 foreach ($emeliaStats as $ea) {
-                    $lastAt = $ea->last_at ? \Carbon\Carbon::parse($ea->last_at)->format('d/m/Y') : 'N/A';
+                    $lastAt = $ea->last_at ? Carbon::parse($ea->last_at)->format('d/m/Y') : 'N/A';
                     $lines[] = "- {$ea->type} : {$ea->cnt}× (dernier : {$lastAt})";
                 }
             }
@@ -729,7 +759,7 @@ class AiInsightService
             WHERE subject_type = ? AND subject_id = ?
         ", [$subjectType, $subjectId]);
 
-        if (!$stats || (!$stats->period_30d && !$stats->period_7d)) {
+        if (! $stats || (! $stats->period_30d && ! $stats->period_7d)) {
             return '❄️ Aucune activité récente';
         }
 
@@ -739,11 +769,11 @@ class AiInsightService
         if ($stats->prev_30d > 0) {
             $variation = (($stats->period_30d - $stats->prev_30d) / max($stats->prev_30d, 1)) * 100;
             $parts[] = match (true) {
-                $variation > 50   => '📈 Forte hausse d\'activité (+'.round($variation).'%)',
-                $variation > 10   => '📈 Activité en hausse (+'.round($variation).'%)',
-                $variation < -50  => '📉 Forte baisse d\'activité (−'.round(abs($variation)).'%)',
-                $variation < -10  => '📉 Activité en baisse (−'.round(abs($variation)).'%)',
-                default            => '→ Activité stable',
+                $variation > 50 => '📈 Forte hausse d\'activité (+'.round($variation).'%)',
+                $variation > 10 => '📈 Activité en hausse (+'.round($variation).'%)',
+                $variation < -50 => '📉 Forte baisse d\'activité (−'.round(abs($variation)).'%)',
+                $variation < -10 => '📉 Activité en baisse (−'.round(abs($variation)).'%)',
+                default => '→ Activité stable',
             };
         } elseif ($stats->period_30d > 0) {
             $parts[] = '📊 '.$stats->period_30d.' activité(s) sur les 30 derniers jours';
@@ -781,7 +811,7 @@ class AiInsightService
             }
 
             return $notes->map(fn ($a) => sprintf(
-                "- [%s] %s (%s)",
+                '- [%s] %s (%s)',
                 $a->type,
                 $a->title,
                 $a->created_at?->format('d/m/Y') ?? '?'

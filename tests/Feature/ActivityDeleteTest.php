@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\User;
 use App\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class ActivityDeleteTest extends TestCase
@@ -20,7 +21,7 @@ class ActivityDeleteTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -29,31 +30,31 @@ class ActivityDeleteTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@delete.test',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@delete.test',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
     private function makeActivity(User $user): Activity
     {
         return Activity::create([
-            'type'     => 'task',
-            'title'    => 'Test task',
-            'status'   => 'open',
+            'type' => 'task',
+            'title' => 'Test task',
+            'status' => 'open',
             'owner_id' => $user->id,
         ]);
     }
 
-    private function deleteRequest(Activity $activity): \Illuminate\Testing\TestResponse
+    private function deleteRequest(Activity $activity): TestResponse
     {
-        return $this->delete('/activities/' . $activity->id, ['_token' => 'test']);
+        return $this->delete('/activities/'.$activity->id, ['_token' => 'test']);
     }
 
     public function test_owner_can_delete_activity(): void
     {
-        $user     = $this->makeUser(User::ROLE_SALES);
+        $user = $this->makeUser(User::ROLE_SALES);
         $activity = $this->makeActivity($user);
 
         $response = $this->withAuth($user)->deleteRequest($activity);
@@ -64,8 +65,8 @@ class ActivityDeleteTest extends TestCase
 
     public function test_admin_can_delete_others_activity(): void
     {
-        $owner    = $this->makeUser(User::ROLE_SALES);
-        $admin    = $this->makeUser(User::ROLE_ADMIN);
+        $owner = $this->makeUser(User::ROLE_SALES);
+        $admin = $this->makeUser(User::ROLE_ADMIN);
         $activity = $this->makeActivity($owner);
 
         $response = $this->withAuth($admin)->deleteRequest($activity);
@@ -76,8 +77,8 @@ class ActivityDeleteTest extends TestCase
 
     public function test_sales_cannot_delete_others_activity(): void
     {
-        $owner    = $this->makeUser(User::ROLE_SALES);
-        $other    = $this->makeUser(User::ROLE_SALES);
+        $owner = $this->makeUser(User::ROLE_SALES);
+        $other = $this->makeUser(User::ROLE_SALES);
         $activity = $this->makeActivity($owner);
 
         $response = $this->withAuth($other)->deleteRequest($activity);

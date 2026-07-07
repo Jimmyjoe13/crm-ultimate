@@ -32,25 +32,48 @@
         </a>
         @endif
         <x-button href="/contacts/create" size="sm">Nouveau contact</x-button>
-        <form method="GET" action="{{ '/contacts' }}" class="flex items-center gap-2">
-            @if(request('sort')) <input type="hidden" name="sort" value="{{ request('sort') }}"> @endif
-            @if(request('dir')) <input type="hidden" name="dir" value="{{ request('dir') }}"> @endif
-            
-            <label class="flex items-center gap-2 text-xs text-secondary cursor-pointer mr-2 select-none">
-                <input type="hidden" name="hide_blacklisted" value="0">
-                <input type="checkbox" name="hide_blacklisted" value="1" 
-                       @checked(request('hide_blacklisted', '1') === '1')
-                       @change="$el.form.submit()"
-                       class="rounded border-default text-accent focus:ring-accent" style="width: 14px; height: 14px; cursor: pointer;">
-                <span>Masquer les blacklistés ({{ \App\Models\Contact::blacklisted()->count() }})</span>
-            </label>
-
-            <input type="text" name="search" value="{{ $search }}" placeholder="Rechercher…"
-                   class="field" style="padding: 6px 10px; border: 1px solid var(--border); border-radius:7px; font-size:13px; background: var(--surface); color: var(--text);">
-            <x-button type="submit" size="sm">Chercher</x-button>
-        </form>
     </div>
 </div>
+
+@php
+    $contactFilters = [
+        ['name' => 'lifecycle_stage', 'label' => 'Lifecycle', 'value' => $lifecycle, 'options' => [
+            'lead' => 'Lead', 'mql' => 'MQL', 'sql' => 'SQL', 'opportunity' => 'Opportunité',
+            'customer' => 'Client', 'evangelist' => 'Évangéliste', 'other' => 'Autre',
+        ]],
+        ['name' => 'lead_status', 'label' => 'Statut', 'value' => $leadStatus, 'options' => [
+            'new' => 'Nouveau', 'open' => 'Ouvert', 'in_progress' => 'En cours',
+            'connected' => 'Connecté', 'unqualified' => 'Non qualifié', 'bad_fit' => 'Hors cible',
+        ]],
+        ['name' => 'has_deal', 'label' => 'Deals', 'value' => $hasDeal, 'options' => [
+            'yes' => 'Avec deal', 'no' => 'Sans deal',
+        ]],
+    ];
+    if ($owners->count() > 1) {
+        $contactFilters[] = ['name' => 'owner_id', 'label' => 'Propriétaire', 'value' => $ownerId,
+            'options' => $owners->pluck('name', 'id')->all()];
+    }
+@endphp
+
+<x-filter-bar action="/contacts" :search="$search" placeholder="Rechercher un contact…"
+              :filters="$contactFilters" :preserve="['sort' => $sort, 'dir' => $dir]">
+    <label class="flex items-center gap-2 text-xs text-secondary cursor-pointer select-none">
+        <input type="hidden" name="hide_blacklisted" value="0">
+        <input type="checkbox" name="hide_blacklisted" value="1"
+               @checked($hideBlacklisted)
+               @change="$el.form.submit()"
+               class="rounded border-default text-accent focus:ring-accent" style="width:14px;height:14px;cursor:pointer;">
+        <span>Masquer blacklistés ({{ \App\Models\Contact::blacklisted()->count() }})</span>
+    </label>
+    <label class="flex items-center gap-2 text-xs text-secondary cursor-pointer select-none ml-2">
+        <input type="hidden" name="is_hot" value="0">
+        <input type="checkbox" name="is_hot" value="1"
+               @checked($isHot)
+               @change="$el.form.submit()"
+               class="rounded border-default text-accent focus:ring-accent" style="width:14px;height:14px;cursor:pointer;">
+        <span>🔥 Contacts Chauds (score ≥ 70)</span>
+    </label>
+</x-filter-bar>
 
 <div class="px-7 pb-12">
     <div class="card overflow-hidden">
@@ -78,13 +101,14 @@
                     <th>Entreprise</th>
                     <th>Lifecycle</th>
                     <x-sort-th column="ai_score" label="Score IA" :sort="$sort" :dir="$dir" />
+                    <x-sort-th column="last_activity" label="Dernière Activité" :sort="$sort" :dir="$dir" />
                 </tr>
             </thead>
             <tbody>
                 {{-- Bannière "tous sélectionnés" --}}
                 @if(in_array(auth()->user()?->role, ['admin','manager']))
                 <tr x-show="$store.bulk.isSelectAllMode('contact')" style="display:none;">
-                    <td colspan="7" class="text-center py-2.5 text-[12.5px] font-medium" style="background:var(--ok-soft);color:var(--ok)">
+                    <td colspan="8" class="text-center py-2.5 text-[12.5px] font-medium" style="background:var(--ok-soft);color:var(--ok)">
                         Les {{ $total }} contacts sont sélectionnés.
                         <button @click="$store.bulk.clear('contact')"
                                 class="underline ml-1" style="color:var(--err)">
@@ -154,9 +178,27 @@
                         <span class="text-tertiary">—</span>
                         @endif
                     </td>
+                    <td>
+                        @if($contact->activities_max_created_at)
+                        <span class="text-secondary text-[12px] font-mono" title="{{ \Carbon\Carbon::parse($contact->activities_max_created_at)->format('d/m/Y H:i') }}">
+                            {{ \Carbon\Carbon::parse($contact->activities_max_created_at)->diffForHumans() }}
+                        </span>
+                        @else
+                        <span class="text-tertiary text-[12px]">—</span>
+                        @endif
+                    </td>
                 </tr>
                 @empty
-                <tr><td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 7 : 6 }}" class="text-center py-12 text-tertiary text-sm">Aucun contact.</td></tr>
+                @php $hasFilters = request()->hasAny(['search', 'lifecycle_stage', 'lead_status', 'owner_id', 'has_deal', 'is_hot']); @endphp
+                <tr><td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 8 : 7 }}">
+                    @if($hasFilters)
+                        <x-empty-state title="Aucun contact ne correspond" subtitle="Essaie d'élargir ta recherche ou de réinitialiser les filtres." ctaLabel="Réinitialiser" ctaHref="/contacts" />
+                    @else
+                        <x-empty-state title="Aucun contact" subtitle="Crée ton premier contact ou importe un fichier CSV."
+                                       icon='<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>'
+                                       ctaLabel="Nouveau contact" ctaHref="/contacts/create" />
+                    @endif
+                </td></tr>
                 @endforelse
             </tbody>
         </table>

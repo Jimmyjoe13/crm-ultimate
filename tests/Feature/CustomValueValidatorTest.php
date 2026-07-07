@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Contact;
 use App\Models\Company;
+use App\Models\Contact;
 use App\Models\CustomField;
 use App\Models\User;
 use App\Services\JwtService;
@@ -24,7 +24,7 @@ class CustomValueValidatorTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeAdmin(): User
@@ -33,20 +33,21 @@ class CustomValueValidatorTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'Admin ' . $counter,
-            'email'    => 'admin' . $counter . '@cvv.test',
+            'name' => 'Admin '.$counter,
+            'email' => 'admin'.$counter.'@cvv.test',
             'password' => bcrypt('password'),
-            'role'     => User::ROLE_ADMIN,
+            'role' => User::ROLE_ADMIN,
         ]);
     }
 
     private function makeField(array $attrs): CustomField
     {
-        Cache::forget('custom_fields.' . $attrs['entity_type']);
+        Cache::forget('custom_fields.'.$attrs['entity_type']);
+
         return CustomField::create(array_merge([
             'is_required' => false,
-            'position'    => 0,
-            'options'     => null,
+            'position' => 0,
+            'options' => null,
         ], $attrs));
     }
 
@@ -157,7 +158,7 @@ class CustomValueValidatorTest extends TestCase
         $this->makeField(['entity_type' => 'contact', 'key' => 'budget', 'label' => 'Budget', 'field_type' => 'number']);
 
         $result = CustomValueValidator::cast('contact', [
-            'budget'  => '100',
+            'budget' => '100',
             'unknown' => 'injected',
         ]);
 
@@ -196,9 +197,9 @@ class CustomValueValidatorTest extends TestCase
         $this->makeField(['entity_type' => 'contact', 'key' => 'budget', 'label' => 'Budget', 'field_type' => 'number']);
 
         $response = $this->withAuth($admin)->post('/contacts', [
-            'first_name'    => 'Test',
+            'first_name' => 'Test',
             'custom_values' => ['budget' => 'not-a-number'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $response->assertSessionHasErrors('custom_values.budget');
@@ -210,9 +211,9 @@ class CustomValueValidatorTest extends TestCase
         $this->makeField(['entity_type' => 'contact', 'key' => 'birth', 'label' => 'Naissance', 'field_type' => 'date']);
 
         $response = $this->withAuth($admin)->post('/contacts', [
-            'first_name'    => 'Test',
+            'first_name' => 'Test',
             'custom_values' => ['birth' => 'not-a-date'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $response->assertSessionHasErrors('custom_values.birth');
@@ -226,10 +227,10 @@ class CustomValueValidatorTest extends TestCase
         $this->makeField(['entity_type' => 'contact', 'key' => 'budget', 'label' => 'Budget', 'field_type' => 'number']);
 
         $this->withAuth($admin)->post('/contacts', [
-            'first_name'    => 'Typed',
-            'email'         => 'typed@test.com',
+            'first_name' => 'Typed',
+            'email' => 'typed@test.com',
             'custom_values' => ['budget' => '7500'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $contact = Contact::where('email', 'typed@test.com')->first();
@@ -242,10 +243,10 @@ class CustomValueValidatorTest extends TestCase
         $this->makeField(['entity_type' => 'contact', 'key' => 'vip', 'label' => 'VIP', 'field_type' => 'boolean']);
 
         $this->withAuth($admin)->post('/contacts', [
-            'first_name'    => 'VipUser',
-            'email'         => 'vip@test.com',
+            'first_name' => 'VipUser',
+            'email' => 'vip@test.com',
             'custom_values' => ['vip' => '1'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $contact = Contact::where('email', 'vip@test.com')->first();
@@ -259,10 +260,10 @@ class CustomValueValidatorTest extends TestCase
 
         $company = Company::create(['name' => 'Acme']);
 
-        $this->withAuth($admin)->put('/companies/' . $company->id, [
-            'name'          => 'Acme',
+        $this->withAuth($admin)->put('/companies/'.$company->id, [
+            'name' => 'Acme',
             'custom_values' => ['employees' => '250'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $this->assertEquals(250.0, $company->fresh()->custom_values['employees']);
@@ -275,10 +276,10 @@ class CustomValueValidatorTest extends TestCase
 
         $contact = Contact::create(['first_name' => 'Test', 'email' => 'bl@test.com']);
 
-        $this->withAuth($admin)->put('/contacts/' . $contact->id, [
-            'first_name'    => 'Test',
+        $this->withAuth($admin)->put('/contacts/'.$contact->id, [
+            'first_name' => 'Test',
             'custom_values' => ['blacklist' => '1'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $this->assertTrue($contact->fresh()->custom_values['blacklist']);
@@ -290,15 +291,15 @@ class CustomValueValidatorTest extends TestCase
         $this->makeField(['entity_type' => 'contact', 'key' => 'blacklist', 'label' => 'Blacklist', 'field_type' => 'boolean']);
 
         $contact = Contact::create([
-            'first_name'    => 'Test',
-            'email'         => 'bl2@test.com',
+            'first_name' => 'Test',
+            'email' => 'bl2@test.com',
             'custom_values' => ['blacklist' => true],
         ]);
 
-        $this->withAuth($admin)->put('/contacts/' . $contact->id, [
-            'first_name'    => 'Test',
+        $this->withAuth($admin)->put('/contacts/'.$contact->id, [
+            'first_name' => 'Test',
             'custom_values' => ['blacklist' => '0'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $this->assertFalse($contact->fresh()->custom_values['blacklist']);
@@ -310,15 +311,15 @@ class CustomValueValidatorTest extends TestCase
         $this->makeField(['entity_type' => 'contact', 'key' => 'blacklist', 'label' => 'Blacklist', 'field_type' => 'boolean']);
 
         $contact = Contact::create([
-            'first_name'    => 'Test',
-            'email'         => 'bl3@test.com',
+            'first_name' => 'Test',
+            'email' => 'bl3@test.com',
             'custom_values' => ['blacklist' => true],
         ]);
 
         // Mise à jour partielle sans custom_values (ex: dropdown lifecycle_stage)
-        $this->withAuth($admin)->put('/contacts/' . $contact->id, [
+        $this->withAuth($admin)->put('/contacts/'.$contact->id, [
             'lifecycle_stage' => 'customer',
-            '_token'          => 'test',
+            '_token' => 'test',
         ]);
 
         $this->assertTrue($contact->fresh()->custom_values['blacklist']);

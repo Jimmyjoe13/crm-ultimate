@@ -22,7 +22,7 @@ class CustomFieldsWebTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeAdmin(): User
@@ -31,10 +31,10 @@ class CustomFieldsWebTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'Admin ' . $counter,
-            'email'    => 'admin' . $counter . '@cf.test',
+            'name' => 'Admin '.$counter,
+            'email' => 'admin'.$counter.'@cf.test',
             'password' => bcrypt('password'),
-            'role'     => User::ROLE_ADMIN,
+            'role' => User::ROLE_ADMIN,
         ]);
     }
 
@@ -44,10 +44,10 @@ class CustomFieldsWebTest extends TestCase
 
         $response = $this->withAuth($admin)->post('/settings/fields', [
             'entity_type' => 'contact',
-            'label'       => 'Budget',
-            'key'         => 'budget',
-            'field_type'  => 'number',
-            '_token'      => 'test',
+            'label' => 'Budget',
+            'key' => 'budget',
+            'field_type' => 'number',
+            '_token' => 'test',
         ]);
 
         $response->assertRedirect();
@@ -59,11 +59,11 @@ class CustomFieldsWebTest extends TestCase
         $admin = $this->makeAdmin();
         CustomField::create([
             'entity_type' => 'contact',
-            'label'       => 'Budget',
-            'key'         => 'budget',
-            'field_type'  => 'number',
+            'label' => 'Budget',
+            'key' => 'budget',
+            'field_type' => 'number',
             'is_required' => false,
-            'position'    => 0,
+            'position' => 0,
         ]);
 
         Cache::forget('custom_fields.contact');
@@ -80,20 +80,20 @@ class CustomFieldsWebTest extends TestCase
         $admin = $this->makeAdmin();
         CustomField::create([
             'entity_type' => 'contact',
-            'label'       => 'Budget',
-            'key'         => 'budget',
-            'field_type'  => 'number',
+            'label' => 'Budget',
+            'key' => 'budget',
+            'field_type' => 'number',
             'is_required' => false,
-            'position'    => 0,
+            'position' => 0,
         ]);
 
         Cache::forget('custom_fields.contact');
 
         $this->withAuth($admin)->post('/contacts', [
-            'first_name'    => 'Test',
-            'email'         => 'cftest@example.com',
+            'first_name' => 'Test',
+            'email' => 'cftest@example.com',
             'custom_values' => ['budget' => '5000'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $contact = Contact::where('email', 'cftest@example.com')->first();
@@ -106,21 +106,21 @@ class CustomFieldsWebTest extends TestCase
         $admin = $this->makeAdmin();
         CustomField::create([
             'entity_type' => 'contact',
-            'label'       => 'Budget',
-            'key'         => 'budget',
-            'field_type'  => 'number',
+            'label' => 'Budget',
+            'key' => 'budget',
+            'field_type' => 'number',
             'is_required' => false,
-            'position'    => 0,
+            'position' => 0,
         ]);
         Cache::forget('custom_fields.contact');
 
         $contact = Contact::create([
-            'first_name'    => 'Test',
-            'email'         => 'cfshow@example.com',
+            'first_name' => 'Test',
+            'email' => 'cfshow@example.com',
             'custom_values' => ['budget' => '3000'],
         ]);
 
-        $response = $this->withAuth($admin)->get('/contacts/' . $contact->id . '/edit');
+        $response = $this->withAuth($admin)->get('/contacts/'.$contact->id.'/edit');
 
         $response->assertStatus(200);
         $response->assertSee('3000');
@@ -131,17 +131,17 @@ class CustomFieldsWebTest extends TestCase
         $admin = $this->makeAdmin();
         $field = CustomField::create([
             'entity_type' => 'contact',
-            'label'       => 'Budget',
-            'key'         => 'budget',
-            'field_type'  => 'number',
+            'label' => 'Budget',
+            'key' => 'budget',
+            'field_type' => 'number',
             'is_required' => false,
-            'position'    => 0,
+            'position' => 0,
         ]);
 
-        $response = $this->withAuth($admin)->patch('/settings/fields/' . $field->id, [
-            'label'      => 'Budget annuel',
+        $response = $this->withAuth($admin)->patch('/settings/fields/'.$field->id, [
+            'label' => 'Budget annuel',
             'field_type' => 'number',
-            '_token'     => 'test',
+            '_token' => 'test',
         ]);
 
         $response->assertRedirect();
@@ -153,14 +153,14 @@ class CustomFieldsWebTest extends TestCase
         $admin = $this->makeAdmin();
         $field = CustomField::create([
             'entity_type' => 'contact',
-            'label'       => 'Budget',
-            'key'         => 'budget',
-            'field_type'  => 'number',
+            'label' => 'Budget',
+            'key' => 'budget',
+            'field_type' => 'number',
             'is_required' => false,
-            'position'    => 0,
+            'position' => 0,
         ]);
 
-        $response = $this->withAuth($admin)->delete('/settings/fields/' . $field->id, [
+        $response = $this->withAuth($admin)->delete('/settings/fields/'.$field->id, [
             '_token' => 'test',
         ]);
 
@@ -173,24 +173,24 @@ class CustomFieldsWebTest extends TestCase
         $admin = $this->makeAdmin();
         $field = CustomField::create([
             'entity_type' => 'contact',
-            'label'       => 'Blacklist',
-            'key'         => 'blacklist',
-            'field_type'  => 'boolean',
+            'label' => 'Blacklist',
+            'key' => 'blacklist',
+            'field_type' => 'boolean',
             'is_required' => false,
-            'position'    => 0,
+            'position' => 0,
         ]);
         Cache::forget('custom_fields.contact');
 
         $contact = Contact::create([
-            'first_name'    => 'Test',
-            'email'         => 'cfboolean@example.com',
+            'first_name' => 'Test',
+            'email' => 'cfboolean@example.com',
             'custom_values' => ['blacklist' => true],
         ]);
 
-        $response = $this->withAuth($admin)->put('/contacts/' . $contact->id, [
-            'first_name'    => 'Test',
+        $response = $this->withAuth($admin)->put('/contacts/'.$contact->id, [
+            'first_name' => 'Test',
             'custom_values' => ['blacklist' => '0'],
-            '_token'        => 'test',
+            '_token' => 'test',
         ]);
 
         $response->assertRedirect();

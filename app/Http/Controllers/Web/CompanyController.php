@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\AuthorizesOwnerAccess;
+use App\Models\Activity;
 use App\Models\Company;
 use App\Support\CustomFieldRenderer;
 use App\Support\CustomValueValidator;
@@ -17,22 +18,32 @@ class CompanyController extends Controller
 
     public function index(Request $request)
     {
-        $search  = $request->get('search');
+        $search = $request->get('search');
         $allowed = ['name', 'industry', 'city', 'created_at'];
-        $sort    = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'name';
-        $dir     = $request->get('dir') === 'desc' ? 'desc' : 'asc';
-        $page    = (int) $request->get('page', 1);
+        $sort = in_array($request->get('sort'), $allowed) ? $request->get('sort') : 'name';
+        $dir = $request->get('dir') === 'desc' ? 'desc' : 'asc';
+        $page = (int) $request->get('page', 1);
 
-        // Cloisonnement par owner : la clé de cache intègre le périmètre de l'utilisateur.
-        $user      = $request->user();
-        $scopeKey  = md5(json_encode($user->accessibleOwnerIds() ?? 'all'));
-        $cacheKey  = 'companies.index.p' . $page . '.s' . $sort . '.d' . $dir . '.' . md5((string) $search) . '.sc' . $scopeKey;
+        // Filtres
+        $industry = $request->get('industry');
+        $lifecycle = $request->get('lifecycle_stage');
+        $ownerId = $request->get('owner_id');
 
-        $cached = Cache::tags(['companies.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page, $user) {
+        // Cloisonnement par owner : la clé de cache intègre le périmètre + chaque filtre.
+        $user = $request->user();
+        $scopeKey = md5(json_encode($user->accessibleOwnerIds() ?? 'all'));
+        $cacheKey = 'companies.index.p'.$page.'.s'.$sort.'.d'.$dir.'.'.md5((string) $search)
+            .'.in'.md5((string) $industry).'.lc'.$lifecycle.'.o'.$ownerId
+            .'.sc'.$scopeKey;
+
+        $cached = Cache::tags(['companies.index'])->remember($cacheKey, 30, function () use ($search, $sort, $dir, $page, $user, $industry, $lifecycle, $ownerId) {
             $pag = Company::with(['contacts:id,first_name,last_name', 'owner:id,name'])
                 ->visibleTo($user)
-                ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('industry', 'ilike', "%{$search}%"))
+                ->when($search, fn ($q) => $q->where(fn ($w) => $w->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('industry', 'ilike', "%{$search}%")))
+                ->when($industry, fn ($q) => $q->where('industry', $industry))
+                ->when($lifecycle, fn ($q) => $q->where('lifecycle_stage', $lifecycle))
+                ->when($ownerId, fn ($q) => $q->where('owner_id', $ownerId))
                 ->orderBy($sort, $dir)
                 ->paginate(25, ['*'], 'page', $page);
 
@@ -47,7 +58,14 @@ class CompanyController extends Controller
             ['path' => url('/companies'), 'query' => $request->query()]
         );
 
-        return view('pages.companies.index', compact('companies', 'search', 'sort', 'dir'));
+        // Liste des industries présentes (pour le filtre), bornée au périmètre owner.
+        $industries = Company::visibleTo($user)
+            ->whereNotNull('industry')->where('industry', '!=', '')
+            ->distinct()->orderBy('industry')->pluck('industry');
+
+        $owners = $this->visibleOwners($user);
+
+        return view('pages.companies.index', compact('companies', 'search', 'sort', 'dir', 'industry', 'lifecycle', 'ownerId', 'industries', 'owners'));
     }
 
     public function create()
@@ -58,13 +76,13 @@ class CompanyController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate(array_merge([
-            'name'     => ['required', 'string', 'max:255'],
-            'domain'   => ['nullable', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
+            'domain' => ['nullable', 'string', 'max:255'],
             'industry' => ['nullable', 'string', 'max:255'],
-            'phone'    => ['nullable', 'string', 'max:255'],
-            'website'  => ['nullable', 'url', 'max:255'],
-            'city'     => ['nullable', 'string', 'max:255'],
-            'country'  => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'country' => ['nullable', 'string', 'max:255'],
         ], CustomValueValidator::validationRules('company')));
 
         // owner_id auto-assigné à l'utilisateur connecté
@@ -74,9 +92,9 @@ class CompanyController extends Controller
 
         $company = Company::create($data);
 
-        return redirect('/companies/' . $company->id)->with('flash_toast', [
+        return redirect('/companies/'.$company->id)->with('flash_toast', [
             'message' => 'Entreprise créée.',
-            'type'    => 'success',
+            'type' => 'success',
         ]);
     }
 
@@ -86,13 +104,19 @@ class CompanyController extends Controller
         $this->ensureVisible($company, $request->user());
 
         $company->load('contacts', 'deals.stage');
-        $activities = \App\Models\Activity::where('subject_type', Company::class)
+        $activities = Activity::where('subject_type', Company::class)
             ->where('subject_id', $company->id)
             ->orderByDesc('created_at')
             ->limit(50)
             ->get();
 
-        return view('pages.companies.show', compact('company', 'activities'));
+        $auditLogs = \App\Models\AuditLog::where('auditable_type', Company::class)
+            ->where('auditable_id', $company->id)
+            ->with('user')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('pages.companies.show', compact('company', 'activities', 'auditLogs'));
     }
 
     public function edit(Request $request, Company $company)
@@ -109,13 +133,13 @@ class CompanyController extends Controller
         $this->ensureVisible($company, $request->user());
 
         $data = $request->validate(array_merge([
-            'name'     => ['required', 'string', 'max:255'],
-            'domain'   => ['nullable', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
+            'domain' => ['nullable', 'string', 'max:255'],
             'industry' => ['nullable', 'string', 'max:255'],
-            'phone'    => ['nullable', 'string', 'max:255'],
-            'website'  => ['nullable', 'url', 'max:255'],
-            'city'     => ['nullable', 'string', 'max:255'],
-            'country'  => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'country' => ['nullable', 'string', 'max:255'],
         ], CustomValueValidator::validationRules('company')));
 
         if (array_key_exists('custom_values', $data)) {
@@ -127,9 +151,9 @@ class CompanyController extends Controller
 
         $company->update($data);
 
-        return redirect('/companies/' . $company->id)->with('flash_toast', [
+        return redirect('/companies/'.$company->id)->with('flash_toast', [
             'message' => 'Entreprise mise à jour.',
-            'type'    => 'success',
+            'type' => 'success',
         ]);
     }
 
@@ -142,13 +166,13 @@ class CompanyController extends Controller
 
         return redirect('/companies')->with('flash_toast', [
             'message' => 'Entreprise supprimée.',
-            'type'    => 'success',
+            'type' => 'success',
         ]);
     }
 
     public function export(Request $request)
     {
-        $search       = $request->get('search');
+        $search = $request->get('search');
         $customFields = CustomFieldRenderer::forEntity('company');
 
         $headers = array_merge(
@@ -162,7 +186,7 @@ class CompanyController extends Controller
             fputcsv($out, $headers);
 
             Company::with(['owner'])
-                ->when($search, fn($q) => $q->where('name', 'ilike', "%{$search}%")
+                ->when($search, fn ($q) => $q->where('name', 'ilike', "%{$search}%")
                     ->orWhere('industry', 'ilike', "%{$search}%"))
                 ->orderBy('name')
                 ->chunk(200, function ($companies) use ($out, $customFields) {
@@ -182,32 +206,36 @@ class CompanyController extends Controller
                             $c->created_at?->format('d/m/Y'),
                         ];
                         foreach ($customFields as $field) {
-                            $raw      = $c->custom_values[$field->key] ?? null;
-                            $display  = CustomFieldRenderer::displayValue($field, $raw);
-                            $row[]    = $display === '—' ? '' : $display;
+                            $raw = $c->custom_values[$field->key] ?? null;
+                            $display = CustomFieldRenderer::displayValue($field, $raw);
+                            $row[] = $display === '—' ? '' : $display;
                         }
                         fputcsv($out, $row);
                     }
                 });
 
             fclose($out);
-        }, 'entreprises_' . date('Y-m-d') . '.csv', [
+        }, 'entreprises_'.date('Y-m-d').'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
     public function bulkDestroy(Request $request)
     {
+        $user = $request->user();
+
         $data = $request->validate([
-            'ids'   => ['required', 'array', 'min:1'],
+            'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:companies,id'],
         ]);
 
-        $count = Company::whereIn('id', $data['ids'])->delete();
+        $count = Company::whereIn('id', $data['ids'])
+            ->visibleTo($user)
+            ->delete();
 
         return redirect('/companies')->with('flash_toast', [
             'message' => "{$count} entreprise(s) supprimée(s).",
-            'type'    => 'success',
+            'type' => 'success',
         ]);
     }
 }

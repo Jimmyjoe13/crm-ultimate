@@ -18,7 +18,7 @@ class EmeliaSyncCampaign extends Command
     public function handle(EmeliaService $emelia): int
     {
         $campaignId = $this->argument('campaign_id');
-        $dryRun     = $this->option('dry-run');
+        $dryRun = $this->option('dry-run');
         $onlyLinked = $this->option('only-linked');
 
         // 1. Vérifier la campagne
@@ -27,11 +27,13 @@ class EmeliaSyncCampaign extends Command
             $campaign = $emelia->findCampaign($campaignId);
         } catch (\RuntimeException $e) {
             $this->error('Emelia API : '.$e->getMessage());
+
             return 1;
         }
 
         if (! $campaign) {
             $this->error("Campagne $campaignId introuvable dans Emelia.");
+
             return 1;
         }
 
@@ -48,10 +50,10 @@ class EmeliaSyncCampaign extends Command
             $query->whereNotNull('emelia_contact_id');
         }
 
-        $total  = $query->count();
+        $total = $query->count();
         $linked = 0;
         $errors = 0;
-        $skip   = 0;
+        $skip = 0;
 
         $this->info("Contacts CRM à traiter : $total");
         $bar = $this->output->createProgressBar($total);
@@ -67,25 +69,27 @@ class EmeliaSyncCampaign extends Command
                     if ($contact->emelia_campaign_id === $campaignId) {
                         $skip++;
                         $bar->advance();
+
                         continue;
                     }
 
                     if ($dryRun) {
                         $linked++;
                         $bar->advance();
+
                         continue;
                     }
 
                     try {
                         $result = $emelia->addContactToCampaign($campaignId, [
-                            'email'     => $contact->email,
+                            'email' => $contact->email,
                             'firstName' => $contact->first_name ?? '',
-                            'lastName'  => $contact->last_name ?? '',
+                            'lastName' => $contact->last_name ?? '',
                         ]);
 
                         $contact->update([
-                            'emelia_contact_id'   => $result['id'] ?? $contact->emelia_contact_id,
-                            'emelia_campaign_id'  => $campaignId,
+                            'emelia_contact_id' => $result['id'] ?? $contact->emelia_contact_id,
+                            'emelia_campaign_id' => $campaignId,
                             'emelia_campaign_name' => $campaignName,
                         ]);
 
@@ -94,7 +98,7 @@ class EmeliaSyncCampaign extends Command
                         if (str_contains($e->getMessage(), 'already included')) {
                             // Contact déjà dans la campagne — résoudre l'ID Emelia manquant si besoin
                             $updates = [
-                                'emelia_campaign_id'   => $campaignId,
+                                'emelia_campaign_id' => $campaignId,
                                 'emelia_campaign_name' => $campaignName,
                             ];
                             if (! $contact->emelia_contact_id) {

@@ -3,9 +3,10 @@
 <div class="px-7 pt-6 pb-3 flex items-end justify-between">
     <div>
         <h1>Deals</h1>
+        @php $statusLabel = ['open' => 'ouverts', 'won' => 'gagnés', 'lost' => 'perdus'][$statusFilter] ?? 'ouverts'; @endphp
         <p class="text-sm text-secondary mt-0.5">
-            <span class="num-mono">{{ $allCount }}</span> deals ouverts ·
-            <span class="num-mono">{{ number_format($total, 0, ',', "\xc2\xa0") }} €</span> en pipeline
+            <span class="num-mono">{{ $allCount }}</span> deals {{ $statusLabel }} ·
+            <span class="num-mono">{{ number_format($total, 0, ',', "\xc2\xa0") }} €</span> au total
         </p>
     </div>
     <div class="flex items-center gap-2">
@@ -22,12 +23,24 @@
 </div>
 
 {{-- Filter bar --}}
-<div class="px-7 pb-3 flex items-center gap-2 flex-wrap">
-    <x-chip color="gray" :dot="true">All · {{ $allCount }}</x-chip>
-    <span class="ml-auto text-xs text-tertiary font-mono">
-        Tri : {{ $sort }} {{ $dir === 'asc' ? '↑' : '↓' }}
-    </span>
-</div>
+@php
+    $dealFilters = [
+        ['name' => 'status', 'label' => 'Statut', 'value' => $statusFilter, 'required' => true, 'options' => [
+            'open' => 'Ouverts', 'won' => 'Gagnés', 'lost' => 'Perdus',
+        ]],
+    ];
+    if ($stages->count()) {
+        $dealFilters[] = ['name' => 'pipeline_stage_id', 'label' => 'Étape', 'value' => $stageId,
+            'options' => $stages->pluck('name', 'id')->all()];
+    }
+    if ($owners->count() > 1) {
+        $dealFilters[] = ['name' => 'owner_id', 'label' => 'Owner', 'value' => $ownerId,
+            'options' => $owners->pluck('name', 'id')->all()];
+    }
+@endphp
+
+<x-filter-bar action="/deals" :search="$search" placeholder="Rechercher un deal…"
+              :filters="$dealFilters" :preserve="['sort' => $sort, 'dir' => $dir]" />
 
 {{-- Flash success --}}
 @if(session('success'))
@@ -109,9 +122,16 @@
                     </td>
                 </tr>
                 @empty
+                @php $hasFilters = request()->hasAny(['search', 'pipeline_stage_id', 'owner_id']) || ($statusFilter !== 'open'); @endphp
                 <tr>
-                    <td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 9 : 8 }}" class="text-center py-12 text-tertiary text-sm">
-                        Aucun deal ouvert pour le moment.
+                    <td colspan="{{ in_array(auth()->user()?->role, ['admin','manager']) ? 9 : 8 }}">
+                        @if($hasFilters)
+                            <x-empty-state title="Aucun deal ne correspond" subtitle="Ajuste le statut ou les filtres pour voir d'autres deals." ctaLabel="Réinitialiser" ctaHref="/deals" />
+                        @else
+                            <x-empty-state title="Aucun deal ouvert" subtitle="Crée ton premier deal pour alimenter le pipeline."
+                                           icon='<path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>'
+                                           ctaLabel="Nouveau deal" ctaHref="/deals/create" />
+                        @endif
                     </td>
                 </tr>
                 @endforelse

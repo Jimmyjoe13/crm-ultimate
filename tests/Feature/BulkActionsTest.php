@@ -23,7 +23,7 @@ class BulkActionsTest extends TestCase
         ]);
 
         return $this->withCookies(['crm_jwt' => $jwt])
-                    ->withSession(['_token' => 'test']);
+            ->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
@@ -32,10 +32,10 @@ class BulkActionsTest extends TestCase
         $counter++;
 
         return User::createWithRole([
-            'name'     => 'User ' . $counter,
-            'email'    => 'user' . $counter . '@bulk.test',
+            'name' => 'User '.$counter,
+            'email' => 'user'.$counter.'@bulk.test',
             'password' => bcrypt('password'),
-            'role'     => $role,
+            'role' => $role,
         ]);
     }
 
@@ -49,7 +49,7 @@ class BulkActionsTest extends TestCase
         $c3 = Contact::create(['first_name' => 'C', 'email' => 'c@test.com']);
 
         $response = $this->withAuth($admin)->post('/contacts/bulk-destroy', [
-            'ids'    => [$c1->id, $c2->id],
+            'ids' => [$c1->id, $c2->id],
             '_token' => 'test',
         ]);
 
@@ -65,7 +65,7 @@ class BulkActionsTest extends TestCase
         $c = Contact::create(['first_name' => 'D', 'email' => 'd@test.com']);
 
         $response = $this->withAuth($viewer)->post('/contacts/bulk-destroy', [
-            'ids'    => [$c->id],
+            'ids' => [$c->id],
             '_token' => 'test',
         ]);
 
@@ -83,7 +83,7 @@ class BulkActionsTest extends TestCase
         $co3 = Company::create(['name' => 'Gamma']);
 
         $response = $this->withAuth($admin)->post('/companies/bulk-destroy', [
-            'ids'    => [$co1->id, $co2->id],
+            'ids' => [$co1->id, $co2->id],
             '_token' => 'test',
         ]);
 
@@ -99,7 +99,7 @@ class BulkActionsTest extends TestCase
         $co = Company::create(['name' => 'Protected']);
 
         $response = $this->withAuth($viewer)->post('/companies/bulk-destroy', [
-            'ids'    => [$co->id],
+            'ids' => [$co->id],
             '_token' => 'test',
         ]);
 
@@ -111,16 +111,16 @@ class BulkActionsTest extends TestCase
 
     public function test_bulk_destroy_deals(): void
     {
-        $admin    = $this->makeUser();
+        $admin = $this->makeUser();
         $pipeline = Pipeline::create(['name' => 'Test', 'is_default' => true]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
 
         $d1 = Deal::create(['name' => 'Deal 1', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 0]);
         $d2 = Deal::create(['name' => 'Deal 2', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 0]);
         $d3 = Deal::create(['name' => 'Deal 3', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 0]);
 
         $response = $this->withAuth($admin)->post('/deals/bulk-destroy', [
-            'ids'    => [$d1->id, $d2->id],
+            'ids' => [$d1->id, $d2->id],
             '_token' => 'test',
         ]);
 
@@ -132,13 +132,13 @@ class BulkActionsTest extends TestCase
 
     public function test_viewer_cannot_bulk_destroy_deals(): void
     {
-        $viewer   = $this->makeUser(User::ROLE_SALES);
+        $viewer = $this->makeUser(User::ROLE_SALES);
         $pipeline = Pipeline::create(['name' => 'Test2', 'is_default' => false]);
-        $stage    = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
+        $stage = $pipeline->stages()->create(['name' => 'Prospect', 'position' => 1, 'probability' => 10]);
         $d = Deal::create(['name' => 'Prot', 'pipeline_id' => $pipeline->id, 'pipeline_stage_id' => $stage->id, 'status' => 'open', 'amount' => 0]);
 
         $response = $this->withAuth($viewer)->post('/deals/bulk-destroy', [
-            'ids'    => [$d->id],
+            'ids' => [$d->id],
             '_token' => 'test',
         ]);
 
@@ -151,7 +151,7 @@ class BulkActionsTest extends TestCase
         $admin = $this->makeUser();
 
         $response = $this->withAuth($admin)->post('/contacts/bulk-destroy', [
-            'ids'    => [],
+            'ids' => [],
             '_token' => 'test',
         ]);
 

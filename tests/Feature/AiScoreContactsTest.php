@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Console\Commands\AiScoreContacts;
-use App\Models\Activity;
 use App\Models\Contact;
-use App\Services\AiInsightService;
-use App\Services\LlmService;
-use App\Services\JwtService;
 use App\Models\User;
+use App\Services\AiInsightService;
+use App\Services\JwtService;
+use App\Services\LlmService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
@@ -20,12 +18,15 @@ class AiScoreContactsTest extends TestCase
     private function withAuth(User $user): static
     {
         $jwt = app(JwtService::class)->encode(['sub' => $user->id, 'exp' => time() + 3600]);
+
         return $this->withCookies(['crm_jwt' => $jwt])->withSession(['_token' => 'test']);
     }
 
     private function makeUser(string $role = User::ROLE_ADMIN): User
     {
-        static $n = 0; $n++;
+        static $n = 0;
+        $n++;
+
         return User::createWithRole(['name' => "U{$n}", 'email' => "u{$n}@score.test", 'password' => bcrypt('x'), 'role' => $role]);
     }
 
@@ -33,7 +34,7 @@ class AiScoreContactsTest extends TestCase
 
     public function test_score_contact_returns_score_and_rationale(): void
     {
-        $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
+        $this->mock(LlmService::class, fn ($m) => $m->shouldReceive('complete')
             ->once()->andReturn('{"score": 72, "rationale": "Contact très engagé via Emelia."}'));
 
         $contact = Contact::create([
@@ -52,7 +53,7 @@ class AiScoreContactsTest extends TestCase
 
     public function test_score_contact_result_is_cached(): void
     {
-        $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
+        $this->mock(LlmService::class, fn ($m) => $m->shouldReceive('complete')
             ->once()->andReturn('{"score": 55, "rationale": "Ok."}'));
 
         $contact = Contact::create(['first_name' => 'Cache', 'last_name' => 'Me', 'email' => 'cache@score.test']);
@@ -94,7 +95,7 @@ class AiScoreContactsTest extends TestCase
 
     public function test_artisan_command_updates_ai_score_on_contacts(): void
     {
-        $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
+        $this->mock(LlmService::class, fn ($m) => $m->shouldReceive('complete')
             ->andReturnUsing($this->batchReply(80, 'Bon profil.')));
 
         $c1 = Contact::create(['first_name' => 'A', 'last_name' => 'B', 'email' => 'a@b.test', 'emelia_campaign_id' => 'c1']);
@@ -110,7 +111,7 @@ class AiScoreContactsTest extends TestCase
 
     public function test_artisan_command_skips_contacts_without_emelia_by_default(): void
     {
-        $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')->never());
+        $this->mock(LlmService::class, fn ($m) => $m->shouldReceive('complete')->never());
 
         Contact::create(['first_name' => 'No', 'last_name' => 'Emelia', 'email' => 'no@emelia.test']);
 
@@ -119,7 +120,7 @@ class AiScoreContactsTest extends TestCase
 
     public function test_artisan_command_with_all_flag_scores_all_contacts(): void
     {
-        $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
+        $this->mock(LlmService::class, fn ($m) => $m->shouldReceive('complete')
             ->once()->andReturnUsing($this->batchReply(30, 'Peu engagé.')));
 
         $contact = Contact::create(['first_name' => 'All', 'last_name' => 'Flag', 'email' => 'all@flag.test']);
@@ -131,7 +132,7 @@ class AiScoreContactsTest extends TestCase
 
     public function test_artisan_command_dry_run_does_not_write_score(): void
     {
-        $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
+        $this->mock(LlmService::class, fn ($m) => $m->shouldReceive('complete')
             ->andReturnUsing($this->batchReply(90, 'Top.')));
 
         $contact = Contact::create(['first_name' => 'Dry', 'last_name' => 'Run', 'email' => 'dry@run.test', 'emelia_campaign_id' => 'cx']);
@@ -143,7 +144,7 @@ class AiScoreContactsTest extends TestCase
 
     public function test_artisan_command_caps_score_at_100(): void
     {
-        $this->mock(LlmService::class, fn($m) => $m->shouldReceive('complete')
+        $this->mock(LlmService::class, fn ($m) => $m->shouldReceive('complete')
             ->andReturnUsing($this->batchReply(150, 'Hors limite.')));
 
         $contact = Contact::create(['first_name' => 'Cap', 'last_name' => 'Test', 'email' => 'cap@test.test', 'emelia_campaign_id' => 'cx2']);
@@ -170,11 +171,11 @@ class AiScoreContactsTest extends TestCase
         $content = $response->getContent();
         // High doit apparaître avant Low, et Null après
         $posHigh = strpos($content, 'high@score.test');
-        $posLow  = strpos($content, 'low@score.test');
+        $posLow = strpos($content, 'low@score.test');
         $posNull = strpos($content, 'null@score.test');
 
-        $this->assertLessThan($posLow,  $posHigh, 'Score 90 devrait apparaître avant score 20');
-        $this->assertLessThan($posNull, $posLow,  'Score 20 devrait apparaître avant NULL');
+        $this->assertLessThan($posLow, $posHigh, 'Score 90 devrait apparaître avant score 20');
+        $this->assertLessThan($posNull, $posLow, 'Score 20 devrait apparaître avant NULL');
     }
 
     // ─── Badge UI visible dans l'index ────────────────────────────────────────

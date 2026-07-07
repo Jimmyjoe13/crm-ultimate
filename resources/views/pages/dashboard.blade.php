@@ -8,10 +8,6 @@
         </p>
     </div>
     <div class="flex items-center gap-2">
-        <button class="btn sm">
-            <svg class="ic" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
-            Filtrer
-        </button>
         <span class="chip ok"><span class="chip-dot"></span>Temps réel</span>
     </div>
 </div>
@@ -88,7 +84,7 @@
     {{-- Principaux indicateurs --}}
     <div class="grid grid-cols-3 gap-3 mb-3">
         {{-- Hero Pipeline Actuel --}}
-        <div class="kpi-hero rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(239,106,42,0.4)] cursor-pointer group">
+        <div class="kpi-hero rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(239,106,42,0.4)] cursor-pointer group" title="Somme des montants de tous les deals encore ouverts">
             <div class="mono-label" style="color: rgba(255,255,255,0.75);">Pipeline actif</div>
             <div class="num text-4xl mt-2">{{ number_format($kpis['pipeline_total'], 0, ',', "\xc2\xa0") }} €</div>
             <div class="flex items-center gap-2 mt-3 text-[12px]" style="color: rgba(255,255,255,0.9);">
@@ -101,7 +97,7 @@
         </div>
 
         {{-- Hero Chiffre d'Affaires (CA) --}}
-        <div class="kpi-ok rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(47,138,95,0.4)] cursor-pointer group">
+        <div class="kpi-ok rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(47,138,95,0.4)] cursor-pointer group" title="Cumul des montants des deals gagnés">
             <div class="mono-label" style="color: rgba(255,255,255,0.75);">Chiffre d'Affaires (CA)</div>
             <div class="num text-4xl mt-2">{{ number_format($kpis['ca_total'], 0, ',', "\xc2\xa0") }} €</div>
             <div class="flex items-center gap-2 mt-3 text-[12px]" style="color: rgba(255,255,255,0.9);">
@@ -114,7 +110,7 @@
         </div>
 
         {{-- Hero CA Perdu --}}
-        <div class="kpi-err rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(198,61,47,0.4)] cursor-pointer group">
+        <div class="kpi-err rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_-10px_rgba(198,61,47,0.4)] cursor-pointer group" title="Cumul des montants des deals perdus">
             <div class="mono-label" style="color: rgba(255,255,255,0.75);">Chiffre d'Affaires Perdu</div>
             <div class="num text-4xl mt-2">{{ number_format($kpis['ca_lost'], 0, ',', "\xc2\xa0") }} €</div>
             <div class="flex items-center gap-2 mt-3 text-[12px]" style="color: rgba(255,255,255,0.9);">
@@ -134,7 +130,6 @@
             <div class="mono-label">Conversion · 30j</div>
             <div class="num text-3xl mt-2">{{ $kpis['conversion'] }}<span class="text-xl text-tertiary">%</span></div>
             <div class="flex items-center gap-2 mt-3 text-[12px]">
-                <span class="num delta-up">▲ +6 pts</span>
                 <span class="text-tertiary">obj. 55%</span>
             </div>
             <div class="pbar accent mt-3"><div style="width: {{ min(($kpis['conversion'] / 55) * 100, 100) }}%;"></div></div>
