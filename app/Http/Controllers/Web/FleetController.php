@@ -440,10 +440,15 @@ class FleetController extends Controller
      */
     private function deptCode(string $dept): string
     {
+        // Doit couvrir TOUT bus.DEPT_CODE (pas seulement les depts déclenchables depuis
+        // l'UI) : approveTask peut porter sur n'importe quel département — echo/charles
+        // inclus (constaté : execute d'un parent E* créée en T* faute de mapping).
         return match ($dept) {
             'finance', 'sales', 'content' => 'G',
             'acquisition' => 'A',
             'web-lead', 'seo', 'devops', 'watch', 'cro', 'linking', 'qa' => 'W',
+            'echo' => 'E',
+            'charles' => 'C',
             'maintenance' => 'M',
             default => 'T',
         };
