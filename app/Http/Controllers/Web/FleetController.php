@@ -464,9 +464,45 @@ class FleetController extends Controller
                 'last_done'   => $lastDone,
             ];
         }
+        // Funnel CRM = dernier livrable kpi_report de Nora (result complet : kpis + deltas vs veille).
+        $noraKpi = null;
+        foreach ($growthTasks as $t) { // déjà trié created_at desc
+            if (($t['dept'] ?? '') === 'finance' && ($t['type'] ?? '') === 'kpi_report'
+                && ($t['status'] ?? '') === 'done' && !empty($t['result']['kpis'])) {
+                $noraKpi = [
+                    'task_id' => $t['id'] ?? '?',
+                    'date'    => $t['result']['date'] ?? null,
+                    'kpis'    => $t['result']['kpis'],
+                    'deltas'  => $t['result']['deltas'] ?? [],
+                ];
+                break;
+            }
+        }
+
+        // Aperçus des contenus Instagram de Mia : les résultats content exposent une image_url
+        // publique servie par le media server de la flotte (api2.nana-intelligence.fr/media/…).
+        $miaPosts = [];
+        foreach ($growthTasks as $t) {
+            if (($t['dept'] ?? '') === 'content' && ($t['status'] ?? '') === 'done'
+                && !empty($t['result']['image_url'])) {
+                $miaPosts[] = [
+                    'id'         => $t['id'] ?? '?',
+                    'type'       => $t['type'] ?? '?',
+                    'image_url'  => $t['result']['image_url'],
+                    'post_id'    => $t['result']['post_id'] ?? null,
+                    'created_at' => $t['created_at'] ?? null,
+                ];
+                if (count($miaPosts) >= 8) {
+                    break;
+                }
+            }
+        }
+
         $growth = [
             'tasks'     => array_slice($growthTasks, 0, 40),
             'per_agent' => $growthPerAgent,
+            'nora_kpi'  => $noraKpi,
+            'mia_posts' => $miaPosts,
         ];
 
         // 10. Santé consolidée (bandeau haut de page) — calculée sur ce qui précède.

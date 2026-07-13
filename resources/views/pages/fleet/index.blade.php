@@ -605,6 +605,87 @@
         </div>
         @endforeach
 
+        <!-- Funnel CRM — dernier rapport KPI de Nora (tuiles + deltas vs veille) -->
+        <div class="col-span-12 lg:col-span-7" x-show="live.growth && live.growth.nora_kpi" x-cloak>
+            <div class="card p-4 flex flex-col gap-3 h-full">
+                <div class="flex items-center justify-between">
+                    <span class="mono-label" style="font-size:10px;">📊 Funnel CRM — dernier rapport de Nora</span>
+                    <span class="text-[10px] font-mono text-tertiary"
+                          x-text="live.growth.nora_kpi ? (live.growth.nora_kpi.task_id + ' · ' + live.growth.nora_kpi.date + (live.growth.nora_kpi.deltas.since ? ' (Δ vs ' + live.growth.nora_kpi.deltas.since + ')' : '')) : ''"></span>
+                </div>
+                <template x-if="live.growth.nora_kpi">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2"
+                         x-data="{ k() { return live.growth.nora_kpi.kpis || {}; }, d() { return live.growth.nora_kpi.deltas || {}; } }">
+                        <div class="rounded p-2.5" style="background: var(--surface2);">
+                            <div class="text-[9px] font-mono uppercase text-tertiary">Contacts</div>
+                            <div class="text-lg font-bold" x-text="(k().contacts_total || 0).toLocaleString('fr-FR')"></div>
+                            <div class="text-[10px] font-mono" x-html="fmtDelta(d().contacts_total)"></div>
+                        </div>
+                        <div class="rounded p-2.5" style="background: var(--surface2);">
+                            <div class="text-[9px] font-mono uppercase text-tertiary">MQL</div>
+                            <div class="text-lg font-bold" x-text="(k().by_lifecycle || {}).mql || 0"></div>
+                            <div class="text-[10px] font-mono" x-html="fmtDelta((d().by_lifecycle || {}).mql)"></div>
+                        </div>
+                        <div class="rounded p-2.5" style="background: var(--surface2);">
+                            <div class="text-[9px] font-mono uppercase text-tertiary">Opportunités</div>
+                            <div class="text-lg font-bold" x-text="(k().by_lifecycle || {}).opportunity || 0"></div>
+                            <div class="text-[10px] font-mono" x-html="fmtDelta((d().by_lifecycle || {}).opportunity)"></div>
+                        </div>
+                        <div class="rounded p-2.5" style="background: var(--surface2);">
+                            <div class="text-[9px] font-mono uppercase text-tertiary">Clients</div>
+                            <div class="text-lg font-bold" style="color: var(--ok);" x-text="(k().by_lifecycle || {}).customer || 0"></div>
+                            <div class="text-[10px] font-mono" x-html="fmtDelta((d().by_lifecycle || {}).customer)"></div>
+                        </div>
+                        <div class="rounded p-2.5" style="background: var(--surface2);">
+                            <div class="text-[9px] font-mono uppercase text-tertiary">Deals ouverts</div>
+                            <div class="text-lg font-bold" x-text="k().deals_open || 0"></div>
+                            <div class="text-[10px] font-mono" x-html="fmtDelta(d().deals_open)"></div>
+                        </div>
+                        <div class="rounded p-2.5" style="background: var(--surface2);">
+                            <div class="text-[9px] font-mono uppercase text-tertiary">Deals gagnés</div>
+                            <div class="text-lg font-bold" style="color: var(--ok);" x-text="k().deals_won || 0"></div>
+                            <div class="text-[10px] font-mono" x-html="fmtDelta(d().deals_won)"></div>
+                        </div>
+                        <div class="rounded p-2.5" style="background: var(--surface2);">
+                            <div class="text-[9px] font-mono uppercase text-tertiary">Pipeline ouvert</div>
+                            <div class="text-lg font-bold" x-text="(k().value_open_eur || 0).toLocaleString('fr-FR') + ' €'"></div>
+                            <div class="text-[10px] font-mono" x-html="fmtDelta(d().value_open_eur, ' €')"></div>
+                        </div>
+                        <div class="rounded p-2.5" style="background: var(--surface2);">
+                            <div class="text-[9px] font-mono uppercase text-tertiary">CA gagné</div>
+                            <div class="text-lg font-bold" style="color: var(--ok);" x-text="(k().value_won_eur || 0).toLocaleString('fr-FR') + ' €'"></div>
+                            <div class="text-[10px] font-mono" x-html="fmtDelta(d().value_won_eur, ' €')"></div>
+                        </div>
+                        <div class="col-span-2 sm:col-span-4 text-[10px] font-mono text-tertiary"
+                             x-text="'Sources : ' + Object.entries(k().by_source || {}).sort((a,b) => b[1]-a[1]).map(([s,n]) => s + ' ' + n.toLocaleString('fr-FR')).join(' · ')"></div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Contenus Instagram générés par Mia (aperçus servis par le media server de la flotte) -->
+        <div class="col-span-12 lg:col-span-5" x-show="live.growth && (live.growth.mia_posts || []).length > 0" x-cloak>
+            <div class="card p-4 flex flex-col gap-3 h-full">
+                <span class="mono-label" style="font-size:10px;">🎨 Contenus Instagram de Mia (derniers visuels générés)</span>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <template x-for="p in (live.growth.mia_posts || [])" :key="p.id">
+                        <a :href="p.image_url" target="_blank" rel="noopener"
+                           class="block rounded overflow-hidden relative group" style="background: var(--surface2); aspect-ratio: 1;"
+                           :title="p.type + ' · ' + p.id + (p.post_id ? ' · publié (post ' + p.post_id + ')' : '')">
+                            <img :src="p.image_url" loading="lazy" :alt="p.type"
+                                 class="w-full h-full object-cover"
+                                 onerror="this.style.display='none'; this.parentElement.insertAdjacentHTML('beforeend', '<div class=&quot;flex items-center justify-center h-full text-2xl&quot;>🖼️</div>')">
+                            <div class="absolute bottom-0 left-0 right-0 px-1.5 py-1 text-[9px] font-mono text-white"
+                                 style="background: linear-gradient(transparent, rgba(0,0,0,.75));">
+                                <span x-text="p.id"></span> · <span x-text="fmtDate(p.created_at)"></span>
+                                <span x-show="p.post_id" title="Publié sur Instagram"> ✓📱</span>
+                            </div>
+                        </a>
+                    </template>
+                </div>
+            </div>
+        </div>
+
         <!-- Flux d'actions de l'équipe Growth (chaque tâche, détail au clic) -->
         <div class="col-span-12">
             <div class="card p-4 flex flex-col gap-3">
@@ -1226,6 +1307,14 @@ function fleetDashboard(seed) {
             } catch (e) {
                 this.agentData = { error: 'Réseau indisponible' };
             }
+        },
+        // Delta d'un KPI vs la veille : flèche verte/rouge, tiret si nul/absent (retourne du HTML)
+        fmtDelta(v, unit = '') {
+            if (v === null || v === undefined || v === 0) return '<span style="color: var(--text3);">—</span>';
+            const n = Number(v);
+            if (!isFinite(n) || n === 0) return '<span style="color: var(--text3);">—</span>';
+            const s = (n > 0 ? '▲ +' : '▼ ') + n.toLocaleString('fr-FR') + unit;
+            return '<span style="color: var(--' + (n > 0 ? 'ok' : 'err') + ');">' + s + '</span>';
         },
         // Flux d'actions de l'équipe Growth, filtrable par agent (dept)
         growthTasks() {

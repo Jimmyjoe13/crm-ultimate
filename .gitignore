@@ -39,3 +39,6 @@
 /playwright-report/
 /test-results/
 .claude/
+
+# Scripts jetables de diagnostic VPS — contiennent des credentials en dur, JAMAIS committés.
+scratch/
