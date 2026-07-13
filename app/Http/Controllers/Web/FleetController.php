@@ -213,7 +213,10 @@ class FleetController extends Controller
                 $rawTask = $fleetRedis->get("task:{$tid}");
                 if ($rawTask) {
                     $taskDecoded = json_decode($rawTask, true);
-                    if ($taskDecoded) {
+                    // Règle SOUL : les réponses aux prospects (prospect_reply) se valident
+                    // EXCLUSIVEMENT par Jimmy sur Telegram (« OUI <id> ») — on ne les affiche
+                    // pas ici pour que le dashboard ne puisse pas court-circuiter ce flux.
+                    if ($taskDecoded && ($taskDecoded['type'] ?? '') !== 'prospect_reply') {
                         $pendingApprovals[] = $taskDecoded;
                     }
                 }
@@ -243,11 +246,15 @@ class FleetController extends Controller
             } catch (\Exception $e) {
                 // silencieux : le heartbeat est une amélioration optionnelle
             }
-            // « en ligne » si le dernier battement date de moins de 120s
+            // « en ligne » si le dernier battement est récent. Les workers battent toutes
+            // les ~5 s dans leur boucle (seuil 120 s) ; le CERVEAU (richard) n'a pas de
+            // boucle à nous : son heartbeat est posé par fleet_watchdog à chaque tick de
+            // 5 min → seuil élargi à 360 s pour cette seule carte (sinon clignotement).
+            $threshold = $agent['dept'] === 'richard' ? 360 : 120;
             $online = false;
             if ($lastSeen) {
                 try {
-                    $online = \Carbon\Carbon::parse($lastSeen)->gt(now()->subSeconds(120));
+                    $online = \Carbon\Carbon::parse($lastSeen)->gt(now()->subSeconds($threshold));
                 } catch (\Exception $e) {
                     $online = false;
                 }
@@ -427,10 +434,48 @@ class FleetController extends Controller
         ];
     }
 
+    /**
+     * Code lettre du département — miroir exact de bus.DEPT_CODE côté flotte
+     * (Richard/scripts/bus.py) pour des IDs courts partagés (#G3, #W7…).
+     */
+    private function deptCode(string $dept): string
+    {
+        return match ($dept) {
+            'finance', 'sales', 'content' => 'G',
+            'acquisition' => 'A',
+            'web-lead', 'seo', 'devops', 'watch', 'cro', 'linking', 'qa' => 'W',
+            'maintenance' => 'M',
+            default => 'T',
+        };
+    }
+
+    /**
+     * ID de tâche court séquentiel — miroir de bus.new_task_id (INCR seq:<code>,
+     * même clé Redis que la flotte : aucune collision possible).
+     */
+    private function newTaskId($fleetRedis, string $dept): string
+    {
+        $n = $fleetRedis->incr('seq:' . $this->deptCode($dept));
+        return $this->deptCode($dept) . $n;
+    }
+
+    /**
+     * Persiste une tâche et l'empile dans le stream de son département —
+     * miroir de bus.save_task + XADD {id} (seul champ lu par les workers).
+     */
+    private function pushTask($fleetRedis, array $task): void
+    {
+        $fleetRedis->set("task:{$task['id']}", json_encode($task, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        $fleetRedis->executeRaw(['XADD', "tasks:{$task['dept']}", '*', 'id', $task['id']]);
+    }
+
     public function triggerAction(Request $request)
     {
+        // NB : « richard » retiré du in: — le dept `richard` n'a AUCUN worker ; une tâche
+        // y serait queued pour toujours (la garde anti-département-fantôme de bus.dispatch
+        // ne s'applique pas ici puisque le CRM fabrique la tâche lui-même).
         $data = $request->validate([
-            'agent' => 'required|string|in:richard,sam,nora,mia,juliette,siteweb,lea,alex,vera,caro,lin,max,joseph',
+            'agent' => 'required|string|in:sam,nora,mia,juliette,siteweb,lea,alex,vera,caro,lin,max,joseph',
             'action_type' => 'required|string',
         ]);
 
@@ -442,18 +487,8 @@ class FleetController extends Controller
         try {
             $fleetRedis = Redis::connection('fleet');
 
-            // 1. Code du département pour l'ID court
-            $code = match($dept) {
-                'finance', 'sales', 'content' => 'G',
-                'acquisition' => 'A',
-                'web-lead', 'seo', 'devops', 'watch', 'cro', 'linking', 'qa' => 'W',
-                'maintenance' => 'M',
-                default => 'T',
-            };
-
-            // 2. Générer l'ID de tâche séquentiel Redis
-            $n = $fleetRedis->incr("seq:{$code}");
-            $taskId = "{$code}{$n}";
+            // ID court séquentiel partagé avec la flotte (helper, miroir de bus.new_task_id)
+            $taskId = $this->newTaskId($fleetRedis, $dept);
 
             // Payload standardisé par action
             $payload = [];
@@ -492,11 +527,8 @@ class FleetController extends Controller
                 ]
             ];
 
-            // 3. Sauvegarder l'état
-            $fleetRedis->set("task:{$taskId}", json_encode($task, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-
-            // 4. Pousser dans le Stream tasks:<dept> via XADD de façon brute pour éviter les bugs de conversion d'arguments
-            $fleetRedis->executeRaw(['XADD', "tasks:{$dept}", '*', 'id', $taskId]);
+            // Persistance + empilement stream (helper, miroir de bus.save_task + XADD)
+            $this->pushTask($fleetRedis, $task);
 
             return redirect()->route('fleet.index')->with('flash_toast', [
                 'message' => "Tâche {$taskId} envoyée avec succès au bus Redis pour {$agentConfig['name']} !",
@@ -511,11 +543,19 @@ class FleetController extends Controller
         }
     }
 
+    /**
+     * Approuve une tâche en attente — MIROIR EXACT de bus.approve (Richard/scripts/bus.py).
+     *
+     * ⚠️ Contrat de la flotte : le worker n'exécute une action staged QUE via une tâche
+     * enfant `type=execute` portant `payload.approved_task` + `payload.action_spec`.
+     * Ré-empiler la tâche PARENT dans le stream (ancien comportement) faisait re-PRÉPARER
+     * l'action en boucle (nouveau plan → nouveau awaiting_approval), sans jamais l'exécuter.
+     */
     public function approveTask(Request $request, $taskId)
     {
         try {
             $fleetRedis = Redis::connection('fleet');
-            
+
             // 1. Lire la tâche
             $raw = $fleetRedis->get("task:{$taskId}");
             if (!$raw) {
@@ -526,21 +566,55 @@ class FleetController extends Controller
             }
 
             $task = json_decode($raw, true);
-            
-            // 2. Mettre à jour le statut
+
+            // Garde (règle SOUL) : une réponse à un prospect se valide EXCLUSIVEMENT par
+            // Jimmy sur Telegram (« OUI <id> ») — jamais depuis le dashboard.
+            if (($task['type'] ?? '') === 'prospect_reply') {
+                return redirect()->route('fleet.index')->with('flash_toast', [
+                    'message' => "Tâche {$taskId} : les réponses aux prospects se valident uniquement sur Telegram (OUI {$taskId}).",
+                    'type' => 'danger',
+                ]);
+            }
+
+            // 2. Marquer approuvée + retirer de la file (LREM count 0 = toutes occurrences, comme bus.approve)
             $task['status'] = 'approved';
             $task['approval']['status'] = 'approved';
-            
             $fleetRedis->set("task:{$taskId}", json_encode($task, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $fleetRedis->lrem('approvals:pending', 0, $taskId);
 
-            // 3. Retirer de la liste approvals:pending
-            $fleetRedis->lrem('approvals:pending', 1, $taskId);
+            // 3. Tâche d'exécution enfant portant l'action staged (contrat bus.approve)
+            $execPayload = [
+                'approved_task' => $taskId,
+                'action_spec'   => ($task['approval']['action_spec'] ?? null) ?: [],
+            ];
+            if (!empty($task['payload']['session_key'])) {
+                // Fil de conversation stable prepare -> execute (cf. bus.approve)
+                $execPayload['session_key'] = $task['payload']['session_key'];
+            }
 
-            // 4. Republier le résultat ou relancer l'agent (XADD dans tasks:<dept>) de façon brute pour éviter les bugs de conversion d'arguments
-            $fleetRedis->executeRaw(['XADD', "tasks:{$task['dept']}", '*', 'id', $taskId]);
+            $execTask = [
+                'id' => $this->newTaskId($fleetRedis, $task['dept']),
+                'squad' => $task['squad'] ?? 'growth',
+                'dept' => $task['dept'],
+                'type' => 'execute',
+                'payload' => $execPayload,
+                'status' => 'queued',
+                'requested_by' => 'jimmy_crm',
+                'parent_task' => $taskId,
+                'created_at' => now()->toIso8601String(),
+                'result' => null,
+                'approval' => [
+                    'required' => false,
+                    'status' => 'none',
+                    'action_spec' => null,
+                ],
+            ];
+            $this->pushTask($fleetRedis, $execTask);
+            // NB : pas de re-XADD du parent ; le worker met à jour la tâche parente
+            // à la complétion de l'execute (mécanique existante côté flotte).
 
             return redirect()->route('fleet.index')->with('flash_toast', [
-                'message' => "Tâche {$taskId} approuvée et relancée !",
+                'message' => "Tâche {$taskId} approuvée — exécution dispatchée ({$execTask['id']}).",
                 'type' => 'success',
             ]);
 
@@ -570,6 +644,16 @@ class FleetController extends Controller
             }
 
             $task = json_decode($raw, true);
+
+            // Garde (règle SOUL) : le sort d'une réponse prospect se décide sur Telegram
+            // (« OUI/NON <id> »), pas depuis le dashboard.
+            if (($task['type'] ?? '') === 'prospect_reply') {
+                return redirect()->route('fleet.index')->with('flash_toast', [
+                    'message' => "Tâche {$taskId} : les réponses aux prospects se traitent uniquement sur Telegram (NON {$taskId}).",
+                    'type' => 'danger',
+                ]);
+            }
+
             $task['status'] = 'rejected';
             if (isset($task['approval']) && is_array($task['approval'])) {
                 $task['approval']['status'] = 'rejected';

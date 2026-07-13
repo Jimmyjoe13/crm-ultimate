@@ -144,10 +144,14 @@
                             <input type="hidden" name="agent" value="{{ $key }}">
                             
                             @if($key === 'richard')
-                                <input type="hidden" name="action_type" value="ceo_routine">
-                                <button type="submit" class="btn primary sm w-full justify-center text-xs">
-                                    ⚡ Lancer la routine CEO
-                                </button>
+                                {{-- Pas de déclencheur : le dept « richard » n'a aucun worker sur le bus
+                                     (une tâche y resterait queued pour toujours). La routine CEO est
+                                     planifiée côté VPS par systemd (richard-ceo.timer, 08h30 Paris). --}}
+                                <span class="btn sm w-full justify-center text-xs cursor-default select-none"
+                                      style="background: var(--surface2); opacity: .7;"
+                                      title="Déclenchée automatiquement par systemd sur le VPS — pas d'action manuelle depuis le CRM.">
+                                    ⏰ Routine CEO planifiée (systemd · 08h30 Paris)
+                                </span>
                             @elseif($key === 'nora')
                                 <input type="hidden" name="action_type" value="kpi_report">
                                 <button type="submit" class="btn primary sm w-full justify-center text-xs">
