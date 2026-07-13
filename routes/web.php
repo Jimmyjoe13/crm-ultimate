@@ -115,6 +115,7 @@ Route::middleware('web.auth')->group(function () {
         Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
         Route::get('/fleet', [FleetController::class, 'index'])->name('fleet.index');
         Route::get('/fleet/data', [FleetController::class, 'data'])->name('fleet.data');
+        Route::get('/fleet/agent/{dept}/tasks', [FleetController::class, 'agentTasks'])->name('fleet.agent.tasks');
         Route::post('/fleet/trigger', [FleetController::class, 'triggerAction'])->name('fleet.trigger');
         Route::post('/fleet/approve/{taskId}', [FleetController::class, 'approveTask'])->name('fleet.approve');
         Route::post('/fleet/reject/{taskId}', [FleetController::class, 'rejectTask'])->name('fleet.reject');

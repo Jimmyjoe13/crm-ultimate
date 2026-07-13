@@ -49,6 +49,26 @@
 
 <div x-data="fleetDashboard(@js($live))" class="col-span-12">
 
+    <!-- ─── BANDEAU SANTÉ CONSOLIDÉE (visible seulement si ≠ ok) ─── -->
+    <div class="px-7 mb-4" x-show="live.health && live.health.level !== 'ok'" x-cloak>
+        <div class="card p-3 border-l-4 flex items-start gap-3"
+             :style="live.health.level === 'crit'
+                 ? 'border-left-color: var(--err); background: color-mix(in srgb, var(--err) 6%, var(--surface));'
+                 : 'border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 5%, var(--surface));'">
+            <span class="text-lg" x-text="live.health.level === 'crit' ? '🔴' : '🟠'"></span>
+            <div class="flex-1">
+                <div class="text-xs font-bold uppercase tracking-wider font-mono mb-1"
+                     :style="live.health.level === 'crit' ? 'color: var(--err);' : 'color: var(--warn);'"
+                     x-text="live.health.level === 'crit' ? 'Incident flotte' : 'Flotte dégradée'"></div>
+                <ul class="m-0 pl-4 text-xs text-secondary" style="list-style: disc;">
+                    <template x-for="issue in live.health.issues" :key="issue">
+                        <li x-text="issue"></li>
+                    </template>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <!-- ─── BANDEAU DE STATS LIVE ─── -->
     <div class="px-7 mb-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div class="card p-3 flex flex-col gap-0.5" style="border-color: var(--border);">
@@ -77,6 +97,81 @@
         </div>
     </div>
 
+    <!-- ─── RANGÉE MONITORING : BUDGET LLM · FILES D'ATTENTE · KPI 7 JOURS ─── -->
+    <div class="px-7 mb-5 grid grid-cols-1 lg:grid-cols-3 gap-3">
+
+        <!-- Budget LLM du jour (fleet:or_gateway:stats, TTL 300s) -->
+        <div class="card p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="mono-label" style="font-size:10px;">⚡ Budget LLM du jour (passerelle)</span>
+                <span class="text-[10px] font-mono text-tertiary" x-show="live.gateway" x-text="live.gateway ? ('RPM ' + live.gateway.rpm + '/' + live.gateway.rpm_limit) : ''"></span>
+            </div>
+            <template x-if="live.gateway">
+                <div>
+                    <div class="flex items-end justify-between mb-1">
+                        <span class="text-xl font-bold" :style="'color:' + gwColor(live.gateway.pct)"
+                              x-text="live.gateway.used + ' / ' + live.gateway.budget"></span>
+                        <span class="text-xs font-mono text-secondary" x-text="live.gateway.pct + ' % — reste ' + live.gateway.remaining"></span>
+                    </div>
+                    <div class="w-full rounded h-2" style="background: var(--surface2);">
+                        <div class="h-2 rounded transition-all" :style="'width:' + Math.min(100, live.gateway.pct) + '%; background:' + gwColor(live.gateway.pct)"></div>
+                    </div>
+                    <div class="text-[10px] font-mono text-tertiary mt-1">Paliers d'alerte : 70 / 90 / 100 % · plafond dur <span x-text="live.gateway.hard"></span></div>
+                </div>
+            </template>
+            <template x-if="!live.gateway">
+                <div class="text-xs" style="color: var(--warn);">⚠️ Passerelle silencieuse — aucune statistique depuis &gt; 5 min.</div>
+            </template>
+        </div>
+
+        <!-- Files d'attente par département (XINFO GROUPS : vrai backlog, pas XLEN) -->
+        <div class="card p-4 flex flex-col gap-2">
+            <span class="mono-label" style="font-size:10px;">📥 Files d'attente (backlog réel par département)</span>
+            <template x-if="busyQueues().length === 0">
+                <div class="text-xs text-secondary py-2">✓ Aucune tâche en attente — tous les workers sont à jour.</div>
+            </template>
+            <div class="flex flex-col gap-1 overflow-y-auto" style="max-height: 130px;">
+                <template x-for="q in busyQueues()" :key="q.dept">
+                    <button type="button" @click="openAgent(q.dept)"
+                            class="flex items-center justify-between text-xs rounded px-2 py-1 text-left w-full"
+                            :style="(q.backlog > 5 || (!q.online && q.backlog > 0)) ? 'background: color-mix(in srgb, var(--err) 8%, var(--surface2));' : 'background: var(--surface2);'">
+                        <span class="font-mono flex items-center gap-1.5">
+                            <span class="led" :class="q.online ? 'green' : ''" :style="q.online ? '' : 'background: var(--err);'" style="width:5px;height:5px;"></span>
+                            <span x-text="q.dept"></span>
+                        </span>
+                        <span class="font-mono text-tertiary">
+                            <span x-text="'file ' + (q.backlog === null ? '?' : q.backlog)"></span>
+                            <span x-show="q.pending > 0" :style="'color: var(--warn);'" x-text="' · en cours ' + q.pending"></span>
+                            <span x-show="q.failed_7d > 0" style="color: var(--err);" x-text="' · ✕' + q.failed_7d"></span>
+                        </span>
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        <!-- KPI fiabilité 7 jours (fenêtre naturelle : TTL 7j des tâches terminées) -->
+        <div class="card p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="mono-label" style="font-size:10px;">📊 Fiabilité 7 jours</span>
+                <span class="text-xs font-mono" x-show="live.kpi && live.kpi.success_rate !== null"
+                      :style="'color:' + (live.kpi.success_rate >= 90 ? 'var(--ok)' : (live.kpi.success_rate >= 70 ? 'var(--warn)' : 'var(--err)'))"
+                      x-text="live.kpi.success_rate + ' % de réussite'"></span>
+            </div>
+            <!-- 7 barres empilées done (vert) / failed (rouge), même pattern que la timeline Juliette -->
+            <div class="flex items-end gap-1.5" style="height: 72px;" x-show="live.kpi">
+                <template x-for="d in (live.kpi ? live.kpi.days : [])" :key="d.date">
+                    <div class="flex-1 flex flex-col items-center gap-0.5 h-full justify-end" :title="d.date + ' : ' + d.done + ' ok, ' + d.failed + ' échecs'">
+                        <div class="w-full rounded-t bg-red-600 transition-all" :style="'height:' + kpiBarH(d.failed) + '%'"></div>
+                        <div class="w-full bg-emerald-600 transition-all" :style="'height:' + kpiBarH(d.done) + '%'"></div>
+                        <span class="text-[8px] font-mono text-tertiary" x-text="d.date.slice(8)"></span>
+                    </div>
+                </template>
+            </div>
+            <div class="text-[10px] font-mono text-tertiary" x-show="live.kpi"
+                 x-text="live.kpi ? (live.kpi.done_7d + ' terminées · ' + live.kpi.failed_7d + ' échecs · top : ' + (live.kpi.top_types || []).slice(0,3).map(t => t.type).join(', ')) : ''"></div>
+        </div>
+    </div>
+
     <!-- Onglets de navigation -->
     <div class="px-7 mb-6 flex gap-6 border-b border-default items-center">
         <button @click="activeTab = 'fleet'" :class="activeTab === 'fleet' ? 'border-b-2 border-accent text-primary font-bold' : 'text-secondary'" class="pb-3 text-sm font-semibold transition-all relative">
@@ -90,8 +185,12 @@
             📧 Acquisition & Cold Email (Juliette)
             <span class="led pulse" x-show="live.juliette.status !== 'healthy' || live.juliette.stale" style="background-color: var(--warn); box-shadow: 0 0 8px var(--warn); width: 6px; height: 6px;" x-cloak></span>
         </button>
+        <!-- Notifications navigateur (nouvelles validations) : l'API exige un geste utilisateur -->
+        <button type="button" @click="toggleNotif()" class="ml-auto pb-3 text-sm"
+                :title="notifEnabled ? 'Notifications activées (nouvelles validations) — cliquer pour couper' : 'Activer les notifications navigateur pour les nouvelles validations'"
+                :style="notifEnabled ? '' : 'opacity: .4; filter: grayscale(1);'">🔔</button>
         <!-- Indicateur de rafraîchissement live -->
-        <span class="ml-auto flex items-center gap-1.5 text-[10px] font-mono text-tertiary pb-3" title="Rafraîchissement automatique toutes les 12s">
+        <span class="flex items-center gap-1.5 text-[10px] font-mono text-tertiary pb-3" title="Rafraîchissement automatique toutes les 12s">
             <span class="led green" style="width:6px;height:6px;"></span>
             <span x-text="'MAJ ' + fmtDate(live.generated_at)"></span>
         </span>
@@ -114,7 +213,9 @@
                                     {{ strtoupper(substr($agent['name'], 0, 2)) }}
                                 </span>
                                 <div>
-                                    <h3 class="text-sm font-semibold m-0" style="margin:0;">{{ $agent['name'] }}</h3>
+                                    <h3 class="text-sm font-semibold m-0" style="margin:0; cursor:pointer;"
+                                        title="Voir l'historique des tâches de {{ $agent['name'] }}"
+                                        @click="openAgent('{{ $agent['dept'] }}', '{{ $agent['name'] }}')">{{ $agent['name'] }} <span class="text-tertiary text-[10px]">📜</span></h3>
                                     <span class="text-[9px] text-tertiary font-mono uppercase tracking-wider">{{ $agent['squad'] }} squad</span>
                                     <template x-if="live.agents['{{ $key }}'] && live.agents['{{ $key }}'].has_heartbeat">
                                         <span class="block text-[8px] font-mono mt-0.5" :class="live.agents['{{ $key }}'].online ? 'text-emerald-500' : 'text-tertiary'"
@@ -194,7 +295,9 @@
                                     {{ strtoupper(substr($agent['name'], 0, 2)) }}
                                 </span>
                                 <div>
-                                    <h3 class="text-xs font-semibold m-0" style="margin:0;">{{ $agent['name'] }}</h3>
+                                    <h3 class="text-xs font-semibold m-0" style="margin:0; cursor:pointer;"
+                                        title="Voir l'historique des tâches de {{ $agent['name'] }}"
+                                        @click="openAgent('{{ $agent['dept'] }}', '{{ $agent['name'] }}')">{{ $agent['name'] }} <span class="text-tertiary text-[10px]">📜</span></h3>
                                     <span class="text-[9px] text-tertiary font-mono truncate max-w-[80px]" title="{{ $agent['role'] }}">{{ $agent['name'] === 'SiteWeb' ? 'Lead' : $agent['dept'] }}</span>
                                 </div>
                             </div>
@@ -268,47 +371,62 @@
         </div>
     </div>
 
-    <!-- ─── BLOC 2 : VALIDAIONS DE TÂCHES (APPROVALS PENDING) ─── -->
-    @if(count($pendingApprovals) > 0)
-        <div class="col-span-12">
-            <div class="card p-4 border-l-4" style="border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 4%, var(--surface));">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="text-base">⚠️</span>
-                    <h2 class="text-sm font-bold uppercase tracking-wider font-mono m-0" style="margin:0; color: var(--warn);">Tâches en attente de votre validation ({{ count($pendingApprovals) }})</h2>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @foreach($pendingApprovals as $app)
-                        <div class="card p-4" style="background: var(--surface2); border-color: var(--border);">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="chip warn font-mono text-[9px] uppercase">Awaiting Jimmy Approval</span>
-                                <span class="font-mono text-tertiary text-xs">{{ $app['id'] }}</span>
-                            </div>
-                            <div class="text-xs text-primary font-medium">
-                                Agent <strong>{{ ucfirst($app['dept']) }}</strong> requis pour la tâche <strong>{{ $app['type'] }}</strong>
-                            </div>
-                            
-                            @if(isset($app['payload']) && count($app['payload']) > 0)
-                                <div class="mt-2 p-2 bg-surface1 rounded font-mono text-[10px] text-secondary">
-                                    <strong>Payload :</strong> {{ json_encode($app['payload'], JSON_UNESCAPED_UNICODE) }}
-                                </div>
-                            @endif
-
-                            <div class="mt-4 flex gap-2">
-                                <form method="POST" action="{{ route('fleet.approve', $app['id']) }}">
-                                    @csrf
-                                    <button type="submit" class="btn primary sm">Approuver et envoyer ✓</button>
-                                </form>
-                                <form method="POST" action="{{ route('fleet.reject', $app['id']) }}" onsubmit="return confirm('Rejeter la tâche {{ $app['id'] }} ? Elle ne sera pas exécutée.');">
-                                    @csrf
-                                    <button type="submit" class="btn sm" style="background: var(--surface1); border-color: var(--border); color: var(--err);">Rejeter ✕</button>
-                                </form>
-                            </div>
+    <!-- ─── BLOC 2 : VALIDATIONS DE TÂCHES — TEMPS RÉEL (live.approvals, polling 12s) ───
+         Avant : rendu serveur uniquement → une nouvelle demande n'apparaissait qu'après F5. -->
+    <div class="col-span-12" x-show="live.approvals && live.approvals.length > 0" x-cloak>
+        <div class="card p-4 border-l-4" style="border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 4%, var(--surface));">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-base">⚠️</span>
+                <h2 class="text-sm font-bold uppercase tracking-wider font-mono m-0" style="margin:0; color: var(--warn);"
+                    x-text="'Tâches en attente de votre validation (' + live.approvals.length + ')'"></h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <template x-for="app in live.approvals" :key="app.id">
+                    <div class="card p-4" style="background: var(--surface2); border-color: var(--border);">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="chip warn font-mono text-[9px] uppercase">Awaiting Jimmy Approval</span>
+                            <span class="font-mono text-tertiary text-xs" x-text="app.id"></span>
                         </div>
-                    @endforeach
-                </div>
+                        <div class="text-xs text-primary font-medium">
+                            Agent <strong x-text="app.dept"></strong> — tâche <strong x-text="app.type"></strong>
+                            <span class="text-tertiary font-mono" x-show="app.created_at" x-text="' · ' + fmtDate(app.created_at)"></span>
+                        </div>
+                        <div class="mt-2 p-2 bg-surface1 rounded font-mono text-[10px] text-secondary" x-show="app.label">
+                            <strong>Action :</strong> <span x-text="app.label"></span>
+                        </div>
+                        <div class="mt-4 flex gap-2">
+                            <form method="POST" :action="'{{ url('/fleet/approve') }}/' + app.id">
+                                @csrf
+                                <button type="submit" class="btn primary sm">Approuver et exécuter ✓</button>
+                            </form>
+                            <form method="POST" :action="'{{ url('/fleet/reject') }}/' + app.id"
+                                  @submit="if (!confirm('Rejeter la tâche ' + app.id + ' ? Elle ne sera pas exécutée.')) $event.preventDefault()">
+                                @csrf
+                                <button type="submit" class="btn sm" style="background: var(--surface1); border-color: var(--border); color: var(--err);">Rejeter ✕</button>
+                            </form>
+                        </div>
+                    </div>
+                </template>
             </div>
         </div>
-    @endif
+    </div>
+
+    <!-- ─── SYNTHÈSE CEO DU MATIN (fleet:ceo:last_report, publiée par la routine 08h30) ─── -->
+    <div class="col-span-12" x-show="live.ceo_report && live.ceo_report.text" x-cloak
+         x-data="{ open: false }" x-init="open = live.ceo_report && ((Date.now() - new Date(live.ceo_report.generated_at).getTime()) < 24*3600*1000)">
+        <div class="card p-4">
+            <button type="button" @click="open = !open" class="w-full flex items-center justify-between text-left" style="background:none;border:none;padding:0;cursor:pointer;">
+                <span class="text-sm font-bold uppercase tracking-wider font-mono" style="color: var(--err);">
+                    🔴 Synthèse CEO
+                    <span class="text-tertiary font-normal normal-case" x-text="live.ceo_report ? ('— ' + fmtDate(live.ceo_report.generated_at)) : ''"></span>
+                </span>
+                <span class="text-xs text-tertiary" x-text="open ? '▲ replier' : '▼ déplier'"></span>
+            </button>
+            <pre x-show="open" x-cloak class="mt-3 rounded p-3 text-[11px] overflow-x-auto"
+                 style="background: var(--surface2); white-space: pre-wrap; font-family: inherit; line-height: 1.5;"
+                 x-text="live.ceo_report ? live.ceo_report.text : ''"></pre>
+        </div>
+    </div>
 
     <!-- ─── BLOC 3 : LE BUS DE TÂCHES REDIS (30 DERNIÈRES) ─── -->
     <div class="col-span-12 lg:col-span-8 flex flex-col gap-3">
@@ -829,29 +947,30 @@
             </div>
 
             <!-- Approbations acquisition en attente -->
-            @php $acqApprovals = collect($pendingApprovals)->filter(fn($a) => ($a['dept'] ?? null) === 'acquisition'); @endphp
-            @if($acqApprovals->count() > 0)
-                <div class="card p-4 border-l-4" style="border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 4%, var(--surface));">
-                    <div class="mono-label mb-2" style="font-size: 10px; color: var(--warn);">Réponses / envois en attente de validation ({{ $acqApprovals->count() }})</div>
-                    <div class="flex flex-col gap-2">
-                        @foreach($acqApprovals as $app)
-                            <div class="flex items-center justify-between p-2.5 bg-surface2 rounded text-xs">
-                                <span class="font-mono text-secondary">{{ $app['id'] }} — {{ $app['type'] }}</span>
-                                <div class="flex gap-1.5">
-                                    <form method="POST" action="{{ route('fleet.approve', $app['id']) }}">
-                                        @csrf
-                                        <button type="submit" class="btn primary sm text-[10px]" style="padding:2px 8px;">Approuver ✓</button>
-                                    </form>
-                                    <form method="POST" action="{{ route('fleet.reject', $app['id']) }}" onsubmit="return confirm('Rejeter {{ $app['id'] }} ?');">
-                                        @csrf
-                                        <button type="submit" class="btn sm text-[10px]" style="padding:2px 8px; background: var(--surface1); color: var(--err);">Rejeter ✕</button>
-                                    </form>
-                                </div>
+            {{-- Approbations acquisition en TEMPS RÉEL (live.approvals filtré, polling 12s) --}}
+            <div x-show="(live.approvals || []).some(a => a.dept === 'acquisition')" x-cloak
+                 class="card p-4 border-l-4" style="border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 4%, var(--surface));">
+                <div class="mono-label mb-2" style="font-size: 10px; color: var(--warn);"
+                     x-text="'Réponses / envois en attente de validation (' + (live.approvals || []).filter(a => a.dept === 'acquisition').length + ')'"></div>
+                <div class="flex flex-col gap-2">
+                    <template x-for="app in (live.approvals || []).filter(a => a.dept === 'acquisition')" :key="app.id">
+                        <div class="flex items-center justify-between p-2.5 bg-surface2 rounded text-xs">
+                            <span class="font-mono text-secondary" x-text="app.id + ' — ' + (app.label || app.type)"></span>
+                            <div class="flex gap-1.5">
+                                <form method="POST" :action="'{{ url('/fleet/approve') }}/' + app.id">
+                                    @csrf
+                                    <button type="submit" class="btn primary sm text-[10px]" style="padding:2px 8px;">Approuver ✓</button>
+                                </form>
+                                <form method="POST" :action="'{{ url('/fleet/reject') }}/' + app.id"
+                                      @submit="if (!confirm('Rejeter ' + app.id + ' ?')) $event.preventDefault()">
+                                    @csrf
+                                    <button type="submit" class="btn sm text-[10px]" style="padding:2px 8px; background: var(--surface1); color: var(--err);">Rejeter ✕</button>
+                                </form>
                             </div>
-                        @endforeach
-                    </div>
+                        </div>
+                    </template>
                 </div>
-            @endif
+            </div>
         </div>
     </div>
 
@@ -906,6 +1025,50 @@
         </div>
     </div>
 
+    <!-- ─── PANNEAU DRILL-DOWN AGENT (fetch à la demande, hors polling) ─── -->
+    <div x-show="agentPanel" x-cloak @click.self="agentPanel = null"
+         class="fixed inset-0 z-50 flex justify-end" style="background: rgba(0,0,0,.45);">
+        <div class="h-full w-full max-w-md overflow-y-auto p-5 flex flex-col gap-3" style="background: var(--surface);">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold m-0" x-text="'📜 Historique — ' + (agentPanel ? agentPanel.name : '')"></h3>
+                <button type="button" class="btn sm" @click="agentPanel = null">✕</button>
+            </div>
+            <template x-if="agentData && agentData.stats">
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="card p-2 text-center">
+                        <div class="text-[9px] font-mono uppercase text-tertiary">7 jours</div>
+                        <div class="text-lg font-bold" x-text="agentData.stats.total_7d"></div>
+                    </div>
+                    <div class="card p-2 text-center">
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Réussite</div>
+                        <div class="text-lg font-bold"
+                             :style="'color:' + (agentData.stats.success_rate === null ? 'var(--text3)' : (agentData.stats.success_rate >= 90 ? 'var(--ok)' : (agentData.stats.success_rate >= 70 ? 'var(--warn)' : 'var(--err)')))"
+                             x-text="agentData.stats.success_rate === null ? '—' : agentData.stats.success_rate + '%'"></div>
+                    </div>
+                    <div class="card p-2 text-center">
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Échecs</div>
+                        <div class="text-lg font-bold" :style="agentData.stats.failed > 0 ? 'color: var(--err);' : 'color: var(--text3);'" x-text="agentData.stats.failed"></div>
+                    </div>
+                </div>
+            </template>
+            <div class="text-xs text-secondary" x-show="agentPanel && !agentData">Chargement…</div>
+            <div class="text-xs" style="color: var(--err);" x-show="agentData && agentData.error" x-text="agentData ? agentData.error : ''"></div>
+            <div class="flex flex-col gap-1.5">
+                <template x-for="t in (agentData ? (agentData.tasks || []) : [])" :key="t.id">
+                    <button type="button" @click="selectedTask = t; agentPanel = null"
+                            class="card p-2.5 flex items-center justify-between text-left w-full" style="cursor:pointer;">
+                        <span class="flex items-center gap-2 text-xs">
+                            <span class="chip font-mono text-[9px]" :class="statusChip(t.status)" x-text="t.status"></span>
+                            <span class="font-mono text-tertiary" x-text="t.id"></span>
+                            <span class="text-secondary" x-text="t.type"></span>
+                        </span>
+                        <span class="text-[10px] font-mono text-tertiary" x-text="fmtDate(t.created_at)"></span>
+                    </button>
+                </template>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -915,6 +1078,9 @@ function fleetDashboard(seed) {
         live: seed,
         taskFilter: 'all',
         selectedTask: null,
+        agentPanel: null,   // {dept, name} quand le panneau historique est ouvert
+        agentData: null,    // réponse de /fleet/agent/<dept>/tasks
+        notifEnabled: localStorage.getItem('fleet_notif') === '1',
         _timer: null,
         init() {
             // Rafraîchissement automatique toutes les 12s (polling léger de /fleet/data)
@@ -927,8 +1093,63 @@ function fleetDashboard(seed) {
                     credentials: 'same-origin'
                 });
                 if (!res.ok) return;
+                const prevIds = new Set((this.live.approvals || []).map(a => a.id));
                 this.live = await res.json();
+                // Notification navigateur pour chaque NOUVELLE demande de validation
+                if (this.notifEnabled && 'Notification' in window && Notification.permission === 'granted') {
+                    (this.live.approvals || []).filter(a => !prevIds.has(a.id)).forEach(a => {
+                        try {
+                            new Notification('Flotte — validation en attente', {
+                                body: a.id + ' · ' + a.dept + ' · ' + (a.label || a.type),
+                                tag: 'fleet-approval-' + a.id, // anti-doublon si plusieurs onglets
+                            });
+                        } catch (e) { /* silencieux */ }
+                    });
+                }
             } catch (e) { /* réseau indisponible : on conserve le dernier état connu */ }
+        },
+        async toggleNotif() {
+            if (this.notifEnabled) {
+                this.notifEnabled = false;
+                localStorage.setItem('fleet_notif', '0');
+                return;
+            }
+            if (!('Notification' in window)) return;
+            const perm = await Notification.requestPermission(); // exige le geste utilisateur (ce clic)
+            if (perm === 'granted') {
+                this.notifEnabled = true;
+                localStorage.setItem('fleet_notif', '1');
+                new Notification('Flotte — notifications activées', { body: 'Vous serez prévenu des nouvelles validations en attente.' });
+            }
+        },
+        async openAgent(dept, name) {
+            this.agentPanel = { dept, name: name || dept };
+            this.agentData = null;
+            try {
+                const res = await fetch('{{ url('/fleet/agent') }}/' + dept + '/tasks', {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                });
+                this.agentData = res.ok ? await res.json() : { error: 'Erreur ' + res.status };
+            } catch (e) {
+                this.agentData = { error: 'Réseau indisponible' };
+            }
+        },
+        // Files d'attente : seulement les départements qui ont quelque chose à montrer
+        busyQueues() {
+            return (this.live.queues || []).filter(q =>
+                (q.backlog || 0) > 0 || (q.pending || 0) > 0 || (q.failed_7d || 0) > 0 || !q.online || q.backlog === null);
+        },
+        // Couleur de la jauge budget — mêmes paliers que les alertes Telegram de la passerelle
+        gwColor(pct) {
+            return pct >= 90 ? 'var(--err)' : (pct >= 70 ? 'var(--warn)' : 'var(--ok)');
+        },
+        // Hauteur (%) d'un segment des barres KPI 7j, relative au jour le plus chargé
+        kpiBarH(v) {
+            const days = (this.live.kpi && this.live.kpi.days) || [];
+            let max = 1;
+            days.forEach(d => { max = Math.max(max, (d.done || 0) + (d.failed || 0)); });
+            return Math.round(((v || 0) / max) * 88); // 88% : garde la place du libellé jour
         },
         filteredTasks() {
             if (!this.live || !this.live.tasks) return [];

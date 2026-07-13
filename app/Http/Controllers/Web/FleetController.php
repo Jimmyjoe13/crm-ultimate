@@ -317,8 +317,183 @@ class FleetController extends Controller
             }
         }
 
+        // 6. Budget LLM temps réel — publié par la passerelle or_gateway (TTL 300 s).
+        // Clé absente = passerelle silencieuse > 5 min → null (remonte en warn santé).
+        $gateway = null;
+        try {
+            $rawGw = $fleetRedis->get('fleet:or_gateway:stats');
+            if ($rawGw) {
+                $gw = json_decode($rawGw, true) ?: [];
+                $used = (int) ($gw['used'] ?? 0);
+                $budget = max(1, (int) ($gw['budget'] ?? 900));
+                $gateway = [
+                    'used'       => $used,
+                    'budget'     => $budget,
+                    'hard'       => (int) ($gw['hard'] ?? 1000),
+                    'remaining'  => (int) ($gw['remaining'] ?? max(0, $budget - $used)),
+                    'rpm'        => (int) ($gw['rpm'] ?? 0),
+                    'rpm_limit'  => (int) ($gw['rpm_limit'] ?? 18),
+                    'pct'        => (int) round($used / $budget * 100),
+                    'updated_at' => $gw['updated_at'] ?? null,
+                ];
+            }
+        } catch (\Exception $e) {
+            \Log::warning('[FleetController] Erreur stats passerelle : ' . $e->getMessage());
+        }
+
+        // 7. Vrai backlog par département : XINFO GROUPS → lag (jamais livrées) + pending
+        // (livrées non ackées). ⚠️ PAS XLEN : les streams ne sont pas trimmés, XLEN est un
+        // cumulatif depuis toujours (le chiffre trompeur « 62 tâches en file »).
+        $onlineByDept = [];
+        foreach (self::AGENTS as $k => $cfg) {
+            $onlineByDept[$cfg['dept']] = $liveAgents[$k]['online'] ?? false;
+        }
+        $failed7dByDept = [];
+        foreach ($allTasks as $t) {
+            if (($t['status'] ?? '') === 'failed') {
+                $d = $t['dept'] ?? '?';
+                $failed7dByDept[$d] = ($failed7dByDept[$d] ?? 0) + 1;
+            }
+        }
+        $queues = [];
+        foreach (self::AGENTS as $cfg) {
+            $dept = $cfg['dept'];
+            if ($dept === 'richard') {
+                continue; // le cerveau n'a pas de stream de tâches
+            }
+            $backlog = null;
+            $pending = null;
+            try {
+                $groups = $fleetRedis->executeRaw(['XINFO', 'GROUPS', "tasks:{$dept}"]);
+                if (is_array($groups)) {
+                    foreach ($groups as $g) {
+                        // predis renvoie chaque groupe en tableau plat [k1, v1, k2, v2, …]
+                        $flat = [];
+                        $n = is_array($g) ? count($g) : 0;
+                        for ($i = 0; $i + 1 < $n; $i += 2) {
+                            $flat[(string) $g[$i]] = $g[$i + 1];
+                        }
+                        $backlog = ($backlog ?? 0) + (int) ($flat['lag'] ?? 0);
+                        $pending = ($pending ?? 0) + (int) ($flat['pending'] ?? 0);
+                    }
+                }
+            } catch (\Exception $e) {
+                // stream absent / Redis < 7 : backlog inconnu (« ? » à l'affichage), jamais de crash du polling
+            }
+            $queues[] = [
+                'dept'      => $dept,
+                'backlog'   => $backlog,
+                'pending'   => $pending,
+                'failed_7d' => $failed7dByDept[$dept] ?? 0,
+                'online'    => $onlineByDept[$dept] ?? false,
+            ];
+        }
+        usort($queues, fn ($a, $b) => (($b['backlog'] ?? -1) + ($b['pending'] ?? 0)) <=> (($a['backlog'] ?? -1) + ($a['pending'] ?? 0)));
+
+        // 8. KPI fiabilité 7 jours — fenêtre naturelle : TTL 7 j des tâches terminées côté flotte.
+        $kpiDays = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $d = now()->subDays($i)->toDateString();
+            $kpiDays[$d] = ['date' => $d, 'done' => 0, 'failed' => 0];
+        }
+        $typeCounts = [];
+        $done7 = 0;
+        $failed7 = 0;
+        foreach ($allTasks as $t) {
+            $d = substr((string) ($t['created_at'] ?? ''), 0, 10);
+            $st = $t['status'] ?? '';
+            if (isset($kpiDays[$d])) {
+                if ($st === 'done') {
+                    $kpiDays[$d]['done']++;
+                } elseif ($st === 'failed') {
+                    $kpiDays[$d]['failed']++;
+                }
+            }
+            if ($st === 'done') {
+                $done7++;
+            } elseif ($st === 'failed') {
+                $failed7++;
+            }
+            $ty = $t['type'] ?? '?';
+            $typeCounts[$ty] = ($typeCounts[$ty] ?? 0) + 1;
+        }
+        arsort($typeCounts);
+        $topTypes = [];
+        foreach (array_slice($typeCounts, 0, 5, true) as $ty => $n) {
+            $topTypes[] = ['type' => $ty, 'n' => $n];
+        }
+        $kpi = [
+            'days'         => array_values($kpiDays),
+            'top_types'    => $topTypes,
+            'success_rate' => ($done7 + $failed7) > 0 ? round($done7 / ($done7 + $failed7) * 100, 1) : null,
+            'done_7d'      => $done7,
+            'failed_7d'    => $failed7,
+        ];
+
+        // 9. Dernière synthèse CEO (publiée par richard_ceo_routine.py, TTL 7 j).
+        $ceoReport = null;
+        try {
+            $rawCeo = $fleetRedis->get('fleet:ceo:last_report');
+            if ($rawCeo) {
+                $ceoReport = json_decode($rawCeo, true) ?: null;
+            }
+        } catch (\Exception $e) {
+            // best effort — le bloc s'affiche « aucun rapport » si absent
+        }
+
+        // 10. Santé consolidée (bandeau haut de page) — calculée sur ce qui précède.
+        $offline = [];
+        foreach (self::AGENTS as $k => $cfg) {
+            if ($cfg['dept'] !== 'richard' && !($liveAgents[$k]['online'] ?? false)) {
+                $offline[] = $cfg['dept'];
+            }
+        }
+        $issues = [];
+        if ($gateway === null) {
+            $issues[] = 'Passerelle LLM silencieuse (aucune stat depuis > 5 min)';
+        }
+        if ($offline) {
+            $issues[] = 'Workers hors ligne : ' . implode(', ', $offline);
+        }
+        if (!($liveAgents['richard']['online'] ?? false)) {
+            $issues[] = 'Cerveau (hermes-gateway) sans heartbeat récent';
+        }
+        if (($josephStatus['status'] ?? 'healthy') !== 'healthy') {
+            $issues[] = 'Joseph signale : ' . ($josephStatus['status'] ?? '?');
+        }
+        if ($josephStale) {
+            $issues[] = 'Diagnostic Joseph périmé (> 24 h)';
+        }
+        if ($julietteStale) {
+            $issues[] = 'Statut Juliette périmé (> 30 min)';
+        }
+        if ($gateway && $gateway['pct'] >= 90) {
+            $issues[] = "Budget LLM à {$gateway['pct']} % du quota du jour";
+        }
+        if ($gateway === null || count($offline) >= 2 || (($josephStatus['status'] ?? 'healthy') !== 'healthy')) {
+            $healthLevel = 'crit';
+        } elseif ($issues) {
+            $healthLevel = 'warn';
+        } else {
+            $healthLevel = 'ok';
+        }
+
         // Payload « live » compact (seed + polling), forme stable
         $live = [
+            'health'          => ['level' => $healthLevel, 'issues' => $issues],
+            'gateway'         => $gateway,
+            'queues'          => $queues,
+            'kpi'             => $kpi,
+            'ceo_report'      => $ceoReport,
+            // Approbations dans le payload live : le bloc « en attente de validation » se met
+            // à jour au polling (avant : rendu serveur uniquement, F5 obligatoire).
+            'approvals'       => array_map(fn ($a) => [
+                'id'         => $a['id'] ?? '?',
+                'dept'       => $a['dept'] ?? '?',
+                'type'       => $a['type'] ?? '?',
+                'label'      => $a['approval']['action_spec']['label'] ?? null,
+                'created_at' => $a['created_at'] ?? null,
+            ], $pendingApprovals),
             'stats'           => $stats,
             'agents'          => $liveAgents,
             'tasks'           => $tasks,
@@ -432,6 +607,46 @@ class FleetController extends Controller
             'by_subject'      => $bySubject,
             'timeline'        => $timeline,
         ];
+    }
+
+    /**
+     * Drill-down agent : les 20 dernières tâches d'un département + mini-stats.
+     * Fetch à la demande depuis le panneau des cartes agents (HORS polling 12 s).
+     */
+    public function agentTasks(Request $request, string $dept)
+    {
+        if (!in_array($dept, array_column(self::AGENTS, 'dept'), true)) {
+            return response()->json(['error' => 'département inconnu'], 404);
+        }
+
+        $fleetRedis = Redis::connection('fleet');
+        $tasks = [];
+        try {
+            foreach ($fleetRedis->keys('task:*') ?: [] as $key) {
+                $cleanKey = str_replace(config('database.redis.options.prefix', ''), '', $key);
+                $t = json_decode($fleetRedis->get($cleanKey) ?: 'null', true);
+                if ($t && ($t['dept'] ?? null) === $dept) {
+                    $tasks[] = $t;
+                }
+            }
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Redis : ' . $e->getMessage()], 500);
+        }
+        usort($tasks, fn ($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+
+        $done = count(array_filter($tasks, fn ($t) => ($t['status'] ?? '') === 'done'));
+        $failed = count(array_filter($tasks, fn ($t) => ($t['status'] ?? '') === 'failed'));
+
+        return response()->json([
+            'dept'  => $dept,
+            'stats' => [
+                'total_7d'     => count($tasks),
+                'done'         => $done,
+                'failed'       => $failed,
+                'success_rate' => ($done + $failed) > 0 ? round($done / ($done + $failed) * 100, 1) : null,
+            ],
+            'tasks' => array_slice($tasks, 0, 20),
+        ]);
     }
 
     /**
