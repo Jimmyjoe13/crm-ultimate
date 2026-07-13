@@ -441,6 +441,34 @@ class FleetController extends Controller
             // best effort — le bloc s'affiche « aucun rapport » si absent
         }
 
+        // 9bis. Équipe Growth (Mia/content, Sam/sales, Nora/finance) — onglet dédié :
+        // chaque action entreprise (tâches COMPLÈTES, result inclus → détail au clic sans
+        // fetch) + agrégats 7 j par agent. Fenêtre naturelle : TTL 7 j des tâches terminées.
+        $growthDepts = ['content', 'sales', 'finance'];
+        $growthTasks = array_values(array_filter($allTasks, fn ($t) => in_array($t['dept'] ?? '', $growthDepts, true)));
+        $growthPerAgent = [];
+        foreach ($growthDepts as $gd) {
+            $mine = array_values(array_filter($growthTasks, fn ($t) => ($t['dept'] ?? '') === $gd));
+            $lastDone = null;
+            foreach ($mine as $t) { // $allTasks est déjà trié created_at desc
+                if (($t['status'] ?? '') === 'done') {
+                    $lastDone = ['id' => $t['id'] ?? '?', 'type' => $t['type'] ?? '?', 'created_at' => $t['created_at'] ?? null];
+                    break;
+                }
+            }
+            $growthPerAgent[$gd] = [
+                'done_7d'     => count(array_filter($mine, fn ($t) => ($t['status'] ?? '') === 'done')),
+                'failed_7d'   => count(array_filter($mine, fn ($t) => ($t['status'] ?? '') === 'failed')),
+                'in_progress' => count(array_filter($mine, fn ($t) => ($t['status'] ?? '') === 'in_progress')) > 0,
+                'awaiting'    => count(array_filter($mine, fn ($t) => ($t['status'] ?? '') === 'awaiting_approval')),
+                'last_done'   => $lastDone,
+            ];
+        }
+        $growth = [
+            'tasks'     => array_slice($growthTasks, 0, 40),
+            'per_agent' => $growthPerAgent,
+        ];
+
         // 10. Santé consolidée (bandeau haut de page) — calculée sur ce qui précède.
         $offline = [];
         foreach (self::AGENTS as $k => $cfg) {
@@ -485,6 +513,7 @@ class FleetController extends Controller
             'queues'          => $queues,
             'kpi'             => $kpi,
             'ceo_report'      => $ceoReport,
+            'growth'          => $growth,
             // Approbations dans le payload live : le bloc « en attente de validation » se met
             // à jour au polling (avant : rendu serveur uniquement, F5 obligatoire).
             'approvals'       => array_map(fn ($a) => [

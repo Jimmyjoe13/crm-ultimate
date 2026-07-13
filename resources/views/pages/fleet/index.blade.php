@@ -177,6 +177,10 @@
         <button @click="activeTab = 'fleet'" :class="activeTab === 'fleet' ? 'border-b-2 border-accent text-primary font-bold' : 'text-secondary'" class="pb-3 text-sm font-semibold transition-all relative">
             👥 Flotte Opérationnelle
         </button>
+        <button @click="activeTab = 'growth'" :class="activeTab === 'growth' ? 'border-b-2 border-accent text-primary font-bold' : 'text-secondary'" class="pb-3 text-sm font-semibold transition-all flex items-center gap-2">
+            📈 Équipe Growth (Mia · Sam · Nora)
+            <span class="led pulse" x-show="growthAwaiting() > 0" style="background-color: var(--warn); box-shadow: 0 0 8px var(--warn); width: 6px; height: 6px;" x-cloak></span>
+        </button>
         <button @click="activeTab = 'joseph'" :class="activeTab === 'joseph' ? 'border-b-2 border-accent text-primary font-bold' : 'text-secondary'" class="pb-3 text-sm font-semibold transition-all flex items-center gap-2">
             🛡️ Infrastructure & Maintenance (Joseph)
             <span class="led pulse" x-show="live.joseph.status !== 'healthy' || live.joseph.stale" style="background-color: var(--warn); box-shadow: 0 0 8px var(--warn); width: 6px; height: 6px;" x-cloak></span>
@@ -545,6 +549,93 @@
         </div>
     </div>
 
+    </div>
+
+    <!-- ─── Conteneur ÉQUIPE GROWTH (Mia · Sam · Nora) — chaque action de l'équipe ─── -->
+    <div x-show="activeTab === 'growth'" class="px-7 pb-12 grid grid-cols-12 gap-6" x-cloak>
+
+        <!-- Cartes des 3 agents Growth -->
+        @foreach(['mia' => ['dept' => 'content', 'emoji' => '🎨', 'action' => 'generate_content', 'action_label' => 'Générer du contenu'],
+                  'sam' => ['dept' => 'sales', 'emoji' => '💬', 'action' => 'inbox_sync', 'action_label' => 'Scanner les DMs'],
+                  'nora' => ['dept' => 'finance', 'emoji' => '📊', 'action' => 'kpi_report', 'action_label' => 'Rapport KPI']] as $gKey => $gCfg)
+        <div class="col-span-12 md:col-span-4">
+            <div class="card p-4 flex flex-col gap-3 h-full">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="av sm text-white font-bold" style="background: color-mix(in srgb, var(--accent) 70%, #000);">{{ $gCfg['emoji'] }}</span>
+                        <div>
+                            <h3 class="text-sm font-bold m-0" style="margin:0; cursor:pointer;"
+                                @click="openAgent('{{ $gCfg['dept'] }}', '{{ $agents[$gKey]['name'] }}')">{{ $agents[$gKey]['name'] }} <span class="text-tertiary text-[10px]">📜</span></h3>
+                            <span class="text-[10px] text-tertiary">{{ $agents[$gKey]['role'] }}</span>
+                        </div>
+                    </div>
+                    <span class="led" :class="live.agents.{{ $gKey }}.online ? 'green' : ''"
+                          :style="live.agents.{{ $gKey }}.online ? '' : 'background: var(--err);'"
+                          :title="live.agents.{{ $gKey }}.online ? 'Worker en ligne' : 'Worker hors ligne'"></span>
+                </div>
+
+                <!-- Compteurs 7 jours -->
+                <div class="grid grid-cols-3 gap-2" x-data="{ pa() { return (live.growth && live.growth.per_agent && live.growth.per_agent['{{ $gCfg['dept'] }}']) || {}; } }">
+                    <div class="rounded p-2 text-center" style="background: var(--surface2);">
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Actions 7j</div>
+                        <div class="text-base font-bold" x-text="(pa().done_7d || 0) + (pa().failed_7d || 0)"></div>
+                    </div>
+                    <div class="rounded p-2 text-center" style="background: var(--surface2);">
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Réussies</div>
+                        <div class="text-base font-bold" style="color: var(--ok);" x-text="pa().done_7d || 0"></div>
+                    </div>
+                    <div class="rounded p-2 text-center" style="background: var(--surface2);">
+                        <div class="text-[9px] font-mono uppercase text-tertiary">Échecs</div>
+                        <div class="text-base font-bold" :style="(pa().failed_7d || 0) > 0 ? 'color: var(--err);' : 'color: var(--text3);'" x-text="pa().failed_7d || 0"></div>
+                    </div>
+                    <div class="col-span-3 text-[10px] font-mono text-tertiary text-center" x-show="pa().in_progress" x-cloak style="color: var(--accent);">⚙ tâche en cours d'exécution…</div>
+                    <div class="col-span-3 text-[10px] font-mono text-center" x-show="(pa().awaiting || 0) > 0" x-cloak style="color: var(--warn);" x-text="'⚠ ' + pa().awaiting + ' en attente de validation'"></div>
+                    <div class="col-span-3 text-[10px] font-mono text-tertiary text-center" x-show="pa().last_done"
+                         x-text="pa().last_done ? ('Dernier livrable : ' + pa().last_done.type + ' (' + fmtDate(pa().last_done.created_at) + ')') : ''"></div>
+                </div>
+
+                <!-- Action rapide -->
+                <form method="POST" action="{{ route('fleet.trigger') }}" class="mt-auto">
+                    @csrf
+                    <input type="hidden" name="agent" value="{{ $gKey }}">
+                    <input type="hidden" name="action_type" value="{{ $gCfg['action'] }}">
+                    <button type="submit" class="btn primary sm w-full justify-center text-xs">⚡ {{ $gCfg['action_label'] }}</button>
+                </form>
+            </div>
+        </div>
+        @endforeach
+
+        <!-- Flux d'actions de l'équipe Growth (chaque tâche, détail au clic) -->
+        <div class="col-span-12">
+            <div class="card p-4 flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                    <span class="mono-label" style="font-size:10px;">🗂 Flux d'actions de l'équipe (7 jours — cliquer pour le détail complet)</span>
+                    <div class="flex gap-1">
+                        <template x-for="f in [['all','Tous'],['content','Mia'],['sales','Sam'],['finance','Nora']]" :key="f[0]">
+                            <button type="button" @click="growthFilter = f[0]"
+                                    class="btn sm text-[10px]" style="padding: 2px 10px;"
+                                    :style="growthFilter === f[0] ? 'background: var(--accent); color: #fff;' : 'background: var(--surface2);'"
+                                    x-text="f[1]"></button>
+                        </template>
+                    </div>
+                </div>
+                <div class="text-xs text-secondary py-2" x-show="growthTasks().length === 0">Aucune action sur les 7 derniers jours.</div>
+                <div class="flex flex-col gap-1.5" style="max-height: 480px; overflow-y: auto;">
+                    <template x-for="t in growthTasks()" :key="t.id">
+                        <button type="button" @click="selectedTask = t"
+                                class="card p-2.5 flex items-center justify-between text-left w-full" style="cursor:pointer;">
+                            <span class="flex items-center gap-2 text-xs min-w-0">
+                                <span class="chip font-mono text-[9px] shrink-0" :class="statusChip(t.status)" x-text="t.status"></span>
+                                <span class="font-mono text-tertiary shrink-0" x-text="t.id"></span>
+                                <span class="chip text-[9px] shrink-0" x-text="({content:'Mia',sales:'Sam',finance:'Nora'})[t.dept] || t.dept"></span>
+                                <span class="text-secondary truncate" x-text="t.type + (t.result && t.result.summary ? ' — ' + t.result.summary : '')"></span>
+                            </span>
+                            <span class="text-[10px] font-mono text-tertiary shrink-0 ml-2" x-text="fmtDate(t.created_at)"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Conteneur Joseph (Maintenance & Infrastructure) -->
@@ -1080,6 +1171,7 @@ function fleetDashboard(seed) {
         selectedTask: null,
         agentPanel: null,   // {dept, name} quand le panneau historique est ouvert
         agentData: null,    // réponse de /fleet/agent/<dept>/tasks
+        growthFilter: 'all', // filtre du flux d'actions Growth (all|content|sales|finance)
         notifEnabled: localStorage.getItem('fleet_notif') === '1',
         _timer: null,
         init() {
@@ -1134,6 +1226,16 @@ function fleetDashboard(seed) {
             } catch (e) {
                 this.agentData = { error: 'Réseau indisponible' };
             }
+        },
+        // Flux d'actions de l'équipe Growth, filtrable par agent (dept)
+        growthTasks() {
+            const all = (this.live.growth && this.live.growth.tasks) || [];
+            return this.growthFilter === 'all' ? all : all.filter(t => t.dept === this.growthFilter);
+        },
+        // Total des tâches Growth en attente de validation (LED de l'onglet)
+        growthAwaiting() {
+            const pa = (this.live.growth && this.live.growth.per_agent) || {};
+            return Object.values(pa).reduce((s, a) => s + (a.awaiting || 0), 0);
         },
         // Files d'attente : seulement les départements qui ont quelque chose à montrer
         busyQueues() {
