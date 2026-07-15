@@ -686,6 +686,44 @@
             </div>
         </div>
 
+        <!-- Insights de la page Facebook — publiés par fb_insights.py (timer horaire) -->
+        <div class="col-span-12" x-show="live.growth && live.growth.fb_insights" x-cloak>
+            <div class="card p-4 flex flex-col gap-3" x-data="{ fb() { return (live.growth && live.growth.fb_insights) || {}; } }">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <span class="mono-label" style="font-size:10px;">📘 Facebook — Page « Joe's Business » (jour)</span>
+                    <span class="text-[10px] font-mono text-tertiary" x-show="fb().timestamp" x-text="'MAJ ' + fmtDate(fb().timestamp)"></span>
+                </div>
+                <div class="text-xs" style="color: var(--err);" x-show="fb().error" x-cloak x-text="'⚠️ ' + fb().error"></div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="text-center">
+                        <div class="text-xl font-bold" x-text="fb().page_views ?? 0"></div>
+                        <div class="text-[10px] font-mono text-tertiary">Vues de la page</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-bold" x-text="fb().engaged_users ?? 0"></div>
+                        <div class="text-[10px] font-mono text-tertiary">Engagements posts</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-bold" x-text="'+' + (fb().fan_adds ?? 0)"></div>
+                        <div class="text-[10px] font-mono text-tertiary">Nouveaux abonnés</div>
+                    </div>
+                </div>
+                <div class="text-[10px] font-mono text-tertiary" x-text="fb().summary || ''"></div>
+                <!-- Top posts de la page (par engagement) -->
+                <div x-show="(fb().top_posts || []).length > 0" x-cloak class="flex flex-col gap-1.5">
+                    <span class="mono-label" style="font-size:9px;">Top posts</span>
+                    <template x-for="p in (fb().top_posts || [])" :key="p.id">
+                        <div class="card p-2 flex items-center justify-between text-xs" style="background: var(--surface2);">
+                            <span class="text-secondary truncate" x-text="p.message || '(post sans texte)'"></span>
+                            <span class="font-mono text-tertiary shrink-0 ml-2 text-[10px]"
+                                  x-text="'👍 ' + (p.likes||0) + ' · 💬 ' + (p.comments||0) + ' · 🔁 ' + (p.shares||0)"></span>
+                        </div>
+                    </template>
+                </div>
+                <div class="text-[9px] font-mono text-tertiary" style="opacity:.7;">Portée/impressions non exposées par l'API Graph v21 (métriques page dépréciées).</div>
+            </div>
+        </div>
+
         <!-- Flux d'actions de l'équipe Growth (chaque tâche, détail au clic) -->
         <div class="col-span-12">
             <div class="card p-4 flex flex-col gap-3">

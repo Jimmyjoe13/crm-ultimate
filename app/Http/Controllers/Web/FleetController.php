@@ -498,11 +498,24 @@ class FleetController extends Controller
             }
         }
 
+        // Insights de la page Facebook — publiés par fb_insights.py (timer horaire).
+        // Absent = aucune passe encore faite → null (le bloc dashboard reste caché).
+        $fbInsights = null;
+        try {
+            $rawFb = $fleetRedis->get('fleet:fb:insights');
+            if ($rawFb) {
+                $fbInsights = json_decode($rawFb, true) ?: null;
+            }
+        } catch (\Exception $e) {
+            \Log::warning('[FleetController] Erreur lecture insights FB Redis : ' . $e->getMessage());
+        }
+
         $growth = [
-            'tasks'     => array_slice($growthTasks, 0, 40),
-            'per_agent' => $growthPerAgent,
-            'nora_kpi'  => $noraKpi,
-            'mia_posts' => $miaPosts,
+            'tasks'       => array_slice($growthTasks, 0, 40),
+            'per_agent'   => $growthPerAgent,
+            'nora_kpi'    => $noraKpi,
+            'mia_posts'   => $miaPosts,
+            'fb_insights' => $fbInsights,
         ];
 
         // 10. Santé consolidée (bandeau haut de page) — calculée sur ce qui précède.
