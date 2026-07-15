@@ -739,9 +739,10 @@
                         <span class="led" :class="(live.joseph.status === 'healthy' && !live.joseph.stale) ? 'green' : 'pulse'" title="Statut de Joseph"></span>
                     </div>
                     <div class="mb-4">
-                        <div class="text-[11px] font-bold text-red-600 uppercase font-mono mb-1">{{ $agents['joseph']['role'] }}</div>
+                        {{-- Rôle : rouge d'identité de Joseph via variable inline (aligné sur l'onglet Juliette qui utilise sa propre couleur) --}}
+                        <div class="text-[11px] font-bold uppercase font-mono mb-1" style="color: #b91c1c;">{{ $agents['joseph']['role'] }}</div>
                         <p class="text-xs text-secondary leading-relaxed">{{ $agents['joseph']['description'] }}</p>
-                        <!-- Badge de fraîcheur du dernier diagnostic -->
+                        {{-- Badge de fraîcheur du dernier diagnostic (chip .warn du design system + horodatage fmtDate) --}}
                         <div class="mt-2 flex items-center gap-1.5 text-[10px] font-mono">
                             <span x-show="live.joseph.stale" class="chip warn text-[9px] uppercase font-bold py-0.5 px-1.5 rounded" x-cloak>⚠️ Diagnostic périmé</span>
                             <span class="text-tertiary" x-text="live.joseph.last ? ('Dernier diagnostic : ' + fmtDate(live.joseph.last)) : 'Aucun diagnostic enregistré'"></span>
@@ -760,9 +761,48 @@
                 </div>
             </div>
 
+            <!-- Moteur & Budget Tokens -->
+            {{-- Suivi du moteur LLM utilisé au dernier diagnostic + budget d'appels Antigravity.
+                 Toutes les valeurs proviennent du polling /fleet/data (live.joseph.*), aucun appel réseau supplémentaire. --}}
+            <div class="card p-5 flex flex-col gap-4" style="background: var(--surface); border-color: var(--border);">
+                <div class="mono-label" style="font-size: 10px; color: #b91c1c;">Moteur &amp; Budget Tokens</div>
+
+                {{-- Moteur du dernier diagnostic : badge dont la variante chip dépend de last_engine
+                     (static → neutre, gateway → .ok vert, agy → .err rouge). Cas null géré par engineLabel/engineClass. --}}
+                <div>
+                    <div class="text-[10px] font-mono uppercase text-tertiary mb-1.5">Moteur du dernier diagnostic</div>
+                    <span class="chip text-[10px] font-bold py-1 px-2 rounded"
+                          :class="engineClass(live.joseph.last_engine)"
+                          x-text="engineLabel(live.joseph.last_engine)"></span>
+                </div>
+
+                {{-- Budget Antigravity (jour) : barre de progression agy_calls_today / agy_cap.
+                     Réutilise barColor() (rouge si proche/atteint le cap) — cohérent avec les barres VPS. --}}
+                <div>
+                    <div class="flex justify-between text-xs font-mono mb-1">
+                        <span class="text-secondary">Budget Antigravity (jour)</span>
+                        <span class="font-bold text-primary">
+                            <span x-text="live.joseph.agy_calls_today ?? 0"></span> / <span x-text="live.joseph.agy_cap ?? 15"></span> appels
+                        </span>
+                    </div>
+                    <div class="w-full bg-surface2 rounded-full h-2 overflow-hidden">
+                        {{-- pct = appels/cap borné à 100 ; barColor renvoie vert/ambre/rouge selon le palier --}}
+                        <div class="h-2 rounded-full transition-all duration-500"
+                             :class="barColor(Math.round(((live.joseph.agy_calls_today ?? 0) / Math.max(1, (live.joseph.agy_cap ?? 15))) * 100))"
+                             :style="'width:' + Math.min(100, Math.round(((live.joseph.agy_calls_today ?? 0) / Math.max(1, (live.joseph.agy_cap ?? 15))) * 100)) + '%'"></div>
+                    </div>
+                </div>
+
+                {{-- Appels passerelle du jour (gratuits) : simple compteur --}}
+                <div class="p-2.5 bg-surface2 rounded flex items-center justify-between text-xs font-mono">
+                    <span class="text-secondary">Appels passerelle (jour, gratuits)</span>
+                    <span class="font-bold" style="color: var(--ok);" x-text="live.joseph.gateway_calls_today ?? 0"></span>
+                </div>
+            </div>
+
             <!-- Métriques VPS -->
             <div class="card p-5 flex flex-col gap-4" style="background: var(--surface); border-color: var(--border);">
-                <div class="mono-label" style="font-size: 10px; color: var(--accent);">Métriques Physiques du VPS</div>
+                <div class="mono-label" style="font-size: 10px; color: #b91c1c;">Métriques Physiques du VPS</div>
 
                 <!-- CPU (live) -->
                 <div>
@@ -798,9 +838,19 @@
                 </div>
 
                 <!-- Verrous (live) -->
+                {{-- Couleur pilotée par les tokens du thème (var(--warn)/var(--ok)) plutôt que des couleurs Tailwind en dur --}}
                 <div class="mt-2 p-3 bg-surface2 rounded flex items-center justify-between text-xs font-mono">
                     <span class="text-secondary">Verrous de fichiers actifs</span>
-                    <span class="font-bold" :class="(live.joseph.system?.file_locks ?? 0) > 0 ? 'text-amber-500' : 'text-emerald-600'" x-text="(live.joseph.system?.file_locks ?? 0)"></span>
+                    <span class="font-bold"
+                          :style="'color:' + ((live.joseph.system?.file_locks ?? 0) > 0 ? 'var(--warn)' : 'var(--ok)')"
+                          x-text="(live.joseph.system?.file_locks ?? 0)"></span>
+                </div>
+
+                {{-- B4 — Légende des seuils des barres (miroir de barColor : vert ≤70 % · ambre 71-85 % · rouge >85 %) --}}
+                <div class="flex items-center gap-3 text-[9px] font-mono text-tertiary pt-1">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background: var(--ok);"></span> &lt; 70 %</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background: var(--warn);"></span> 70-85 %</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background: var(--err);"></span> &gt; 85 %</span>
                 </div>
             </div>
         </div>
@@ -809,7 +859,7 @@
         <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
             <!-- Services Systemd -->
             <div class="card p-5" style="background: var(--surface); border-color: var(--border);">
-                <div class="mono-label mb-3" style="font-size: 10px; color: var(--accent);">État des Services Systemd de la Flotte</div>
+                <div class="mono-label mb-3" style="font-size: 10px; color: #b91c1c;">État des Services Systemd de la Flotte</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <template x-for="svc in Object.entries(live.joseph.services || {})" :key="svc[0]">
                         <div class="flex items-center justify-between p-2.5 bg-surface2 rounded border border-default text-xs font-mono">
@@ -1364,6 +1414,19 @@ function fleetDashboard(seed) {
         barColor(p) {
             p = p || 0;
             return p > 85 ? 'bg-red-600' : (p > 70 ? 'bg-amber-500' : 'bg-emerald-600');
+        },
+        // Libellé lisible du moteur LLM du dernier diagnostic Joseph (— si inconnu/null)
+        engineLabel(e) {
+            return ({
+                static:  'Statique (0 token)',
+                gateway: 'Passerelle nemotron (gratuit)',
+                cache:   'Cache investigation (0 token)',
+                agy:     'Antigravity (Google AI Pro)',
+            })[e] || '—';
+        },
+        // Variante chip du badge moteur : static/cache → neutre, gateway → .ok, agy → .err
+        engineClass(e) {
+            return ({ static: '', gateway: 'ok', cache: 'info', agy: 'err' })[e] || '';
         },
         fmtDate(iso) {
             if (!iso) return '—';

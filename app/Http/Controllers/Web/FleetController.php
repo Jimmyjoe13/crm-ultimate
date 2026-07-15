@@ -570,6 +570,12 @@ class FleetController extends Controller
                 'logs'     => $josephStatus['logs'] ?? [],
                 'last'     => $josephLast,
                 'stale'    => $josephStale,
+                // Suivi du moteur LLM + budget tokens (publié par la flotte dans fleet:joseph:status).
+                // Valeurs par défaut robustes tant que les workers n'écrivent pas encore ces champs.
+                'last_engine'          => $josephStatus['last_engine'] ?? null,          // "static" | "gateway" | "agy" | null
+                'agy_calls_today'      => (int) ($josephStatus['agy_calls_today'] ?? 0),      // appels Antigravity du jour
+                'gateway_calls_today'  => (int) ($josephStatus['gateway_calls_today'] ?? 0),  // appels passerelle nemotron du jour (gratuits)
+                'agy_cap'              => (int) ($josephStatus['agy_cap'] ?? 15),            // quota journalier d'appels Antigravity
             ],
             'juliette'        => [
                 'status'            => $julietteStatus['status'] ?? 'healthy',
